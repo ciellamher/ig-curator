@@ -13,7 +13,7 @@ interface StoryFolderViewProps {
   updateItems: (newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[])) => void;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   activeSlotId: string | null;
-  setActiveSlotId: (id: string) => void;
+  setActiveSlotId: (id: string | null) => void;
 }
 
 export function StoryFolderView({ folder, stories, onBack, updateItems, updateItem, activeSlotId, setActiveSlotId }: StoryFolderViewProps) {
