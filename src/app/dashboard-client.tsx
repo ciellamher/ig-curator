@@ -261,7 +261,15 @@ export function DashboardClient() {
                   </div>
 
                   <div className="w-full flex-1 flex flex-col min-h-0">
-                    {gridFilter === "Story" ? (
+                    {status === "unauthenticated" ? (
+                      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
+                        <div className="w-16 h-16 bg-soft-100 rounded-full flex items-center justify-center mb-2">
+                          <Grid3X3 className="text-soft-400" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-foreground">Sign up first or login</h3>
+                        <p className="text-foreground/60 max-w-xs text-sm">You need an account to arrange your grid and upload photos.</p>
+                      </div>
+                    ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
                         <StoryFolderView 
                           folder={items.find(i => i.id === activeStoryFolderId)!}

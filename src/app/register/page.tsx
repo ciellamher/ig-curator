@@ -8,7 +8,7 @@ import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,11 +18,23 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      setLoading(false);
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError("Password must contain both letters and numbers");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await res.json();
@@ -36,7 +48,7 @@ export default function RegisterPage() {
       // Auto login after registration
       const loginRes = await signIn("credentials", {
         redirect: false,
-        email,
+        username,
         password,
       });
 
@@ -71,13 +83,13 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-soft-200 focus:outline-none focus:ring-2 focus:ring-pastel-500/20 focus:border-pastel-500 transition-all text-sm"
-              placeholder="you@example.com"
+              placeholder="curator"
               required
             />
           </div>

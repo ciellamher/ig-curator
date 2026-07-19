@@ -9,7 +9,7 @@ import { Camera } from "lucide-react";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,12 +21,12 @@ export default function LoginPage() {
 
     const res = await signIn("credentials", {
       redirect: false,
-      email,
+      username,
       password,
     });
 
     if (res?.error) {
-      setError("Invalid email or password");
+      setError("Invalid username or password");
       setLoading(false);
     } else {
       router.push("/");
@@ -53,13 +53,13 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-soft-200 focus:outline-none focus:ring-2 focus:ring-pastel-500/20 focus:border-pastel-500 transition-all text-sm"
-              placeholder="you@example.com"
+              placeholder="curator"
               required
             />
           </div>
