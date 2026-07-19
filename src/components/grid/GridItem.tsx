@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock, Camera } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock, Camera, Trash2 } from "lucide-react";
 import { uploadImage } from "@/app/actions/upload";
 import { SlotItem } from "@/types";
 
@@ -14,9 +14,10 @@ interface GridItemProps {
   isActive: boolean;
   onClick: () => void;
   onDoubleClick?: () => void;
+  onDelete?: (id: string) => void;
 }
 
-export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDoubleClick }: GridItemProps) {
+export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDoubleClick, onDelete }: GridItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,26 +38,32 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setIsUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        const newUrls = [...item.urls, base64String];
-        updateItem(item.id, {
-          type: "image",
-          urls: newUrls,
-          currentUrlIndex: newUrls.length - 1,
-        });
-        setIsUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const base64Promises = files.map(file => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      }));
+
+      const newBase64Strings = await Promise.all(base64Promises);
+      const newUrls = [...item.urls, ...newBase64Strings];
+      
+      updateItem(item.id, {
+        type: "image",
+        urls: newUrls,
+        currentUrlIndex: item.urls.length, // point to the first new option
+      });
     } catch (error) {
       console.error("Upload failed", error);
+    } finally {
       setIsUploading(false);
+      // Reset input so the same files can be selected again if needed
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -84,7 +91,12 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
+      onClick={(e) => {
+        onClick();
+        if (item.urls.length > 1) {
+          nextImage(e);
+        }
+      }}
       onDoubleClick={onDoubleClick}
       className={`relative w-full overflow-hidden cursor-grab active:cursor-grabbing transition-all group ${
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
@@ -98,6 +110,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         onChange={handleUpload}
         className="hidden"
         accept="image/*"
+        multiple
       />
 
       {item.type === "image" && item.urls.length > 0 ? (
@@ -108,22 +121,29 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
             className="w-full h-full object-cover"
           />
           {item.urls.length > 1 && (
-            <div className="absolute inset-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button 
-                onClick={prevImage} 
-                onPointerDown={(e) => e.stopPropagation()}
-                className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <button 
-                onClick={nextImage} 
-                onPointerDown={(e) => e.stopPropagation()}
-                className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
+            <>
+              {/* Counter Indicator */}
+              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 pointer-events-none">
+                {item.currentUrlIndex! + 1} / {item.urls.length}
+              </div>
+              
+              <div className="absolute inset-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={prevImage} 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <button 
+                  onClick={nextImage} 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </>
           )}
         </div>
       ) : (
@@ -178,11 +198,27 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
               e.stopPropagation();
               fileInputRef.current?.click();
             }}
-            className="text-foreground hover:text-pastel-500 transition-colors"
+            className="text-foreground hover:text-pastel-500 transition-colors p-1"
             title="Upload Image"
           >
-            <Upload size={14} />
+            <Upload size={16} />
           </button>
+          
+          {onDelete && (
+            <>
+              <div className="w-[1px] h-4 bg-soft-200 mx-1"></div>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
+                className="text-foreground hover:text-red-500 transition-colors p-1"
+                title="Delete Box"
+              >
+                <Trash2 size={16} />
+              </button>
+            </>
+          )}
         </div>
       )}
 

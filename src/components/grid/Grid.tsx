@@ -27,9 +27,10 @@ interface GridProps {
   setActiveSlotId: (id: string) => void;
   gridFilter?: string;
   onDoubleClickItem?: (id: string) => void;
+  onDeleteItem?: (id: string) => void;
 }
 
-export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem }: GridProps) {
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem }: GridProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -72,6 +73,7 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
                 isActive={activeSlotId === item.id}
                 onClick={() => setActiveSlotId(item.id)}
                 onDoubleClick={() => onDoubleClickItem?.(item.id)}
+                onDelete={onDeleteItem ? () => onDeleteItem(item.id) : undefined}
               />
             ))}
           </SortableContext>

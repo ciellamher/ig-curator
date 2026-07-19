@@ -83,6 +83,10 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
                       setIsPreviewOpen(true);
                     }
                   }}
+                  onDelete={(id) => {
+                    updateItems(prev => prev.filter(i => i.id !== id));
+                    if (activeSlotId === id) setActiveSlotId(null);
+                  }}
                 />
               ))}
             </SortableContext>

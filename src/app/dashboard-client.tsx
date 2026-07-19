@@ -35,6 +35,19 @@ export function DashboardClient() {
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null)
   const [previewSlotId, setPreviewSlotId] = useState<string | null>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ig-curator-items")
+    if (saved) {
+      try {
+        setItems(JSON.parse(saved))
+      } catch (e) {
+        console.error("Failed to parse saved items")
+      }
+    }
+    setIsLoaded(true)
+  }, [])
 
   useEffect(() => {
     async function loadLiveGrid() {
@@ -76,9 +89,10 @@ export function DashboardClient() {
         ? newItemsOrUpdater(currentItems) 
         : newItemsOrUpdater;
       
-      // Save to history if changed
+      // Save to history and local storage if changed
       if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
         setHistory(prev => [...prev, currentItems].slice(-30));
+        localStorage.setItem("ig-curator-items", JSON.stringify(nextItems));
       }
       return nextItems;
     });
@@ -89,6 +103,7 @@ export function DashboardClient() {
       if (prev.length === 0) return prev;
       const previousState = prev[prev.length - 1];
       setItems(previousState);
+      localStorage.setItem("ig-curator-items", JSON.stringify(previousState));
       return prev.slice(0, -1);
     });
   }
@@ -114,6 +129,8 @@ export function DashboardClient() {
       setIsSaving(false)
     }
   }
+
+  if (!isLoaded) return null;
 
   return (
     <div className="w-full flex flex-col min-h-screen bg-soft-50">
@@ -264,6 +281,11 @@ export function DashboardClient() {
                         setActiveSlotId={setActiveSlotId}
                         gridFilter={gridFilter}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
+                        onDeleteItem={(id) => {
+                          updateItems(prev => prev.filter(item => item.id !== id));
+                          if (activeSlotId === id) setActiveSlotId(null);
+                          if (previewSlotId === id) setPreviewSlotId(null);
+                        }}
                       />
                     )}
                   </div>

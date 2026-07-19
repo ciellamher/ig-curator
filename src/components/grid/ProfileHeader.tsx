@@ -22,29 +22,10 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
           <button onClick={onAddRow} title="Add Row" className="hover:text-pastel-500 transition-colors">
             <Plus size={24} className="text-foreground" strokeWidth={2.5} />
           </button>
-          {!session?.user ? (
-            <div className="flex gap-2">
-              <button 
-                onClick={() => signIn("instagram")}
-                className="px-4 py-2 bg-gradient-to-r from-pastel-400 to-pastel-500 text-white rounded-full text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
-              >
-                Sign in with IG
-              </button>
-              <button 
-                onClick={() => signIn("demo")}
-                className="px-4 py-2 bg-foreground text-white rounded-full text-sm font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
-              >
-                Demo Mode
-              </button>
-            </div>
-          ) : (
-            <>
-              {canUndo && (
-                <button onClick={onUndo} title="Undo" className="hover:text-pastel-500 transition-colors">
-                  <Undo2 size={22} className="text-foreground" strokeWidth={2.5} />
-                </button>
-              )}
-            </>
+          {canUndo && (
+            <button onClick={onUndo} title="Undo" className="hover:text-pastel-500 transition-colors">
+              <Undo2 size={22} className="text-foreground" strokeWidth={2.5} />
+            </button>
           )}
         </div>
 
