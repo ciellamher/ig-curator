@@ -3,6 +3,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import GoogleProvider from "next-auth/providers/google"
 import EmailProvider from "next-auth/providers/email"
 import InstagramProvider from "next-auth/providers/instagram"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 
 export const authOptions: NextAuthOptions = {
@@ -19,6 +20,18 @@ export const authOptions: NextAuthOptions = {
     InstagramProvider({
       clientId: process.env.INSTAGRAM_CLIENT_ID || "",
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET || "",
+    }),
+    CredentialsProvider({
+      id: "demo",
+      name: "Demo Account",
+      credentials: {},
+      async authorize() {
+        return {
+          id: "demo_user",
+          name: "demo_user",
+          email: "demo@example.com",
+        }
+      }
     }),
   ],
   session: {
@@ -42,6 +55,9 @@ export const authOptions: NextAuthOptions = {
       }
       if (account && account.provider === "instagram") {
         token.instagramAccessToken = account.access_token
+      }
+      if (account && account.provider === "demo") {
+        token.instagramAccessToken = "demo_token_123"
       }
       return token
     },

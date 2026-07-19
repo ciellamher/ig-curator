@@ -25,9 +25,11 @@ interface GridProps {
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   activeSlotId: string | null;
   setActiveSlotId: (id: string) => void;
+  gridFilter?: string;
+  onDoubleClickItem?: (id: string) => void;
 }
 
-export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId }: GridProps) {
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem }: GridProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -59,16 +61,17 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-3 gap-1">
+        <div className="grid grid-cols-3 gap-[1px] bg-white">
           <SortableContext items={items} strategy={rectSortingStrategy}>
             {items.map((item) => (
               <GridItem 
                 key={item.id} 
                 item={item} 
                 updateItem={updateItem}
-                isStoryMode={false} // Story mode can be toggleable elsewhere if needed
+                gridFilter={gridFilter}
                 isActive={activeSlotId === item.id}
                 onClick={() => setActiveSlotId(item.id)}
+                onDoubleClick={() => onDoubleClickItem?.(item.id)}
               />
             ))}
           </SortableContext>

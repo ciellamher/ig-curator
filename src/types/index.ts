@@ -1,4 +1,4 @@
-export type ContentType = "Post" | "Reel" | "Carousel" | "Story";
+export type ContentType = "Post" | "Reel" | "Carousel" | "Story" | "StoryFolder" | "TikTok";
 
 export type SlotItem = {
   id: string;
@@ -13,6 +13,7 @@ export type SlotItem = {
   audioTrack?: string;
   contentType?: ContentType;
   scheduledTime?: string;
+  folderId?: string; // Links a story item to its parent StoryFolder
   
   // Instagram Sync
   isLocked?: boolean;

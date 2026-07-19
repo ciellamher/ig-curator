@@ -10,12 +10,13 @@ import { SlotItem } from "@/types";
 interface GridItemProps {
   item: SlotItem;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
-  isStoryMode: boolean;
+  gridFilter: string;
   isActive: boolean;
   onClick: () => void;
+  onDoubleClick?: () => void;
 }
 
-export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: GridItemProps) {
+export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDoubleClick }: GridItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -41,19 +42,20 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await uploadImage(formData);
-      
-      const newUrls = [...item.urls, res.url];
-      updateItem(item.id, {
-        type: "image",
-        urls: newUrls,
-        currentUrlIndex: newUrls.length - 1,
-      });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        const newUrls = [...item.urls, base64String];
+        updateItem(item.id, {
+          type: "image",
+          urls: newUrls,
+          currentUrlIndex: newUrls.length - 1,
+        });
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
       console.error("Upload failed", error);
-    } finally {
       setIsUploading(false);
     }
   };
@@ -83,10 +85,11 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
       {...attributes}
       {...listeners}
       onClick={onClick}
-      className={`relative w-full rounded-2xl overflow-hidden shadow-diffused-sm cursor-grab active:cursor-grabbing transition-all group ${
-        isStoryMode ? "aspect-[9/16]" : "aspect-square"
-      } ${isDragging ? "shadow-diffused scale-105" : ""} ${
-        isActive ? "ring-2 ring-pastel-400 ring-offset-2" : ""
+      onDoubleClick={onDoubleClick}
+      className={`relative w-full overflow-hidden cursor-grab active:cursor-grabbing transition-all group ${
+        ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
+      } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
+        isActive ? "ring-2 ring-pastel-400 ring-offset-0 z-10" : ""
       }`}
     >
       <input
@@ -125,15 +128,17 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
         </div>
       ) : (
         <div
-          className="w-full h-full flex flex-col items-center justify-center p-4 relative"
+          className="w-full h-full flex flex-col items-center justify-center p-2 relative"
           style={{ backgroundColor: item.hexColor }}
         >
           {item.text ? (
-            <span className="text-foreground text-center font-medium drop-shadow-sm text-sm truncate w-full">
+            <span className="text-white text-center font-extrabold text-lg drop-shadow-md leading-tight w-full break-words px-2">
               {item.text}
             </span>
           ) : (
-            <div className="w-1/3 h-1/3 rounded-full bg-white/40 backdrop-blur-sm shadow-diffused-sm mb-2" />
+            <span className="text-white/90 text-center font-extrabold text-lg drop-shadow-md leading-tight w-full break-words px-2">
+              Slot
+            </span>
           )}
         </div>
       )}
