@@ -23,7 +23,7 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
 
   const handleAddStory = () => {
     const newStory: SlotItem = {
-      id: `story-${Date.now()}`,
+      id: `story-${Math.floor(Math.random() * 1000000)}`,
       type: "placeholder",
       urls: [],
       currentUrlIndex: 0,

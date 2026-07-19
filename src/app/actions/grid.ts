@@ -17,7 +17,7 @@ export async function saveGridSlot(item: SlotItem) {
   // @ts-ignore - id is added in callbacks
   const userId = session.user.id
 
-  const position = parseInt(item.id.replace("slot-", ""))
+  const position = parseInt(item.id.replace("slot-", "").replace("story-", ""))
   if (isNaN(position)) {
     throw new Error("Invalid slot ID")
   }
