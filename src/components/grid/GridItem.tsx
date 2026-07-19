@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock, Camera } from "lucide-react";
 import { uploadImage } from "@/app/actions/upload";
 import { SlotItem } from "@/types";
 
@@ -27,7 +27,7 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: item.isLocked });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -141,6 +141,11 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
 
       {/* Visual Badges */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
+        {item.isLocked && (
+          <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white p-1 rounded-full shadow-sm">
+            <Camera size={12} />
+          </div>
+        )}
         {item.contentType === "Reel" && (
           <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-sm">
             <Video size={12} />
@@ -158,32 +163,34 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
         )}
       </div>
 
-      {/* Hover/Edit Controls */}
-      <div 
-        className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            fileInputRef.current?.click();
-          }}
-          className="text-foreground hover:text-pastel-500 transition-colors"
-          title="Upload Image"
+      {/* Hover/Edit Controls (Hidden if locked) */}
+      {!item.isLocked && (
+        <div 
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm"
+          onPointerDown={(e) => e.stopPropagation()}
         >
-          <Upload size={14} />
-        </button>
-        <button 
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsEditing(!isEditing);
-          }}
-          className="text-foreground hover:text-pastel-500 transition-colors"
-          title="Edit Placeholder"
-        >
-          <Type size={14} />
-        </button>
-      </div>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            className="text-foreground hover:text-pastel-500 transition-colors"
+            title="Upload Image"
+          >
+            <Upload size={14} />
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(!isEditing);
+            }}
+            className="text-foreground hover:text-pastel-500 transition-colors"
+            title="Edit Placeholder"
+          >
+            <Type size={14} />
+          </button>
+        </div>
+      )}
 
       {isUploading && (
         <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm pointer-events-none">

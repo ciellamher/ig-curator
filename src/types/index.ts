@@ -13,4 +13,7 @@ export type SlotItem = {
   audioTrack?: string;
   contentType?: ContentType;
   scheduledTime?: string;
+  
+  // Instagram Sync
+  isLocked?: boolean;
 };

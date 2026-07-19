@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { Grid } from "@/components/grid/Grid"
 import { EditorPanel } from "@/components/editor/EditorPanel"
 import { SlotItem } from "@/types"
+import { getLiveGrid } from "@/app/actions/instagram"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index}`,
@@ -15,9 +17,38 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
 }))
 
 export function DashboardClient() {
+  const { data: session, status } = useSession()
   const [items, setItems] = useState<SlotItem[]>(initialItems)
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    async function loadLiveGrid() {
+      // @ts-ignore
+      if (status === "authenticated" && session?.instagramAccessToken) {
+        const res = await getLiveGrid()
+        if (res.success && res.liveItems) {
+          setItems(current => {
+            const newItems = [...current]
+            res.liveItems.forEach((livePost: any, index: number) => {
+              if (index < newItems.length) {
+                newItems[index] = {
+                  ...newItems[index],
+                  type: "image",
+                  urls: [livePost.url],
+                  currentUrlIndex: 0,
+                  caption: livePost.caption || "",
+                  isLocked: true,
+                }
+              }
+            })
+            return newItems
+          })
+        }
+      }
+    }
+    loadLiveGrid()
+  }, [status, session])
 
   const activeSlot = items.find(item => item.id === activeSlotId) || null
 
