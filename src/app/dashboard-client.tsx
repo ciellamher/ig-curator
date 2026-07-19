@@ -129,7 +129,13 @@ export function DashboardClient() {
     setIsSaving(true)
     try {
       const { saveGridSlot } = await import("@/app/actions/grid")
-      await saveGridSlot(activeSlot)
+      const result = await saveGridSlot(activeSlot)
+      
+      if (result && !result.success) {
+        alert("Server Error: " + result.error)
+        return
+      }
+      
       alert("Saved successfully!")
     } catch (error: any) {
       console.error(error)
