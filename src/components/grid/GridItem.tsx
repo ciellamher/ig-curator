@@ -239,7 +239,15 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(item.id);
+                  if (item.urls.length > 1) {
+                    const newUrls = item.urls.filter((_, i) => i !== item.currentUrlIndex);
+                    updateItem(item.id, { 
+                      urls: newUrls,
+                      currentUrlIndex: Math.max(0, item.currentUrlIndex - 1)
+                    });
+                  } else {
+                    onDelete(item.id);
+                  }
                 }}
                 className="text-foreground hover:text-red-500 transition-colors p-1"
                 title="Delete Box"
