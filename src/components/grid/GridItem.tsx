@@ -3,25 +3,19 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, ChevronRight, Upload, Type } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock } from "lucide-react";
 import { uploadImage } from "@/app/actions/upload";
-
-export type SlotItem = {
-  id: string;
-  type: "image" | "placeholder";
-  urls: string[];
-  currentUrlIndex: number;
-  hexColor: string;
-  text: string;
-};
+import { SlotItem } from "@/types";
 
 interface GridItemProps {
   item: SlotItem;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   isStoryMode: boolean;
+  isActive: boolean;
+  onClick: () => void;
 }
 
-export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
+export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: GridItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -82,23 +76,18 @@ export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
     }
   };
 
-  const handleHexChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateItem(item.id, { hexColor: e.target.value });
-  };
-
-  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateItem(item.id, { text: e.target.value });
-  };
-
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative w-full rounded-2xl overflow-hidden shadow-diffused-sm cursor-grab active:cursor-grabbing transition-shadow group ${
+      onClick={onClick}
+      className={`relative w-full rounded-2xl overflow-hidden shadow-diffused-sm cursor-grab active:cursor-grabbing transition-all group ${
         isStoryMode ? "aspect-[9/16]" : "aspect-square"
-      } ${isDragging ? "shadow-diffused scale-105" : ""}`}
+      } ${isDragging ? "shadow-diffused scale-105" : ""} ${
+        isActive ? "ring-2 ring-pastel-400 ring-offset-2" : ""
+      }`}
       onDoubleClick={() => setIsEditing(!isEditing)}
     >
       <input
@@ -150,20 +139,45 @@ export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
         </div>
       )}
 
+      {/* Visual Badges */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
+        {item.contentType === "Reel" && (
+          <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-sm">
+            <Video size={12} />
+          </div>
+        )}
+        {item.contentType === "Carousel" && (
+          <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-sm">
+            <GalleryHorizontal size={12} />
+          </div>
+        )}
+        {item.scheduledTime && (
+          <div className="bg-pastel-500 text-white p-1 rounded-full shadow-sm">
+            <Clock size={12} />
+          </div>
+        )}
+      </div>
+
       {/* Hover/Edit Controls */}
       <div 
         className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm"
         onPointerDown={(e) => e.stopPropagation()}
       >
         <button 
-          onClick={() => fileInputRef.current?.click()}
+          onClick={(e) => {
+            e.stopPropagation();
+            fileInputRef.current?.click();
+          }}
           className="text-foreground hover:text-pastel-500 transition-colors"
           title="Upload Image"
         >
           <Upload size={14} />
         </button>
         <button 
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditing(!isEditing);
+          }}
           className="text-foreground hover:text-pastel-500 transition-colors"
           title="Edit Placeholder"
         >
@@ -172,7 +186,7 @@ export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
       </div>
 
       {isUploading && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm">
+        <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm pointer-events-none">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pastel-500"></div>
         </div>
       )}
@@ -188,7 +202,7 @@ export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
             <input 
               type="text" 
               value={item.hexColor} 
-              onChange={handleHexChange}
+              onChange={(e) => updateItem(item.id, { hexColor: e.target.value })}
               placeholder="#fdfdfd"
               className="px-2 py-1 border border-soft-200 rounded outline-none focus:border-pastel-300"
             />
@@ -198,7 +212,7 @@ export function GridItem({ item, updateItem, isStoryMode }: GridItemProps) {
             <input 
               type="text" 
               value={item.text} 
-              onChange={handleTextChange}
+              onChange={(e) => updateItem(item.id, { text: e.target.value })}
               placeholder="Moodboard text..."
               className="px-2 py-1 border border-soft-200 rounded outline-none focus:border-pastel-300"
             />

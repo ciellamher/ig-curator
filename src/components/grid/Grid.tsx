@@ -16,20 +16,19 @@ import {
   sortableKeyboardCoordinates,
   rectSortingStrategy,
 } from "@dnd-kit/sortable"
-import { GridItem, SlotItem } from "./GridItem"
+import { GridItem } from "./GridItem"
 import { LayoutGrid, Smartphone } from "lucide-react"
+import { SlotItem } from "@/types"
 
-const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
-  id: `slot-${index}`,
-  type: "placeholder",
-  urls: [],
-  currentUrlIndex: 0,
-  hexColor: index % 2 === 0 ? "var(--color-pastel-50)" : "var(--color-soft-50)",
-  text: "",
-}))
+interface GridProps {
+  items: SlotItem[];
+  setItems: React.Dispatch<React.SetStateAction<SlotItem[]>>;
+  updateItem: (id: string, updates: Partial<SlotItem>) => void;
+  activeSlotId: string | null;
+  setActiveSlotId: (id: string) => void;
+}
 
-export function Grid() {
-  const [items, setItems] = useState<SlotItem[]>(initialItems)
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId }: GridProps) {
   const [isStoryMode, setIsStoryMode] = useState(false)
 
   const sensors = useSensors(
@@ -54,12 +53,6 @@ export function Grid() {
         return arrayMove(items, oldIndex, newIndex)
       })
     }
-  }
-
-  function updateItem(id: string, updates: Partial<SlotItem>) {
-    setItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    )
   }
 
   return (
@@ -98,6 +91,8 @@ export function Grid() {
                 item={item} 
                 updateItem={updateItem}
                 isStoryMode={isStoryMode}
+                isActive={activeSlotId === item.id}
+                onClick={() => setActiveSlotId(item.id)}
               />
             ))}
           </SortableContext>
