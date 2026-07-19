@@ -17,7 +17,6 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable"
 import { GridItem } from "./GridItem"
-import { LayoutGrid, Smartphone } from "lucide-react"
 import { SlotItem } from "@/types"
 
 interface GridProps {
@@ -29,8 +28,6 @@ interface GridProps {
 }
 
 export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId }: GridProps) {
-  const [isStoryMode, setIsStoryMode] = useState(false)
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -56,41 +53,20 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
   }
 
   return (
-    <div className="max-w-[420px] mx-auto w-full p-6 bg-white rounded-[2rem] shadow-diffused border border-soft-100 flex flex-col gap-6">
-      
-      {/* Toggle Header */}
-      <div className="flex items-center justify-center bg-soft-50 rounded-full p-1 self-center">
-        <button
-          onClick={() => setIsStoryMode(false)}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-            !isStoryMode ? "bg-white text-foreground shadow-sm" : "text-foreground/50 hover:text-foreground"
-          }`}
-        >
-          <LayoutGrid size={16} /> Grid
-        </button>
-        <button
-          onClick={() => setIsStoryMode(true)}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-medium transition-colors ${
-            isStoryMode ? "bg-white text-foreground shadow-sm" : "text-foreground/50 hover:text-foreground"
-          }`}
-        >
-          <Smartphone size={16} /> Story
-        </button>
-      </div>
-
+    <div className="w-full h-full pb-20">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className={`grid ${isStoryMode ? 'grid-cols-3 gap-2' : 'grid-cols-3 gap-3'}`}>
+        <div className="grid grid-cols-3 gap-1">
           <SortableContext items={items} strategy={rectSortingStrategy}>
             {items.map((item) => (
               <GridItem 
                 key={item.id} 
                 item={item} 
                 updateItem={updateItem}
-                isStoryMode={isStoryMode}
+                isStoryMode={false} // Story mode can be toggleable elsewhere if needed
                 isActive={activeSlotId === item.id}
                 onClick={() => setActiveSlotId(item.id)}
               />

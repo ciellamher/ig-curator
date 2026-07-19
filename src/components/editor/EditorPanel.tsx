@@ -76,6 +76,30 @@ export function EditorPanel({ activeSlot, updateSlot, onSave, isSaving }: Editor
           className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-300 text-sm text-foreground"
         />
       </div>
+
+      <div className="border-t border-soft-200 my-2 pt-4 flex flex-col gap-4">
+        <h4 className="text-sm font-medium text-foreground">Placeholder Appearance</h4>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-foreground/80">Hex Color</label>
+          <input
+            type="text"
+            value={activeSlot.hexColor || ""}
+            onChange={(e) => updateSlot(activeSlot.id, { hexColor: e.target.value })}
+            placeholder="#fdfdfd"
+            className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-300 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-foreground/80">Overlay Text</label>
+          <input
+            type="text"
+            value={activeSlot.text || ""}
+            onChange={(e) => updateSlot(activeSlot.id, { text: e.target.value })}
+            placeholder="Moodboard text..."
+            className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-300 text-sm"
+          />
+        </div>
+      </div>
     </div>
   );
 }

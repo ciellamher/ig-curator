@@ -6,8 +6,11 @@ import { Grid } from "@/components/grid/Grid"
 import { EditorPanel } from "@/components/editor/EditorPanel"
 import { SlotItem } from "@/types"
 import { getLiveGrid } from "@/app/actions/instagram"
+import { CalendarView } from "@/components/calendar/CalendarView"
+import { MediaLibrary } from "@/components/media/MediaLibrary"
+import { PenTool, Calendar, Image as ImageIcon, Hash } from "lucide-react"
 
-const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
+const initialItems: SlotItem[] = Array.from({ length: 60 }).map((_, index) => ({
   id: `slot-${index}`,
   type: "placeholder",
   urls: [],
@@ -21,6 +24,7 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems)
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR" | "MEDIA" | "HASHTAGS">("CREATE")
 
   useEffect(() => {
     async function loadLiveGrid() {
@@ -63,8 +67,6 @@ export function DashboardClient() {
     
     setIsSaving(true)
     try {
-      // In a real environment with auth working, this will save to DB.
-      // We will catch errors if user is not logged in.
       const { saveGridSlot } = await import("@/app/actions/grid")
       await saveGridSlot(activeSlot)
       alert("Saved successfully!")
@@ -77,26 +79,98 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-8 items-start justify-center">
-      {/* Left Side: Drag-and-Drop Grid */}
-      <div className="flex-1 w-full flex justify-center lg:justify-end">
-        <Grid 
-          items={items} 
-          setItems={setItems} 
-          updateItem={updateItem}
-          activeSlotId={activeSlotId}
-          setActiveSlotId={setActiveSlotId}
-        />
+    <div className="w-full flex flex-col min-h-screen bg-soft-50">
+      {/* Sub-Navigation Tabs */}
+      <div className="w-full bg-white border-b border-soft-100 px-6 py-4 flex gap-8 shadow-sm overflow-x-auto">
+        <button 
+          onClick={() => setActiveTab("CREATE")}
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "CREATE" ? "text-pastel-600" : "text-foreground/60 hover:text-foreground"}`}
+        >
+          <PenTool size={16} /> CREATE
+        </button>
+        <button 
+          onClick={() => setActiveTab("CALENDAR")}
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "CALENDAR" ? "text-pastel-600" : "text-foreground/60 hover:text-foreground"}`}
+        >
+          <Calendar size={16} /> CALENDAR
+        </button>
+        <button 
+          onClick={() => setActiveTab("MEDIA")}
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "MEDIA" ? "text-pastel-600" : "text-foreground/60 hover:text-foreground"}`}
+        >
+          <ImageIcon size={16} /> MEDIA
+        </button>
+        <button 
+          onClick={() => setActiveTab("HASHTAGS")}
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${activeTab === "HASHTAGS" ? "text-pastel-600" : "text-foreground/60 hover:text-foreground"}`}
+        >
+          <Hash size={16} /> HASHTAGS
+        </button>
       </div>
-      
-      {/* Right Side: Editor & Timeline */}
-      <div className="flex-1 w-full max-w-[500px] flex flex-col gap-6">
-        <EditorPanel 
-          activeSlot={activeSlot} 
-          updateSlot={updateItem} 
-          onSave={handleSave}
-          isSaving={isSaving}
-        />
+
+      <div className="flex-1 w-full max-w-[1400px] mx-auto p-4 md:p-8">
+        {activeTab === "CREATE" && (
+          <div className="flex flex-col lg:flex-row gap-8 h-[calc(100vh-140px)]">
+            
+            {/* Left Column: Media Library */}
+            <div className="flex-1 min-w-[300px] bg-white rounded-2xl shadow-diffused border border-soft-100 overflow-hidden flex flex-col">
+              <MediaLibrary />
+            </div>
+
+            {/* Right Column: Phone Mockup Grid */}
+            <div className="w-full max-w-[400px] mx-auto lg:mx-0 flex flex-col">
+              <div className="bg-white rounded-[3rem] p-4 shadow-xl border-[8px] border-soft-200 h-full max-h-[800px] overflow-hidden flex flex-col relative">
+                {/* Phone Notch */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-soft-200 rounded-b-2xl z-20"></div>
+                
+                <div className="flex-1 overflow-y-auto no-scrollbar pt-6">
+                  <Grid 
+                    items={items} 
+                    setItems={setItems} 
+                    updateItem={updateItem}
+                    activeSlotId={activeSlotId}
+                    setActiveSlotId={setActiveSlotId}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Optional Editor Panel Popup or Side-pane when slot is active */}
+            {activeSlotId && (
+              <div className="absolute right-4 top-24 w-80 bg-white/95 backdrop-blur shadow-2xl border border-soft-200 rounded-2xl z-50">
+                <EditorPanel 
+                  activeSlot={activeSlot} 
+                  updateSlot={updateItem} 
+                  onSave={handleSave}
+                  isSaving={isSaving}
+                />
+                <button 
+                  onClick={() => setActiveSlotId(null)}
+                  className="absolute top-4 right-4 text-xs font-medium text-foreground/50 hover:text-foreground"
+                >
+                  Close
+                </button>
+              </div>
+            )}
+            
+          </div>
+        )}
+
+        {activeTab === "CALENDAR" && (
+          <CalendarView items={items} />
+        )}
+        
+        {activeTab === "MEDIA" && (
+          <div className="bg-white rounded-2xl shadow-diffused border border-soft-100 p-8 text-center text-foreground/50 h-64 flex items-center justify-center">
+            Media Management coming soon...
+          </div>
+        )}
+
+        {activeTab === "HASHTAGS" && (
+          <div className="bg-white rounded-2xl shadow-diffused border border-soft-100 p-8 text-center text-foreground/50 h-64 flex items-center justify-center">
+            Hashtag Collections coming soon...
+          </div>
+        )}
       </div>
     </div>
   )

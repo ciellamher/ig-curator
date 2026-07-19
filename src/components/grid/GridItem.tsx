@@ -88,7 +88,6 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
       } ${isDragging ? "shadow-diffused scale-105" : ""} ${
         isActive ? "ring-2 ring-pastel-400 ring-offset-2" : ""
       }`}
-      onDoubleClick={() => setIsEditing(!isEditing)}
     >
       <input
         type="file"
@@ -179,68 +178,12 @@ export function GridItem({ item, updateItem, isStoryMode, isActive, onClick }: G
           >
             <Upload size={14} />
           </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(!isEditing);
-            }}
-            className="text-foreground hover:text-pastel-500 transition-colors"
-            title="Edit Placeholder"
-          >
-            <Type size={14} />
-          </button>
         </div>
       )}
 
       {isUploading && (
         <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm pointer-events-none">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pastel-500"></div>
-        </div>
-      )}
-
-      {/* Editing Popover */}
-      {isEditing && (
-        <div 
-          className="absolute inset-0 bg-white/95 p-4 flex flex-col gap-3 justify-center text-sm z-20 backdrop-blur-md"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-foreground/70">Hex Color</label>
-            <input 
-              type="text" 
-              value={item.hexColor} 
-              onChange={(e) => updateItem(item.id, { hexColor: e.target.value })}
-              placeholder="#fdfdfd"
-              className="px-2 py-1 border border-soft-200 rounded outline-none focus:border-pastel-300"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-foreground/70">Text Overlay</label>
-            <input 
-              type="text" 
-              value={item.text} 
-              onChange={(e) => updateItem(item.id, { text: e.target.value })}
-              placeholder="Moodboard text..."
-              className="px-2 py-1 border border-soft-200 rounded outline-none focus:border-pastel-300"
-            />
-          </div>
-          <div className="flex justify-between items-center mt-2">
-            <button 
-              onClick={() => {
-                updateItem(item.id, { type: "placeholder" })
-                setIsEditing(false)
-              }}
-              className="text-xs text-foreground/70 hover:text-foreground"
-            >
-              Clear Image
-            </button>
-            <button 
-              onClick={() => setIsEditing(false)}
-              className="px-3 py-1 bg-pastel-500 text-white rounded hover:bg-pastel-400 transition-colors"
-            >
-              Done
-            </button>
-          </div>
         </div>
       )}
     </div>
