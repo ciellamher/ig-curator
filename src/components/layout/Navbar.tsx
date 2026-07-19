@@ -2,6 +2,7 @@
 
 import { signIn, signOut, useSession } from "next-auth/react"
 import { Camera } from "lucide-react"
+import Link from "next/link"
 
 export function Navbar() {
   const { data: session } = useSession()
@@ -26,12 +27,20 @@ export function Navbar() {
             </button>
           </div>
         ) : (
-          <button 
-            onClick={() => signIn("demo")}
-            className="text-sm font-medium bg-foreground text-white px-5 py-2 rounded-full hover:opacity-90 transition-opacity shadow-sm"
-          >
-            Log In
-          </button>
+          <div className="flex items-center gap-3">
+            <Link 
+              href="/login"
+              className="text-sm font-medium text-foreground px-4 py-2 rounded-full hover:bg-soft-50 transition-colors"
+            >
+              Log In
+            </Link>
+            <Link 
+              href="/register"
+              className="text-sm font-medium bg-foreground text-white px-5 py-2 rounded-full hover:opacity-90 transition-opacity shadow-sm"
+            >
+              Sign Up
+            </Link>
+          </div>
         )}
       </div>
     </nav>
