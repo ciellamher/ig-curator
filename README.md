@@ -1,6 +1,8 @@
 **ig-curator**
 A minimalist, drag-and-drop dashboard to visually curate and schedule Instagram grids, reels, and stories.
 
+🌐 **Live Demo:** [https://ig-curator.vercel.app/](https://ig-curator.vercel.app/)
+
 ### 01 — INSTALL
 
 **Local setup:**
