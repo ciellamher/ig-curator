@@ -17,4 +17,5 @@ export type SlotItem = {
   
   // Instagram Sync
   isLocked?: boolean;
+  isHiddenFromGrid?: boolean;
 };

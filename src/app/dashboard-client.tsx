@@ -225,7 +225,7 @@ export function DashboardClient() {
                         updateItems([newFolder, ...items]);
                       } else {
                         const newId = items.length;
-                        const numItemsToAdd = ["Reel", "Story"].includes(gridFilter) ? 1 : 3;
+                        const numItemsToAdd = 1;
                         const newRows = Array.from({ length: numItemsToAdd }).map((_, i) => ({
                           id: `slot-${Date.now()}-${i}`,
                           type: "placeholder" as const,
@@ -296,7 +296,7 @@ export function DashboardClient() {
                     ) : (
                       <Grid 
                         items={gridFilter === "All" 
-                          ? items.filter(i => i.contentType !== "StoryFolder" && !i.folderId) 
+                          ? items.filter(i => i.contentType !== "StoryFolder" && !i.folderId && !i.isHiddenFromGrid) 
                           : items.filter(i => i.contentType === gridFilter && !i.folderId)} 
                         setItems={updateItems} 
                         updateItem={updateItem}

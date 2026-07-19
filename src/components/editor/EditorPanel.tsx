@@ -41,6 +41,21 @@ export function EditorPanel({ activeSlot, updateSlot, onSave, isSaving }: Editor
           <>
 
 
+            {activeSlot.contentType === "Reel" && (
+              <div className="flex items-center gap-3 bg-soft-50 border border-soft-200 p-3 rounded-xl mb-2">
+                <input
+                  type="checkbox"
+                  id="hideFromGrid"
+                  checked={activeSlot.isHiddenFromGrid || false}
+                  onChange={(e) => updateSlot(activeSlot.id, { isHiddenFromGrid: e.target.checked })}
+                  className="w-4 h-4 rounded text-pastel-500 focus:ring-pastel-500/20"
+                />
+                <label htmlFor="hideFromGrid" className="text-sm font-medium text-foreground cursor-pointer">
+                  Hide from Profile Grid
+                </label>
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5 flex-1">
               <label className="text-xs font-bold text-foreground/70 uppercase tracking-wider">Caption & Hashtags</label>
               <textarea
