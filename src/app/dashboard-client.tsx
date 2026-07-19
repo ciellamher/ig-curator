@@ -228,7 +228,7 @@ export function DashboardClient() {
                           hexColor: "#E5D3C8",
                           text: "",
                           contentType: gridFilter === "All" ? "Post" : gridFilter as any,
-                          folderId: gridFilter === "Story" ? activeStoryFolderId : undefined,
+                          folderId: gridFilter === "Story" ? (activeStoryFolderId || undefined) : undefined,
                         }));
                         updateItems([...newRows, ...items]);
                       }
