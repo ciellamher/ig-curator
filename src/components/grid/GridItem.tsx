@@ -45,7 +45,36 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
     try {
       const base64Promises = files.map(file => new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const MAX_SIZE = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = Math.round((height * MAX_SIZE) / width);
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = Math.round((width * MAX_SIZE) / height);
+                height = MAX_SIZE;
+              }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            // Compress to JPEG to save massive amounts of storage
+            resolve(canvas.toDataURL("image/jpeg", 0.7));
+          };
+          img.onerror = reject;
+          img.src = e.target?.result as string;
+        };
         reader.onerror = reject;
         reader.readAsDataURL(file);
       }));

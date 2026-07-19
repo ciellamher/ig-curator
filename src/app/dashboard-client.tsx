@@ -92,7 +92,12 @@ export function DashboardClient() {
       // Save to history and local storage if changed
       if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
         setHistory(prev => [...prev, currentItems].slice(-30));
-        localStorage.setItem("ig-curator-items", JSON.stringify(nextItems));
+        try {
+          localStorage.setItem("ig-curator-items", JSON.stringify(nextItems));
+        } catch (error) {
+          console.error("Storage quota exceeded!", error);
+          alert("Warning: Local storage is full! Your latest changes might not be saved after a refresh. Please delete some old photos to free up space.");
+        }
       }
       return nextItems;
     });
@@ -103,7 +108,11 @@ export function DashboardClient() {
       if (prev.length === 0) return prev;
       const previousState = prev[prev.length - 1];
       setItems(previousState);
-      localStorage.setItem("ig-curator-items", JSON.stringify(previousState));
+      try {
+        localStorage.setItem("ig-curator-items", JSON.stringify(previousState));
+      } catch (e) {
+        // ignore
+      }
       return prev.slice(0, -1);
     });
   }
