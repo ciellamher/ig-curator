@@ -16,13 +16,13 @@ npm run dev
 
 Call the application locally in your browser to plan your content:
 
-> "Navigate to `http://localhost:3000` to arrange your grid, preview immersive story folders, and schedule upcoming posts."
+> "Navigate to `http://localhost:3000` to arrange your grid, upload multiple photo variations to cycle through, and preview immersive story folders."
 
 ### 03 — WHAT'S INSIDE
 
-- `src/app/` — Core Next.js routing and server-side actions.
-- `src/components/grid/` — The primary visual interface, including the drag-and-drop planner and true-to-life Instagram preview modals.
-- `src/lib/` — Configuration for NextAuth authentication and database connections.
+- `src/app/` — Core Next.js routing, local storage persistence, and server-side actions.
+- `src/components/grid/` — The primary visual interface, including the drag-and-drop planner, multi-photo cycling, and true-to-life Instagram preview modals.
+- `src/lib/` — Configuration for authentication and database connections.
 
 ### 04 — LICENSE
 
