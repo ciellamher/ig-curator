@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+**ig-curator**
+A minimalist, drag-and-drop dashboard to visually curate and schedule Instagram grids, reels, and stories.
 
-## Getting Started
+### 01 — INSTALL
 
-First, run the development server:
+**Local setup:**
 
 ```bash
+git clone https://github.com/ciellamher/ig-curator.git
+cd ig-curator
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 02 — USE
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Call the application locally in your browser to plan your content:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> "Navigate to `http://localhost:3000` to arrange your grid, preview immersive story folders, and schedule upcoming posts."
 
-## Learn More
+### 03 — WHAT'S INSIDE
 
-To learn more about Next.js, take a look at the following resources:
+- `src/app/` — Core Next.js routing and server-side actions.
+- `src/components/grid/` — The primary visual interface, including the drag-and-drop planner and true-to-life Instagram preview modals.
+- `src/lib/` — Configuration for NextAuth authentication and database connections.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 04 — LICENSE
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
