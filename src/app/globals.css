@@ -1,8 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fdfdfd;
+  --foreground: #4a4a4a;
+  
+  /* Delicate pastel pinks */
+  --pastel-pink-50: #fff1f2;
+  --pastel-pink-100: #ffe4e6;
+  --pastel-pink-200: #fecdd3;
+  --pastel-pink-300: #fda4af;
+  --pastel-pink-400: #fb7185;
+  --pastel-pink-500: #f43f5e;
+  
+  /* Soft greys */
+  --soft-grey-50: #f9fafb;
+  --soft-grey-100: #f3f4f6;
+  --soft-grey-200: #e5e7eb;
 }
 
 @theme inline {
@@ -10,17 +23,25 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  
+  --color-pastel-50: var(--pastel-pink-50);
+  --color-pastel-100: var(--pastel-pink-100);
+  --color-pastel-200: var(--pastel-pink-200);
+  --color-pastel-300: var(--pastel-pink-300);
+  --color-pastel-400: var(--pastel-pink-400);
+  --color-pastel-500: var(--pastel-pink-500);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-soft-50: var(--soft-grey-50);
+  --color-soft-100: var(--soft-grey-100);
+  --color-soft-200: var(--soft-grey-200);
+  
+  /* Diffused shadows */
+  --shadow-diffused: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+  --shadow-diffused-sm: 0 4px 20px -5px rgba(0, 0, 0, 0.03);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), sans-serif;
 }
