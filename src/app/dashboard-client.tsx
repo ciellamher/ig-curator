@@ -42,6 +42,13 @@ export function DashboardClient() {
   const [syncStatus, setSyncStatus] = useState<"Idle" | "Saving..." | "Saved" | "Error">("Idle")
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      localStorage.removeItem("ig-curator-items")
+      setItems(initialItems)
+      setIsLoaded(true)
+      return
+    }
+
     const saved = localStorage.getItem("ig-curator-items")
     if (saved) {
       try { setItems(JSON.parse(saved)) } catch (e) {}
@@ -60,12 +67,15 @@ export function DashboardClient() {
             }
           }
         } catch (e) {
-          console.error("Failed to load from cloud", e)
+          console.error("Failed to load cloud grid", e)
         }
       }
       setIsLoaded(true)
     }
-    if (status !== "loading") loadCloud()
+    
+    if (status !== "loading") {
+      loadCloud()
+    }
   }, [status])
 
   useEffect(() => {
@@ -279,6 +289,7 @@ export function DashboardClient() {
                 <div className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "pt-1" : ""}`}>
                   <ProfileHeader 
                     session={session} 
+                    status={status}
                     liveMediaCount={items.filter(i => i.isLocked && !i.folderId && i.contentType !== "StoryFolder").length}
                     onAddRow={() => {
                       if (gridFilter === "Story" && !activeStoryFolderId) {

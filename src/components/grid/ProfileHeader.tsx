@@ -4,13 +4,14 @@ import { Plus, ChevronDown, Undo2, Settings, Calendar as CalendarIcon, User, Edi
 
 interface ProfileHeaderProps {
   session: any;
+  status?: string;
   liveMediaCount?: number;
   onAddRow?: () => void;
   onUndo?: () => void;
   canUndo?: boolean;
 }
 
-export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, canUndo }: ProfileHeaderProps) {
+export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, onUndo, canUndo }: ProfileHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
     username: session?.user?.name || "your_username",
@@ -21,6 +22,18 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
   });
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      localStorage.removeItem("ig-curator-profile");
+      setProfile({
+        username: "your_username",
+        followers: "10.5k",
+        following: "500",
+        bio: "Your Name\nCreative Director ✨\nlinkin.bio/brand",
+        avatarUrl: ""
+      });
+      return;
+    }
+
     const saved = localStorage.getItem("ig-curator-profile");
     if (saved) {
       try { setProfile(JSON.parse(saved)); } catch(e) {}
@@ -33,7 +46,7 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
         avatarUrl: ""
       });
     }
-  }, [session]);
+  }, [session, status]);
 
   const saveProfile = () => {
     localStorage.setItem("ig-curator-profile", JSON.stringify(profile));
