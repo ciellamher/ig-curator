@@ -289,6 +289,7 @@ export function DashboardClient() {
                           folders={items.filter(i => i.contentType === "StoryFolder")}
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
+                          updateItem={updateItem}
                         />
                       )
                     ) : (

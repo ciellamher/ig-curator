@@ -5,9 +5,10 @@ interface StoryListViewProps {
   folders: SlotItem[];
   allItems: SlotItem[];
   onFolderClick: (folderId: string) => void;
+  updateItem: (id: string, updates: Partial<SlotItem>) => void;
 }
 
-export function StoryListView({ folders, allItems, onFolderClick }: StoryListViewProps) {
+export function StoryListView({ folders, allItems, onFolderClick, updateItem }: StoryListViewProps) {
   if (folders.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center pt-20">
@@ -49,9 +50,13 @@ export function StoryListView({ folders, allItems, onFolderClick }: StoryListVie
               </div>
               
               <div className="flex flex-col">
-                <span className="font-bold text-foreground text-[18px] tracking-tight mb-0.5">
-                  {folder.text || folder.caption || "New Folder"}
-                </span>
+                <input 
+                  value={folder.text || folder.caption || ""}
+                  onChange={(e) => updateItem(folder.id, { text: e.target.value })}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="New Folder"
+                  className="font-bold text-foreground text-[18px] tracking-tight mb-0.5 bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-1 -ml-1 w-full"
+                />
                 <span className="text-foreground/80 font-medium text-[15px]">
                   {storiesInFolder.length} items
                 </span>
