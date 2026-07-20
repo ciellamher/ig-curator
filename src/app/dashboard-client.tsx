@@ -32,7 +32,11 @@ export function DashboardClient() {
   const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
   const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
-  const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null)
+  const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
+
+  // Floating modal drag state
+  const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
+  const modalDragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
   const [previewSlotId, setPreviewSlotId] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
   const [syncStatus, setSyncStatus] = useState<"Idle" | "Saving..." | "Saved" | "Error">("Idle")
@@ -183,6 +187,33 @@ export function DashboardClient() {
     )
   }
 
+  const handleModalPointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    modalDragRef.current = { 
+      startX: e.clientX, 
+      startY: e.clientY,
+      initialX: modalPos.x,
+      initialY: modalPos.y
+    };
+  };
+
+  const handleModalPointerMove = (e: React.PointerEvent) => {
+    if (!modalDragRef.current) return;
+    const dx = e.clientX - modalDragRef.current.startX;
+    const dy = e.clientY - modalDragRef.current.startY;
+    setModalPos({
+      x: modalDragRef.current.initialX + dx,
+      y: modalDragRef.current.initialY + dy
+    });
+  };
+
+  const handleModalPointerUp = (e: React.PointerEvent) => {
+    if (!modalDragRef.current) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    modalDragRef.current = null;
+  };
+
 
 
   if (!isLoaded) return null;
@@ -330,6 +361,7 @@ export function DashboardClient() {
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
                           updateItem={updateItem}
+                          onDeleteFolder={(id) => updateItems(prev => prev.filter(item => item.id !== id && item.folderId !== id))}
                         />
                       )
                     ) : (
@@ -357,17 +389,31 @@ export function DashboardClient() {
 
             {/* Optional Editor Panel Popup or Side-pane when slot is active */}
             {activeTab === "CREATE" && activeSlotId && (
-              <div className="absolute right-4 top-24 w-80 bg-white/95 backdrop-blur shadow-2xl border border-soft-200 rounded-2xl z-50">
-                <EditorPanel 
-                  activeSlot={activeSlot} 
-                  updateSlot={updateItem} 
-                />
-                <button 
-                  onClick={() => setActiveSlotId(null)}
-                  className="absolute top-4 right-4 text-xs font-medium text-foreground/50 hover:text-foreground"
+              <div 
+                className="absolute right-4 top-24 w-80 bg-white/95 backdrop-blur shadow-2xl border border-soft-200 rounded-2xl z-50 overflow-hidden flex flex-col"
+                style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+              >
+                <div 
+                  className="h-10 bg-soft-50 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100/50 transition-colors"
+                  onPointerDown={handleModalPointerDown}
+                  onPointerMove={handleModalPointerMove}
+                  onPointerUp={handleModalPointerUp}
+                  onPointerCancel={handleModalPointerUp}
                 >
-                  Close
-                </button>
+                  <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none">Drag to move</span>
+                  <button 
+                    onClick={() => setActiveSlotId(null)}
+                    className="text-xs font-bold text-foreground/50 hover:text-foreground pointer-events-auto"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="pointer-events-auto">
+                  <EditorPanel 
+                    activeSlot={activeSlot} 
+                    updateSlot={updateItem} 
+                  />
+                </div>
               </div>
             )}
 

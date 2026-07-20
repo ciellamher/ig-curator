@@ -1,14 +1,15 @@
 import { SlotItem } from "@/types";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Trash2 } from "lucide-react";
 
 interface StoryListViewProps {
   folders: SlotItem[];
   allItems: SlotItem[];
   onFolderClick: (folderId: string) => void;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
+  onDeleteFolder?: (folderId: string) => void;
 }
 
-export function StoryListView({ folders, allItems, onFolderClick, updateItem }: StoryListViewProps) {
+export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder }: StoryListViewProps) {
   if (folders.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center pt-20">
@@ -67,7 +68,23 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem }: 
                 )}
               </div>
             </div>
-            <ChevronRight size={20} className="text-foreground/30" />
+            <div className="flex items-center gap-2">
+              {onDeleteFolder && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Are you sure you want to delete this folder and all its stories?")) {
+                      onDeleteFolder(folder.id);
+                    }
+                  }}
+                  className="p-2 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  title="Delete Folder"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+              <ChevronRight size={20} className="text-foreground/30" />
+            </div>
           </div>
         );
       })}

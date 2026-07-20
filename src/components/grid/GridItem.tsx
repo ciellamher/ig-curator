@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock, Camera, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Upload, Type, Video, GalleryHorizontal, Clock, Camera, Trash2, Crop, Check } from "lucide-react";
 import { uploadImage } from "@/app/actions/upload";
 import { SlotItem } from "@/types";
 
@@ -20,6 +20,9 @@ interface GridItemProps {
 export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDoubleClick, onDelete }: GridItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAdjusting, setIsAdjusting] = useState(false);
+  const [tempSettings, setTempSettings] = useState({ scale: 1, x: 0, y: 0 });
+  const startDragRef = useRef<{ x: number, y: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -29,7 +32,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id, disabled: item.isLocked });
+  } = useSortable({ id: item.id, disabled: item.isLocked || isAdjusting });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -114,6 +117,62 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
     }
   };
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!isAdjusting) return;
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startDragRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isAdjusting || !startDragRef.current) return;
+    const dx = e.clientX - startDragRef.current.x;
+    const dy = e.clientY - startDragRef.current.y;
+    startDragRef.current = { x: e.clientX, y: e.clientY };
+    setTempSettings(s => ({ ...s, x: s.x + dx, y: s.y + dy }));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isAdjusting) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    startDragRef.current = null;
+  };
+
+  const saveAdjustment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAdjusting(false);
+    const newSettings = { ...(item.imageSettings || {}) };
+    newSettings[item.currentUrlIndex] = tempSettings;
+    updateItem(item.id, { imageSettings: newSettings });
+  };
+
+  const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isAdjusting || item.urls.length <= 1) return;
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (isAdjusting || item.urls.length <= 1 || !touchStartRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+    
+    // Check if it's a horizontal swipe (dx > 30px, and mostly horizontal)
+    if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) {
+        prevImage(e as any);
+      } else {
+        nextImage(e as any);
+      }
+    }
+    touchStartRef.current = null;
+  };
+
+  const currentSettings = isAdjusting 
+    ? tempSettings 
+    : (item.imageSettings?.[item.currentUrlIndex] || { scale: 1, x: 0, y: 0 });
+
   return (
     <div
       ref={setNodeRef}
@@ -127,7 +186,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         }
       }}
       onDoubleClick={onDoubleClick}
-      className={`relative w-full overflow-hidden cursor-grab active:cursor-grabbing transition-all group ${
+      className={`relative w-full overflow-visible ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all group ${
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
         isActive ? "ring-2 ring-pastel-400 ring-offset-0 z-10" : ""
@@ -143,11 +202,24 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       />
 
       {item.type === "image" && item.urls.length > 0 ? (
-        <div className="w-full h-full relative">
+        <div 
+          className="w-full h-full relative overflow-hidden bg-soft-100"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <img
             src={item.urls[item.currentUrlIndex]}
             alt={`Grid slot ${item.id}`}
-            className="w-full h-full object-cover"
+            style={{ 
+              transform: `translate(${currentSettings.x}px, ${currentSettings.y}px) scale(${currentSettings.scale})`,
+              transformOrigin: "center"
+            }}
+            className="w-full h-full object-cover transition-transform duration-75"
+            draggable={false}
           />
           {item.urls.length > 1 && (
             <>
@@ -156,23 +228,47 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
                 {item.currentUrlIndex! + 1} / {item.urls.length}
               </div>
               
-              <div className="absolute inset-0 flex items-center justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={prevImage} 
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <button 
-                  onClick={nextImage} 
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="p-1 bg-white/70 rounded-full hover:bg-white text-foreground"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
+              {!isAdjusting && (
+                <>
+                  <div className="absolute top-1/2 -translate-y-1/2 -left-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <button 
+                      onClick={prevImage} 
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="p-1 bg-white shadow-md rounded-full hover:bg-soft-50 text-foreground"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                  </div>
+                  <div className="absolute top-1/2 -translate-y-1/2 -right-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                    <button 
+                      onClick={nextImage} 
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="p-1 bg-white shadow-md rounded-full hover:bg-soft-50 text-foreground"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
             </>
+          )}
+
+          {isAdjusting && (
+            <div 
+              className="absolute bottom-2 left-1/2 -translate-x-1/2 w-11/12 bg-white/90 backdrop-blur-md rounded-xl p-2 shadow-lg flex items-center gap-2 z-50"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <span className="text-[10px] font-bold text-foreground opacity-60">ZOOM</span>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="3" 
+                step="0.05" 
+                value={tempSettings.scale}
+                onChange={(e) => setTempSettings(s => ({ ...s, scale: parseFloat(e.target.value) }))}
+                className="flex-1 accent-pastel-500"
+              />
+            </div>
           )}
         </div>
       ) : (
@@ -181,11 +277,11 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
           style={{ backgroundColor: item.hexColor }}
         >
           {item.text ? (
-            <span className="text-white text-center font-extrabold text-lg drop-shadow-md leading-tight w-full break-words px-2">
+            <span className="text-white text-center font-extrabold text-sm drop-shadow-md leading-tight w-full break-words px-2">
               {item.text}
             </span>
           ) : (
-            <span className="text-white/90 text-center font-extrabold text-lg drop-shadow-md leading-tight w-full break-words px-2">
+            <span className="text-white/90 text-center font-extrabold text-sm drop-shadow-md leading-tight w-full break-words px-2">
               Slot
             </span>
           )}
@@ -217,11 +313,36 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       </div>
 
       {/* Hover/Edit Controls (Hidden if locked) */}
-      {!item.isLocked && (
+      {!item.isLocked && item.urls.length > 0 && isAdjusting && (
         <div 
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm"
+          className="absolute top-2 right-2 flex items-center gap-2 z-50 bg-pastel-500 text-white px-3 py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-pastel-600 transition-colors"
+          onClick={saveAdjustment}
           onPointerDown={(e) => e.stopPropagation()}
         >
+          <Check size={16} />
+          <span className="text-xs font-bold">Done</span>
+        </div>
+      )}
+
+      {!item.isLocked && !isAdjusting && (
+        <div 
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm z-40"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setTempSettings(item.imageSettings?.[item.currentUrlIndex] || { scale: 1, x: 0, y: 0 });
+              setIsAdjusting(true);
+            }}
+            className="text-foreground hover:text-pastel-500 transition-colors p-1"
+            title="Adjust Image"
+          >
+            <Crop size={16} />
+          </button>
+          
+          <div className="w-[1px] h-4 bg-soft-200 mx-1"></div>
+
           <button 
             onClick={(e) => {
               e.stopPropagation();

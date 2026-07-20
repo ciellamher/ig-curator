@@ -7,6 +7,7 @@ export type SlotItem = {
   currentUrlIndex: number;
   hexColor: string;
   text: string;
+  imageSettings?: Record<number, { scale: number; x: number; y: number }>;
   
   // Metadata for Editor Panel
   caption?: string;

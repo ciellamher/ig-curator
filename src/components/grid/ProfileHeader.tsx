@@ -16,7 +16,8 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
     username: session?.user?.name || "your_username",
     followers: "10.5k",
     following: "500",
-    bio: "Your Name\nCreative Director ✨\nlinkin.bio/brand"
+    bio: "Your Name\nCreative Director ✨\nlinkin.bio/brand",
+    avatarUrl: ""
   });
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
     setIsEditing(false);
   };
 
-  const avatarUrl = session?.user?.image;
+  const avatarUrl = profile.avatarUrl || session?.user?.image;
 
   return (
     <div className="w-full bg-white flex flex-col pt-10 pb-4 px-4">
@@ -74,13 +75,61 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
       {/* Stats Row - Minimal Style */}
       <div className="flex items-center justify-between px-2">
         <div className="relative shrink-0">
-          <div className="w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-pastel-300 to-pastel-500 shadow-sm">
-            <div className="w-full h-full bg-white rounded-full p-[2px]">
+          <div 
+            className={`w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-pastel-300 to-pastel-500 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            onClick={() => {
+              if (isEditing) document.getElementById('profile-upload')?.click();
+            }}
+          >
+            <input 
+              type="file" 
+              id="profile-upload" 
+              className="hidden" 
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const MAX_SIZE = 200;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height) {
+                      if (width > MAX_SIZE) {
+                        height = Math.round((height * MAX_SIZE) / width);
+                        width = MAX_SIZE;
+                      }
+                    } else {
+                      if (height > MAX_SIZE) {
+                        width = Math.round((width * MAX_SIZE) / height);
+                        height = MAX_SIZE;
+                      }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    setProfile({ ...profile, avatarUrl: canvas.toDataURL("image/webp", 0.8) });
+                  };
+                  img.src = e.target?.result as string;
+                };
+                reader.readAsDataURL(file);
+              }}
+            />
+            <div className="w-full h-full bg-white rounded-full p-[2px] relative overflow-hidden group">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
               ) : (
                 <div className="w-full h-full rounded-full bg-soft-50 flex items-center justify-center">
                   <User size={30} className="text-foreground/20" strokeWidth={2} />
+                </div>
+              )}
+              {isEditing && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Edit3 size={18} />
                 </div>
               )}
             </div>
