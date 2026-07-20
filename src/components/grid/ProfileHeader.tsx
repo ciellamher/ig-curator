@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
-import { Plus, ChevronDown, Undo2, Settings, Calendar as CalendarIcon, User } from "lucide-react";
+import { Plus, ChevronDown, Undo2, Settings, Calendar as CalendarIcon, User, Edit3, Check } from "lucide-react";
 
 interface ProfileHeaderProps {
   session: any;
@@ -11,7 +11,26 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, canUndo }: ProfileHeaderProps) {
-  const username = session?.user?.name || "your_username";
+  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState({
+    username: session?.user?.name || "your_username",
+    followers: "10.5k",
+    following: "500",
+    bio: "Your Name\nCreative Director ✨\nlinkin.bio/brand"
+  });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ig-curator-profile");
+    if (saved) {
+      try { setProfile(JSON.parse(saved)); } catch(e) {}
+    }
+  }, []);
+
+  const saveProfile = () => {
+    localStorage.setItem("ig-curator-profile", JSON.stringify(profile));
+    setIsEditing(false);
+  };
+
   const avatarUrl = session?.user?.image;
 
   return (
@@ -30,13 +49,25 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
         </div>
 
         <div className="flex items-center gap-1 cursor-pointer">
-          <span className="font-bold text-[16px] text-foreground tracking-tight">{username}</span>
-          <ChevronDown size={16} className="text-foreground opacity-60" strokeWidth={2.5} />
+          {isEditing ? (
+            <input 
+              value={profile.username}
+              onChange={(e) => setProfile({...profile, username: e.target.value})}
+              className="font-bold text-[16px] text-foreground tracking-tight text-center outline-none border-b border-pastel-300 w-32"
+            />
+          ) : (
+            <>
+              <span className="font-bold text-[16px] text-foreground tracking-tight">{profile.username}</span>
+              <ChevronDown size={16} className="text-foreground opacity-60" strokeWidth={2.5} />
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
+          <button onClick={isEditing ? saveProfile : () => setIsEditing(true)} className="hover:text-pastel-500 transition-colors">
+            {isEditing ? <Check size={22} className="text-pastel-500" strokeWidth={2.5} /> : <Edit3 size={20} className="text-foreground" strokeWidth={2} />}
+          </button>
           <Settings size={22} className="text-foreground" strokeWidth={2} />
-          <CalendarIcon size={22} className="text-foreground" strokeWidth={2} />
         </div>
       </div>
 
@@ -62,11 +93,19 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
             <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">posts</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-extrabold text-foreground text-[17px]">10.5k</span>
+            {isEditing ? (
+              <input value={profile.followers} onChange={(e) => setProfile({...profile, followers: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-pastel-300" />
+            ) : (
+              <span className="font-extrabold text-foreground text-[17px]">{profile.followers}</span>
+            )}
             <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">followers</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="font-extrabold text-foreground text-[17px]">500</span>
+            {isEditing ? (
+              <input value={profile.following} onChange={(e) => setProfile({...profile, following: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-pastel-300" />
+            ) : (
+              <span className="font-extrabold text-foreground text-[17px]">{profile.following}</span>
+            )}
             <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">following</span>
           </div>
         </div>
@@ -74,9 +113,17 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
       
       {/* Bio - Minimal Style */}
       <div className="px-3 mt-4 mb-2">
-        <div className="text-[14px] text-foreground/80 leading-[1.4] whitespace-pre-line tracking-tight font-medium">
-          {"Your Name\nCreative Director ✨\nlinkin.bio/brand"}
-        </div>
+        {isEditing ? (
+          <textarea 
+            value={profile.bio}
+            onChange={(e) => setProfile({...profile, bio: e.target.value})}
+            className="w-full text-[14px] text-foreground/80 leading-[1.4] tracking-tight font-medium outline-none border border-pastel-300 rounded p-1 resize-none h-20"
+          />
+        ) : (
+          <div className="text-[14px] text-foreground/80 leading-[1.4] whitespace-pre-line tracking-tight font-medium">
+            {profile.bio}
+          </div>
+        )}
       </div>
     </div>
   );

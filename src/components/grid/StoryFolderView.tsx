@@ -53,9 +53,12 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
         <button onClick={onBack} className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground">
           <ChevronLeft size={28} strokeWidth={2.5} />
         </button>
-        <span className="font-bold text-[18px] text-foreground tracking-tight">
-          {folder.text || folder.caption || "Folder"}
-        </span>
+        <input 
+          value={folder.text || folder.caption || ""}
+          onChange={(e) => updateItem(folder.id, { text: e.target.value })}
+          placeholder="New Folder"
+          className="font-bold text-[18px] text-foreground tracking-tight text-center bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-2 w-[150px]"
+        />
         <button onClick={() => { setPreviewStartIndex(0); setIsPreviewOpen(true); }} className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground">
           <Eye size={24} strokeWidth={2.5} />
         </button>

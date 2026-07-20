@@ -157,20 +157,7 @@ export function DashboardClient() {
         <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
           {/* View Toggle & Tabs */}
           <div className="flex justify-between items-center px-8 pt-6 pb-2">
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setActiveTab("CREATE")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${activeTab === "CREATE" ? "bg-pastel-500 text-white shadow-md shadow-pastel-500/20" : "bg-white text-foreground/60 hover:bg-white/60"}`}
-              >
-                <PenTool size={16} /> Create
-              </button>
-              <button 
-                onClick={() => setActiveTab("CALENDAR")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${activeTab === "CALENDAR" ? "bg-pastel-500 text-white shadow-md shadow-pastel-500/20" : "bg-white text-foreground/60 hover:bg-white/60"}`}
-              >
-                <Calendar size={16} /> Calendar
-              </button>
-            </div>
+            <div></div>
             
             <div className="flex items-center bg-white rounded-full p-1 shadow-sm">
               <button 
@@ -214,7 +201,7 @@ export function DashboardClient() {
                     onAddRow={() => {
                       if (gridFilter === "Story" && !activeStoryFolderId) {
                         const newFolder: SlotItem = {
-                          id: `folder-${Date.now()}`,
+                          id: `folder-${Math.floor(Math.random() * 1000000000)}`,
                           type: "placeholder",
                           urls: [],
                           currentUrlIndex: 0,
@@ -227,7 +214,7 @@ export function DashboardClient() {
                         const newId = items.length;
                         const numItemsToAdd = 1;
                         const newRows = Array.from({ length: numItemsToAdd }).map((_, i) => ({
-                          id: `slot-${Date.now()}-${i}`,
+                          id: `slot-${Math.floor(Math.random() * 1000000000)}-${i}`,
                           type: "placeholder" as const,
                           urls: [],
                           currentUrlIndex: 0,
