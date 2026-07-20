@@ -20,7 +20,11 @@ export function Navbar() {
               </span>
             </div>
             <button 
-              onClick={() => signOut()}
+              onClick={() => {
+                localStorage.removeItem("ig-curator-profile");
+                localStorage.removeItem("ig-curator-items");
+                signOut();
+              }}
               className="text-sm text-foreground/60 hover:text-foreground transition-colors"
             >
               Sign Out
