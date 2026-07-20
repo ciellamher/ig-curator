@@ -11,7 +11,7 @@ import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle } from "lucide-react"
+import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw } from "lucide-react"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -35,6 +35,7 @@ export function DashboardClient() {
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null)
   const [previewSlotId, setPreviewSlotId] = useState<string | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<"Idle" | "Saving..." | "Saved" | "Error">("Idle")
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-items")
@@ -66,14 +67,22 @@ export function DashboardClient() {
   useEffect(() => {
     if (!isLoaded || status !== "authenticated") return;
     
+    setSyncStatus("Saving...")
     const timer = setTimeout(async () => {
       try {
         const { syncGridToCloud } = await import("@/app/actions/grid")
         const profileStr = localStorage.getItem("ig-curator-profile")
         const profile = profileStr ? JSON.parse(profileStr) : undefined
-        await syncGridToCloud(items, profile)
+        const res = await syncGridToCloud(items, profile)
+        if (res.success) {
+          setSyncStatus("Saved")
+          setTimeout(() => setSyncStatus(prev => prev === "Saved" ? "Idle" : prev), 2000)
+        } else {
+          setSyncStatus("Error")
+        }
       } catch (e) {
         console.error("Auto-sync failed", e)
+        setSyncStatus("Error")
       }
     }, 2000);
     
@@ -148,6 +157,26 @@ export function DashboardClient() {
     });
   }
 
+  async function handleManualSync() {
+    if (status !== "authenticated") return;
+    setSyncStatus("Saving...")
+    try {
+      const { syncGridToCloud } = await import("@/app/actions/grid")
+      const profileStr = localStorage.getItem("ig-curator-profile")
+      const profile = profileStr ? JSON.parse(profileStr) : undefined
+      const res = await syncGridToCloud(items, profile)
+      if (res.success) {
+        setSyncStatus("Saved")
+        setTimeout(() => setSyncStatus(prev => prev === "Saved" ? "Idle" : prev), 2000)
+      } else {
+        setSyncStatus("Error")
+      }
+    } catch (e) {
+      console.error("Manual sync failed", e)
+      setSyncStatus("Error")
+    }
+  }
+
   function updateItem(id: string, updates: Partial<SlotItem>) {
     updateItems((current) =>
       current.map((item) => (item.id === id ? { ...item, ...updates } : item))
@@ -168,7 +197,18 @@ export function DashboardClient() {
         <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
           {/* View Toggle & Tabs */}
           <div className="flex justify-between items-center px-8 pt-6 pb-2">
-            <div></div>
+            <div className="flex items-center gap-4">
+              {status === "authenticated" && (
+                <button 
+                  onClick={handleManualSync}
+                  disabled={syncStatus === "Saving..."}
+                  className="text-sm font-medium px-4 py-2 rounded-full bg-white shadow-sm border border-soft-200 text-foreground/70 hover:text-foreground transition-all flex items-center gap-2"
+                >
+                  <RefreshCw size={14} className={syncStatus === "Saving..." ? "animate-spin" : ""} />
+                  {syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}
+                </button>
+              )}
+            </div>
             
             <div className="flex items-center bg-white rounded-full p-1 shadow-sm">
               <button 
