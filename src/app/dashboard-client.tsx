@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { Grid } from "@/components/grid/Grid"
 import { EditorPanel } from "@/components/editor/EditorPanel"
