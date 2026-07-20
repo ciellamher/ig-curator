@@ -6,11 +6,9 @@ import { SlotItem, ContentType } from "@/types"
 interface EditorPanelProps {
   activeSlot: SlotItem | null;
   updateSlot: (id: string, updates: Partial<SlotItem>) => void;
-  onSave: () => void;
-  isSaving: boolean;
 }
 
-export function EditorPanel({ activeSlot, updateSlot, onSave, isSaving }: EditorPanelProps) {
+export function EditorPanel({ activeSlot, updateSlot }: EditorPanelProps) {
   const [activeTab, setActiveTab] = useState<"details" | "appearance">("details");
 
   if (!activeSlot) return null;
@@ -107,14 +105,6 @@ export function EditorPanel({ activeSlot, updateSlot, onSave, isSaving }: Editor
           </>
         )}
       </div>
-
-      <button 
-        onClick={onSave}
-        disabled={isSaving}
-        className="w-full mt-2 py-3.5 bg-foreground text-white rounded-xl text-[15px] font-bold hover:bg-foreground/90 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
-      >
-        {isSaving ? "Saving..." : "Save"}
-      </button>
     </div>
   );
 }

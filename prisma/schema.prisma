@@ -47,6 +47,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   gridSlots     GridSlot[]
+  userGrid      UserGrid?
 }
 
 model VerificationToken {
@@ -58,6 +59,14 @@ model VerificationToken {
 }
 
 // App Models
+model UserGrid {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemsData   String // JSON stringified array of SlotItem
+  profileData String? // JSON stringified profile data
+}
+
 model GridSlot {
   id       String @id @default(cuid())
   userId   String

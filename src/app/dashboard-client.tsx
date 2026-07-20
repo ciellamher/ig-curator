@@ -29,7 +29,6 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems)
   const [history, setHistory] = useState<SlotItem[][]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
   const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
@@ -40,14 +39,46 @@ export function DashboardClient() {
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-items")
     if (saved) {
-      try {
-        setItems(JSON.parse(saved))
-      } catch (e) {
-        console.error("Failed to parse saved items")
-      }
+      try { setItems(JSON.parse(saved)) } catch (e) {}
     }
-    setIsLoaded(true)
-  }, [])
+
+    async function loadCloud() {
+      if (status === "authenticated") {
+        try {
+          const { fetchGridFromCloud } = await import("@/app/actions/grid")
+          const res = await fetchGridFromCloud()
+          if (res.success && res.data) {
+            setItems(res.data.items)
+            if (res.data.profile) {
+              localStorage.setItem("ig-curator-profile", JSON.stringify(res.data.profile))
+              window.dispatchEvent(new Event("storage"))
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load from cloud", e)
+        }
+      }
+      setIsLoaded(true)
+    }
+    if (status !== "loading") loadCloud()
+  }, [status])
+
+  useEffect(() => {
+    if (!isLoaded || status !== "authenticated") return;
+    
+    const timer = setTimeout(async () => {
+      try {
+        const { syncGridToCloud } = await import("@/app/actions/grid")
+        const profileStr = localStorage.getItem("ig-curator-profile")
+        const profile = profileStr ? JSON.parse(profileStr) : undefined
+        await syncGridToCloud(items, profile)
+      } catch (e) {
+        console.error("Auto-sync failed", e)
+      }
+    }, 2000);
+    
+    return () => clearTimeout(timer)
+  }, [items, isLoaded, status])
 
   useEffect(() => {
     async function loadLiveGrid() {
@@ -123,27 +154,7 @@ export function DashboardClient() {
     )
   }
 
-  async function handleSave() {
-    if (!activeSlot) return
-    
-    setIsSaving(true)
-    try {
-      const { saveGridSlot } = await import("@/app/actions/grid")
-      const result = await saveGridSlot(activeSlot)
-      
-      if (result && !result.success) {
-        alert("Server Error: " + result.error)
-        return
-      }
-      
-      alert("Saved successfully!")
-    } catch (error: any) {
-      console.error(error)
-      alert(error.message === "Unauthorized" ? "Please sign in to save data." : "Failed to save")
-    } finally {
-      setIsSaving(false)
-    }
-  }
+
 
   if (!isLoaded) return null;
 
@@ -309,8 +320,6 @@ export function DashboardClient() {
                 <EditorPanel 
                   activeSlot={activeSlot} 
                   updateSlot={updateItem} 
-                  onSave={handleSave}
-                  isSaving={isSaving}
                 />
                 <button 
                   onClick={() => setActiveSlotId(null)}
