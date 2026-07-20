@@ -24,8 +24,16 @@ export function ProfileHeader({ session, liveMediaCount = 0, onAddRow, onUndo, c
     const saved = localStorage.getItem("ig-curator-profile");
     if (saved) {
       try { setProfile(JSON.parse(saved)); } catch(e) {}
+    } else {
+      setProfile({
+        username: session?.user?.name || "your_username",
+        followers: "10.5k",
+        following: "500",
+        bio: "Your Name\nCreative Director ✨\nlinkin.bio/brand",
+        avatarUrl: ""
+      });
     }
-  }, []);
+  }, [session]);
 
   const saveProfile = () => {
     localStorage.setItem("ig-curator-profile", JSON.stringify(profile));
