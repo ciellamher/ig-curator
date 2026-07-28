@@ -60,11 +60,11 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
       {/* Top Bar - Minimal Style */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <button onClick={onAddRow} title="Add Row" className="hover:text-pastel-500 transition-colors">
+          <button onClick={onAddRow} title="Add Row" className="hover:text-slate-900 transition-colors cursor-pointer">
             <Plus size={24} className="text-foreground" strokeWidth={2.5} />
           </button>
           {canUndo && (
-            <button onClick={onUndo} title="Undo" className="hover:text-pastel-500 transition-colors">
+            <button onClick={onUndo} title="Undo" className="hover:text-slate-900 transition-colors cursor-pointer">
               <Undo2 size={22} className="text-foreground" strokeWidth={2.5} />
             </button>
           )}
@@ -75,7 +75,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
             <input 
               value={profile.username}
               onChange={(e) => setProfile({...profile, username: e.target.value})}
-              className="font-bold text-[16px] text-foreground tracking-tight text-center outline-none border-b border-pastel-300 w-32"
+              className="font-bold text-[16px] text-foreground tracking-tight text-center outline-none border-b border-slate-400 w-32 bg-transparent"
             />
           ) : (
             <>
@@ -86,10 +86,10 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
         </div>
 
         <div className="flex items-center gap-4">
-          <button onClick={isEditing ? saveProfile : () => setIsEditing(true)} className="hover:text-pastel-500 transition-colors">
-            {isEditing ? <Check size={22} className="text-pastel-500" strokeWidth={2.5} /> : <Edit3 size={20} className="text-foreground" strokeWidth={2} />}
+          <button onClick={isEditing ? saveProfile : () => setIsEditing(true)} className="hover:text-slate-900 transition-colors cursor-pointer">
+            {isEditing ? <Check size={22} className="text-slate-900" strokeWidth={2.5} /> : <Edit3 size={20} className="text-foreground" strokeWidth={2} />}
           </button>
-          <Settings size={22} className="text-foreground" strokeWidth={2} />
+          <Settings size={22} className="text-foreground cursor-pointer" strokeWidth={2} />
         </div>
       </div>
 
@@ -97,7 +97,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
       <div className="flex items-center justify-between px-2">
         <div className="relative shrink-0">
           <div 
-            className={`w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-pastel-300 to-pastel-500 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            className={`w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-slate-300 via-slate-500 to-slate-800 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             onClick={() => {
               if (isEditing) document.getElementById('profile-upload')?.click();
             }}
@@ -164,7 +164,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           </div>
           <div className="flex flex-col items-center">
             {isEditing ? (
-              <input value={profile.followers} onChange={(e) => setProfile({...profile, followers: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-pastel-300" />
+              <input value={profile.followers} onChange={(e) => setProfile({...profile, followers: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-slate-400 bg-transparent" />
             ) : (
               <span className="font-extrabold text-foreground text-[17px]">{profile.followers}</span>
             )}
@@ -172,7 +172,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           </div>
           <div className="flex flex-col items-center">
             {isEditing ? (
-              <input value={profile.following} onChange={(e) => setProfile({...profile, following: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-pastel-300" />
+              <input value={profile.following} onChange={(e) => setProfile({...profile, following: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-slate-400 bg-transparent" />
             ) : (
               <span className="font-extrabold text-foreground text-[17px]">{profile.following}</span>
             )}
@@ -187,7 +187,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           <textarea 
             value={profile.bio}
             onChange={(e) => setProfile({...profile, bio: e.target.value})}
-            className="w-full text-[14px] text-foreground/80 leading-[1.4] tracking-tight font-medium outline-none border border-pastel-300 rounded p-1 resize-none h-20"
+            className="w-full text-[14px] text-foreground/80 leading-[1.4] tracking-tight font-medium outline-none border border-slate-300 rounded-xl p-2 resize-none h-20 bg-soft-50"
           />
         ) : (
           <div className="text-[14px] text-foreground/80 leading-[1.4] whitespace-pre-line tracking-tight font-medium">

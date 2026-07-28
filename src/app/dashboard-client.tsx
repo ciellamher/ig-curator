@@ -429,49 +429,58 @@ export function DashboardClient() {
 
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
             {activeTab === "CREATE" && activeSlotId && (
-              <div 
-                className="max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute md:right-6 md:top-16 md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200"
-                style={{
-                  transform: typeof window !== "undefined" && window.innerWidth >= 768 ? `translate(${modalPos.x}px, ${modalPos.y}px)` : "none"
-                }}
-              >
+              <>
+                {/* Backdrop for Mobile Bottom Sheet */}
                 <div 
-                  className="py-3 px-4 bg-white/90 backdrop-blur border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
-                  onPointerDown={handleModalPointerDown}
-                  onPointerMove={handleModalPointerMove}
-                  onPointerUp={handleModalPointerUp}
-                  onPointerCancel={handleModalPointerUp}
+                  className="fixed inset-0 bg-black/40 backdrop-blur-xs md:hidden z-40 animate-in fade-in duration-200"
+                  onClick={() => setActiveSlotId(null)}
+                />
+
+                <div 
+                  className="max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute md:right-6 md:top-16 md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-4"
+                  style={{
+                    transform: typeof window !== "undefined" && window.innerWidth >= 768 ? `translate(${modalPos.x}px, ${modalPos.y}px)` : "none"
+                  }}
                 >
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-pastel-500" />
-                    <h3 className="font-bold text-base text-foreground tracking-tight">Edit Slot</h3>
-                  </div>
-
-                  <div className="w-10 h-1 bg-soft-300 rounded-full md:hidden"></div>
-
-                  <button 
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveSlotId(null);
-                    }}
-                    className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors pointer-events-auto cursor-pointer"
-                    title="Close"
+                  <div 
+                    className="py-3 px-4 bg-white/90 backdrop-blur border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
+                    onPointerDown={handleModalPointerDown}
+                    onPointerMove={handleModalPointerMove}
+                    onPointerUp={handleModalPointerUp}
+                    onPointerCancel={handleModalPointerUp}
                   >
-                    <X size={18} />
-                  </button>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} className="text-slate-700" />
+                      <h3 className="font-bold text-base text-foreground tracking-tight">Edit Slot</h3>
+                    </div>
+
+                    <div className="w-10 h-1 bg-soft-300 rounded-full md:hidden"></div>
+
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveSlotId(null);
+                      }}
+                      className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors pointer-events-auto cursor-pointer"
+                      title="Close"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                  <div className="pointer-events-auto">
+                    <EditorPanel 
+                      activeSlot={activeSlot} 
+                      updateSlot={updateItem} 
+                      onClose={() => setActiveSlotId(null)}
+                      onDeleteSlot={(id) => {
+                        updateItems(prev => prev.filter(item => item.id !== id));
+                        setActiveSlotId(null);
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="pointer-events-auto">
-                  <EditorPanel 
-                    activeSlot={activeSlot} 
-                    updateSlot={updateItem} 
-                    onClose={() => setActiveSlotId(null)}
-                    onDeleteSlot={(id) => {
-                      updateItems(prev => prev.filter(item => item.id !== id));
-                      setActiveSlotId(null);
-                    }}
-                  />
-              </div>
+              </>
             )}
 
             {/* Instagram Feed / Reel Preview Modal */}
@@ -483,11 +492,49 @@ export function DashboardClient() {
             )}
 
             {activeTab === "CALENDAR" && (
-          <CalendarView items={items} />
-        )}
+              <CalendarView items={items} />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Native Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-soft-200 py-2 px-6 flex items-center justify-around z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <button 
+          onClick={() => setActiveTab("CREATE")}
+          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+        >
+          <Grid3X3 size={20} strokeWidth={activeTab === "CREATE" ? 2.5 : 2} />
+          <span className="text-[10px] font-semibold">Planner</span>
+        </button>
+
+        <button 
+          onClick={() => {
+            const newRows = [{
+              id: `slot-${Math.floor(Math.random() * 1000000000)}`,
+              type: "placeholder" as const,
+              urls: [],
+              currentUrlIndex: 0,
+              hexColor: "#E5D3C8",
+              text: "",
+              contentType: "Post" as const,
+            }];
+            updateItems(prev => [...newRows, ...prev]);
+          }}
+          className="p-3 bg-slate-900 text-white rounded-full shadow-lg -mt-5 hover:bg-black active:scale-95 transition-all cursor-pointer"
+          title="Add New Slot"
+        >
+          <PenTool size={18} strokeWidth={2.5} />
+        </button>
+
+        <button 
+          onClick={() => setActiveTab("CALENDAR")}
+          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CALENDAR" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+        >
+          <Calendar size={20} strokeWidth={activeTab === "CALENDAR" ? 2.5 : 2} />
+          <span className="text-[10px] font-semibold">Calendar</span>
+        </button>
       </div>
     </div>
-  </div>
-</div>
   )
 }

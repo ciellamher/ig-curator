@@ -107,9 +107,9 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-pastel-300 hover:bg-pastel-50/50 rounded-xl text-xs font-semibold text-foreground shadow-xs hover:text-pastel-700 transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-slate-400 hover:bg-soft-50 rounded-xl text-xs font-semibold text-foreground shadow-xs hover:text-slate-900 transition-all cursor-pointer"
           >
-            <Upload size={14} className="text-pastel-500" />
+            <Upload size={14} className="text-slate-700" />
             <span>{isUploading ? "Uploading..." : "Upload Image"}</span>
           </button>
 
@@ -170,7 +170,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                     onClick={() => updateSlot(activeSlot.id, { currentUrlIndex: idx })}
                     className={`relative w-9 h-9 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                       idx === (activeSlot.currentUrlIndex || 0)
-                        ? "border-pastel-500 ring-2 ring-pastel-400/50 scale-105"
+                        ? "border-slate-800 ring-2 ring-slate-400/40 scale-105"
                         : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
@@ -189,7 +189,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           onClick={() => setActiveTab("details")}
           className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
             activeTab === "details" 
-              ? "bg-white text-foreground font-bold shadow-xs" 
+              ? "bg-white text-slate-900 font-bold shadow-xs" 
               : "text-foreground/50 hover:text-foreground"
           }`}
         >
@@ -199,7 +199,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           onClick={() => setActiveTab("appearance")}
           className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
             activeTab === "appearance" 
-              ? "bg-white text-foreground font-bold shadow-xs" 
+              ? "bg-white text-slate-900 font-bold shadow-xs" 
               : "text-foreground/50 hover:text-foreground"
           }`}
         >
@@ -218,7 +218,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                   id="hideFromGrid"
                   checked={activeSlot.isHiddenFromGrid || false}
                   onChange={(e) => updateSlot(activeSlot.id, { isHiddenFromGrid: e.target.checked })}
-                  className="w-4 h-4 rounded text-pastel-500 focus:ring-pastel-500/20 cursor-pointer"
+                  className="w-4 h-4 rounded text-slate-800 focus:ring-slate-800/20 cursor-pointer"
                 />
                 <label htmlFor="hideFromGrid" className="text-xs font-medium text-foreground cursor-pointer">
                   Hide from Profile Grid
@@ -232,7 +232,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                 value={activeSlot.caption || ""}
                 onChange={(e) => updateSlot(activeSlot.id, { caption: e.target.value })}
                 placeholder="Write a caption..."
-                className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-400 focus:bg-white text-sm min-h-[120px] resize-none transition-all"
+                className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-sm min-h-[120px] resize-none transition-all"
               />
             </div>
 
@@ -242,7 +242,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                 type="datetime-local"
                 value={activeSlot.scheduledTime || ""}
                 onChange={(e) => updateSlot(activeSlot.id, { scheduledTime: e.target.value })}
-                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-400 focus:bg-white text-xs transition-all"
+                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
               />
             </div>
           </>
@@ -256,7 +256,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                   value={activeSlot.hexColor || ""}
                   onChange={(e) => updateSlot(activeSlot.id, { hexColor: e.target.value })}
                   placeholder="#E5D3C8"
-                  className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-400 focus:bg-white text-xs transition-all uppercase font-mono"
+                  className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all uppercase font-mono"
                 />
                 <div 
                   className="w-10 h-10 rounded-xl border border-soft-200 shadow-sm shrink-0" 
@@ -272,7 +272,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                 value={activeSlot.text || ""}
                 onChange={(e) => updateSlot(activeSlot.id, { text: e.target.value })}
                 placeholder="e.g. Quote box, Product teaser..."
-                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-400 focus:bg-white text-xs transition-all"
+                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
               />
             </div>
           </>

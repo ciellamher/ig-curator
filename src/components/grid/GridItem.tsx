@@ -188,8 +188,8 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
         isActive 
-          ? "ring-4 ring-pastel-500 ring-inset z-20 shadow-lg" 
-          : "hover:ring-2 hover:ring-pastel-300/50 hover:ring-inset"
+          ? "ring-4 ring-slate-900 ring-inset z-20 shadow-md" 
+          : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"
       }`}
     >
       <input
@@ -221,11 +221,6 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
             className="w-full h-full object-cover transition-transform duration-75"
             draggable={false}
           />
-          {item.urls.length > 1 && (
-            <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-30 pointer-events-none">
-              {item.currentUrlIndex! + 1} / {item.urls.length}
-            </div>
-          )}
 
           {isAdjusting && (
             <div 
@@ -240,7 +235,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
                 step="0.05" 
                 value={tempSettings.scale}
                 onChange={(e) => setTempSettings(s => ({ ...s, scale: parseFloat(e.target.value) }))}
-                className="flex-1 accent-pastel-500"
+                className="flex-1 accent-slate-800"
               />
             </div>
           )}
@@ -265,7 +260,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       {/* Visual Badges */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
         {item.isLocked && (
-          <div className="bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 text-white p-1 rounded-full shadow-sm">
+          <div className="bg-gradient-to-tr from-slate-700 to-slate-900 text-white p-1 rounded-full shadow-sm">
             <Camera size={12} />
           </div>
         )}
@@ -280,7 +275,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
           </div>
         )}
         {item.scheduledTime && (
-          <div className="bg-pastel-500 text-white p-1 rounded-full shadow-sm">
+          <div className="bg-slate-900 text-white p-1 rounded-full shadow-sm">
             <Clock size={12} />
           </div>
         )}
@@ -289,7 +284,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       {/* Done Button when Adjusting Image */}
       {!item.isLocked && item.urls.length > 0 && isAdjusting && (
         <div 
-          className="absolute top-2 right-2 flex items-center gap-1.5 z-50 bg-pastel-500 text-white px-3 py-1 rounded-full shadow-lg cursor-pointer hover:bg-pastel-600 transition-colors"
+          className="absolute top-2 right-2 flex items-center gap-1.5 z-50 bg-slate-900 text-white px-3 py-1 rounded-full shadow-lg cursor-pointer hover:bg-black transition-colors"
           onClick={saveAdjustment}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -300,7 +295,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
 
       {isUploading && (
         <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-sm pointer-events-none z-50">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pastel-500"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-800"></div>
         </div>
       )}
     </div>
