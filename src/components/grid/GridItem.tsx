@@ -175,21 +175,21 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
 
   return (
     <div
+      id={`grid-slot-${item.id}`}
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
       onClick={(e) => {
         onClick();
-        if (item.urls.length > 1) {
-          nextImage(e);
-        }
       }}
       onDoubleClick={onDoubleClick}
-      className={`relative w-full overflow-hidden ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all group ${
+      className={`relative w-full overflow-hidden ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all duration-200 group ${
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
-        isActive ? "ring-2 ring-pastel-500 ring-inset z-20" : ""
+        isActive 
+          ? "ring-4 ring-pastel-500 ring-offset-2 ring-offset-white shadow-2xl scale-[1.02] z-30 rounded-md" 
+          : "hover:ring-2 hover:ring-pastel-300/60"
       }`}
     >
       <input
@@ -200,6 +200,13 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         accept="image/*"
         multiple
       />
+
+      {/* Active Selection Badge */}
+      {isActive && (
+        <div className="absolute top-2 left-2 bg-pastel-500 text-white rounded-full p-1 shadow-md z-40 animate-in fade-in zoom-in-75">
+          <Check size={12} strokeWidth={3} />
+        </div>
+      )}
 
       {item.type === "image" && item.urls.length > 0 ? (
         <div 
@@ -224,28 +231,30 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
           {item.urls.length > 1 && (
             <>
               {/* Counter Indicator */}
-              <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 pointer-events-none">
+              <div className={`absolute top-2 ${isActive ? 'left-8' : 'left-2'} bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-30 pointer-events-none transition-all`}>
                 {item.currentUrlIndex! + 1} / {item.urls.length}
               </div>
               
               {!isAdjusting && (
                 <>
-                  <div className="absolute top-1/2 -translate-y-1/2 -left-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                  <div className="absolute top-1/2 -translate-y-1/2 left-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-40">
                     <button 
                       onClick={prevImage} 
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="p-1 bg-white shadow-md rounded-full hover:bg-soft-50 text-foreground"
+                      className="p-1.5 bg-white/90 shadow-lg rounded-full hover:bg-white text-foreground hover:scale-110 transition-all cursor-pointer"
+                      title="Previous Image"
                     >
-                      <ChevronLeft size={16} />
+                      <ChevronLeft size={14} strokeWidth={2.5} />
                     </button>
                   </div>
-                  <div className="absolute top-1/2 -translate-y-1/2 -right-4 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                  <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-40">
                     <button 
                       onClick={nextImage} 
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="p-1 bg-white shadow-md rounded-full hover:bg-soft-50 text-foreground"
+                      className="p-1.5 bg-white/90 shadow-lg rounded-full hover:bg-white text-foreground hover:scale-110 transition-all cursor-pointer"
+                      title="Next Image"
                     >
-                      <ChevronRight size={16} />
+                      <ChevronRight size={14} strokeWidth={2.5} />
                     </button>
                   </div>
                 </>

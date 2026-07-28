@@ -208,6 +208,23 @@ export function DashboardClient() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!activeSlotId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`grid-slot-${activeSlotId}`);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const container = el.closest(".relative");
+        if (container) {
+          const containerRect = container.getBoundingClientRect();
+          const topOffset = Math.max(-10, Math.min(450, rect.top - containerRect.top - 15));
+          setModalPos({ x: 0, y: topOffset });
+        }
+      }
+    }, 10);
+    return () => clearTimeout(timer);
+  }, [activeSlotId]);
+
   const handleModalPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, input, textarea")) return;
     e.stopPropagation();

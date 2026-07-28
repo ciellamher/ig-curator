@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { SlotItem } from "@/types"
-import { Upload, Trash2, X, Sparkles } from "lucide-react"
+import { Upload, Trash2, X, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface EditorPanelProps {
   activeSlot: SlotItem | null;
@@ -17,6 +17,22 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!activeSlot) return null;
+
+  const nextImage = () => {
+    if (activeSlot.urls && activeSlot.urls.length > 1) {
+      updateSlot(activeSlot.id, {
+        currentUrlIndex: (activeSlot.currentUrlIndex + 1) % activeSlot.urls.length
+      });
+    }
+  };
+
+  const prevImage = () => {
+    if (activeSlot.urls && activeSlot.urls.length > 1) {
+      updateSlot(activeSlot.id, {
+        currentUrlIndex: (activeSlot.currentUrlIndex - 1 + activeSlot.urls.length) % activeSlot.urls.length
+      });
+    }
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -103,24 +119,49 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
       </div>
 
       {/* Quick Action Toolbar */}
-      <div className="flex items-center gap-2 p-2 bg-soft-50 border border-soft-200 rounded-xl">
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-pastel-300 rounded-lg text-xs font-semibold text-foreground shadow-sm hover:text-pastel-600 transition-all cursor-pointer"
-        >
-          <Upload size={14} />
-          <span>{isUploading ? "Uploading..." : "Upload Image"}</span>
-        </button>
-
-        {onDeleteSlot && (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 p-2 bg-soft-50 border border-soft-200 rounded-xl">
           <button
-            onClick={() => onDeleteSlot(activeSlot.id)}
-            className="flex items-center justify-center p-2 bg-white border border-soft-200 hover:border-red-300 rounded-lg text-foreground/60 hover:text-red-500 shadow-sm transition-all cursor-pointer"
-            title="Delete Slot"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-pastel-300 rounded-lg text-xs font-semibold text-foreground shadow-sm hover:text-pastel-600 transition-all cursor-pointer"
           >
-            <Trash2 size={15} />
+            <Upload size={14} />
+            <span>{isUploading ? "Uploading..." : "Upload Image"}</span>
           </button>
+
+          {onDeleteSlot && (
+            <button
+              onClick={() => onDeleteSlot(activeSlot.id)}
+              className="flex items-center justify-center p-2 bg-white border border-soft-200 hover:border-red-300 rounded-lg text-foreground/60 hover:text-red-500 shadow-sm transition-all cursor-pointer"
+              title="Delete Slot"
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
+
+        {/* Carousel Navigation in Editor Panel */}
+        {activeSlot.urls && activeSlot.urls.length > 1 && (
+          <div className="flex items-center justify-between p-2 bg-pastel-50/70 border border-pastel-200/80 rounded-xl">
+            <button 
+              onClick={prevImage}
+              className="p-1.5 bg-white border border-pastel-200 rounded-lg hover:bg-pastel-100 text-foreground transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+              title="Previous Photo"
+            >
+              <ChevronLeft size={16} /> Prev
+            </button>
+            <span className="text-xs font-extrabold text-pastel-700">
+              Photo {activeSlot.currentUrlIndex + 1} / {activeSlot.urls.length}
+            </span>
+            <button 
+              onClick={nextImage}
+              className="p-1.5 bg-white border border-pastel-200 rounded-lg hover:bg-pastel-100 text-foreground transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+              title="Next Photo"
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
         )}
       </div>
 
