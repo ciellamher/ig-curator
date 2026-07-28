@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { SlotItem } from "@/types"
-import { Upload, Trash2, X, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
+import { Upload, Trash2, X, Sparkles, ChevronLeft, ChevronRight, ImageMinus } from "lucide-react"
 
 interface EditorPanelProps {
   activeSlot: SlotItem | null;
@@ -90,20 +90,26 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
     }
   };
 
-  const deleteCurrentImage = () => {
-    if (!activeSlot.urls || activeSlot.urls.length <= 1) {
-      updateSlot(activeSlot.id, {
-        type: "placeholder",
-        urls: [],
-        currentUrlIndex: 0
-      });
-    } else {
+  const handleDelete = () => {
+    if (activeSlot.urls && activeSlot.urls.length > 0) {
+      // Deletes only the single photo currently being viewed (e.g. 1 of 3)
       const newUrls = activeSlot.urls.filter((_, idx) => idx !== (activeSlot.currentUrlIndex || 0));
-      const newIndex = Math.min(activeSlot.currentUrlIndex || 0, newUrls.length - 1);
-      updateSlot(activeSlot.id, {
-        urls: newUrls,
-        currentUrlIndex: newIndex
-      });
+      if (newUrls.length === 0) {
+        updateSlot(activeSlot.id, {
+          type: "placeholder",
+          urls: [],
+          currentUrlIndex: 0
+        });
+      } else {
+        const newIndex = Math.min(activeSlot.currentUrlIndex || 0, newUrls.length - 1);
+        updateSlot(activeSlot.id, {
+          urls: newUrls,
+          currentUrlIndex: newIndex
+        });
+      }
+    } else {
+      // If empty placeholder slot, remove the whole post slot from grid
+      if (onDeleteSlot) onDeleteSlot(activeSlot.id);
     }
   };
 
@@ -118,38 +124,27 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         multiple
       />
 
-      {/* Quick Action Toolbar */}
+      {/* Quick Action Toolbar - Only Add & Trash Icons */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
+          {/* Add / Upload Photo Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-slate-400 hover:bg-soft-50 rounded-xl text-xs font-semibold text-foreground shadow-xs hover:text-slate-900 transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
+            title={isUploading ? "Uploading..." : "Add / Upload Photo"}
           >
-            <Upload size={14} className="text-slate-700" />
-            <span>{isUploading ? "Uploading..." : "Upload Image"}</span>
+            <Upload size={18} strokeWidth={2.2} />
           </button>
 
-          {activeSlot.type === "image" && activeSlot.urls.length > 0 && (
-            <button
-              onClick={deleteCurrentImage}
-              className="flex items-center justify-center gap-1 py-2 px-3 bg-white border border-soft-200 hover:border-red-300 hover:bg-red-50/50 rounded-xl text-xs font-semibold text-foreground/70 hover:text-red-600 shadow-xs transition-all cursor-pointer"
-              title="Delete Current Photo"
-            >
-              <Trash2 size={14} />
-              <span className="text-[11px]">Remove Photo</span>
-            </button>
-          )}
-
-          {onDeleteSlot && (
-            <button
-              onClick={() => onDeleteSlot(activeSlot.id)}
-              className="flex items-center justify-center p-2 bg-white border border-soft-200 hover:border-red-300 hover:bg-red-50/50 rounded-xl text-foreground/60 hover:text-red-500 shadow-xs transition-all cursor-pointer"
-              title="Delete Entire Slot"
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
+          {/* Single Photo Trash Button */}
+          <button
+            onClick={handleDelete}
+            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl active:scale-95 transition-all cursor-pointer"
+            title={activeSlot.urls && activeSlot.urls.length > 0 ? "Delete Current Photo" : "Delete Entire Post"}
+          >
+            <Trash2 size={18} strokeWidth={2.2} />
+          </button>
         </div>
 
         {/* Carousel Navigation & Photo Switcher */}
