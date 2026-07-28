@@ -237,24 +237,24 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
               
               {!isAdjusting && (
                 <>
-                  <div className="absolute top-1/2 -translate-y-1/2 left-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-40">
+                  <div className={`absolute top-1/2 -translate-y-1/2 left-2 flex items-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity z-40`}>
                     <button 
                       onClick={prevImage} 
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-white/90 shadow-lg rounded-full hover:bg-white text-foreground hover:scale-110 transition-all cursor-pointer"
+                      className="p-1.5 bg-black/60 text-white shadow-xl rounded-full hover:bg-black backdrop-blur-md hover:scale-110 transition-all cursor-pointer border border-white/30"
                       title="Previous Image"
                     >
-                      <ChevronLeft size={14} strokeWidth={2.5} />
+                      <ChevronLeft size={16} strokeWidth={2.5} />
                     </button>
                   </div>
-                  <div className="absolute top-1/2 -translate-y-1/2 right-1.5 flex items-center opacity-0 group-hover:opacity-100 transition-opacity z-40">
+                  <div className={`absolute top-1/2 -translate-y-1/2 right-2 flex items-center ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity z-40`}>
                     <button 
                       onClick={nextImage} 
                       onPointerDown={(e) => e.stopPropagation()}
-                      className="p-1.5 bg-white/90 shadow-lg rounded-full hover:bg-white text-foreground hover:scale-110 transition-all cursor-pointer"
+                      className="p-1.5 bg-black/60 text-white shadow-xl rounded-full hover:bg-black backdrop-blur-md hover:scale-110 transition-all cursor-pointer border border-white/30"
                       title="Next Image"
                     >
-                      <ChevronRight size={14} strokeWidth={2.5} />
+                      <ChevronRight size={16} strokeWidth={2.5} />
                     </button>
                   </div>
                 </>

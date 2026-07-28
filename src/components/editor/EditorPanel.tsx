@@ -141,26 +141,64 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           )}
         </div>
 
-        {/* Carousel Navigation in Editor Panel */}
-        {activeSlot.urls && activeSlot.urls.length > 1 && (
-          <div className="flex items-center justify-between p-2 bg-pastel-50/70 border border-pastel-200/80 rounded-xl">
-            <button 
-              onClick={prevImage}
-              className="p-1.5 bg-white border border-pastel-200 rounded-lg hover:bg-pastel-100 text-foreground transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
-              title="Previous Photo"
-            >
-              <ChevronLeft size={16} /> Prev
-            </button>
-            <span className="text-xs font-extrabold text-pastel-700">
-              Photo {activeSlot.currentUrlIndex + 1} / {activeSlot.urls.length}
-            </span>
-            <button 
-              onClick={nextImage}
-              className="p-1.5 bg-white border border-pastel-200 rounded-lg hover:bg-pastel-100 text-foreground transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
-              title="Next Photo"
-            >
-              Next <ChevronRight size={16} />
-            </button>
+        {/* Carousel Navigation & Photo Switcher in Drag Panel */}
+        {activeSlot.urls && activeSlot.urls.length > 0 && (
+          <div className="flex flex-col gap-2 p-2.5 bg-pastel-50/80 border border-pastel-200 rounded-xl shadow-inner">
+            <div className="flex items-center justify-between">
+              <button 
+                onClick={prevImage}
+                disabled={activeSlot.urls.length <= 1}
+                className={`px-3 py-1.5 bg-white border border-pastel-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
+                  activeSlot.urls.length > 1 
+                    ? "hover:bg-pastel-500 hover:text-white hover:border-pastel-500 cursor-pointer text-foreground" 
+                    : "opacity-40 cursor-not-allowed text-foreground/40"
+                }`}
+                title="Previous Photo"
+              >
+                <ChevronLeft size={16} strokeWidth={2.5} />
+                <span>Left</span>
+              </button>
+
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-extrabold text-pastel-800 tracking-tight">
+                  Photo {(activeSlot.currentUrlIndex || 0) + 1} of {activeSlot.urls.length}
+                </span>
+                <span className="text-[10px] text-pastel-600 font-medium">Carousel Navigation</span>
+              </div>
+
+              <button 
+                onClick={nextImage}
+                disabled={activeSlot.urls.length <= 1}
+                className={`px-3 py-1.5 bg-white border border-pastel-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
+                  activeSlot.urls.length > 1 
+                    ? "hover:bg-pastel-500 hover:text-white hover:border-pastel-500 cursor-pointer text-foreground" 
+                    : "opacity-40 cursor-not-allowed text-foreground/40"
+                }`}
+                title="Next Photo"
+              >
+                <span>Right</span>
+                <ChevronRight size={16} strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* Thumbnail Strip */}
+            {activeSlot.urls.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+                {activeSlot.urls.map((url, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => updateSlot(activeSlot.id, { currentUrlIndex: idx })}
+                    className={`relative w-10 h-10 rounded-md overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                      idx === (activeSlot.currentUrlIndex || 0)
+                        ? "border-pastel-500 ring-2 ring-pastel-400 scale-105"
+                        : "border-white opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={url} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
