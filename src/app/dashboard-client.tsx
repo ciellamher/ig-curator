@@ -11,7 +11,7 @@ import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw } from "lucide-react"
+import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X } from "lucide-react"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
