@@ -56,48 +56,63 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
   const avatarUrl = profile.avatarUrl || session?.user?.image;
 
   return (
-    <div className="w-full bg-white flex flex-col pt-10 pb-4 px-4">
-      {/* Top Bar - Minimal Style */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <button onClick={onAddRow} title="Add Row" className="hover:text-slate-900 transition-colors cursor-pointer">
-            <Plus size={24} className="text-foreground" strokeWidth={2.5} />
+    <div className="w-full bg-white flex flex-col pt-8 pb-4 px-5 select-none">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <button onClick={onAddRow} title="Add Row" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
+            <Plus size={22} strokeWidth={2.2} />
           </button>
           {canUndo && (
-            <button onClick={onUndo} title="Undo" className="hover:text-slate-900 transition-colors cursor-pointer">
-              <Undo2 size={22} className="text-foreground" strokeWidth={2.5} />
+            <button onClick={onUndo} title="Undo" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
+              <Undo2 size={20} strokeWidth={2.2} />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1 cursor-pointer">
+        <div className="flex items-center gap-1.5 cursor-pointer">
           {isEditing ? (
             <input 
               value={profile.username}
               onChange={(e) => setProfile({...profile, username: e.target.value})}
-              className="font-bold text-[16px] text-foreground tracking-tight text-center outline-none border-b border-slate-400 w-32 bg-transparent"
+              className="font-bold text-sm text-slate-900 tracking-tight text-center outline-none bg-soft-100 border border-soft-200 focus:border-slate-800 focus:bg-white rounded-full px-3 py-1 w-36 transition-all shadow-xs"
             />
           ) : (
             <>
-              <span className="font-bold text-[16px] text-foreground tracking-tight">{profile.username}</span>
-              <ChevronDown size={16} className="text-foreground opacity-60" strokeWidth={2.5} />
+              <span className="font-extrabold text-[16px] text-slate-900 tracking-tight">{profile.username}</span>
+              <ChevronDown size={15} className="text-slate-500" strokeWidth={2.5} />
             </>
           )}
         </div>
 
-        <div className="flex items-center gap-4">
-          <button onClick={isEditing ? saveProfile : () => setIsEditing(true)} className="hover:text-slate-900 transition-colors cursor-pointer">
-            {isEditing ? <Check size={22} className="text-slate-900" strokeWidth={2.5} /> : <Edit3 size={20} className="text-foreground" strokeWidth={2} />}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={isEditing ? saveProfile : () => setIsEditing(true)} 
+            className="px-3 py-1 bg-soft-100 border border-soft-200 hover:bg-slate-900 hover:text-white rounded-full text-xs font-bold text-slate-800 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+          >
+            {isEditing ? (
+              <>
+                <Check size={14} strokeWidth={2.5} />
+                <span>Save</span>
+              </>
+            ) : (
+              <>
+                <Edit3 size={13} strokeWidth={2} />
+                <span>Edit</span>
+              </>
+            )}
           </button>
-          <Settings size={22} className="text-foreground cursor-pointer" strokeWidth={2} />
+          <button className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800" title="Settings">
+            <Settings size={20} strokeWidth={2} />
+          </button>
         </div>
       </div>
 
-      {/* Stats Row - Minimal Style */}
-      <div className="flex items-center justify-between px-2">
+      {/* Stats & Avatar Row */}
+      <div className="flex items-center justify-between px-1">
         <div className="relative shrink-0">
           <div 
-            className={`w-[72px] h-[72px] rounded-full p-[2px] bg-gradient-to-tr from-slate-300 via-slate-500 to-slate-800 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            className={`w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-slate-200 via-slate-400 to-slate-900 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             onClick={() => {
               if (isEditing) document.getElementById('profile-upload')?.click();
             }}
@@ -145,7 +160,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
                 <img src={avatarUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
               ) : (
                 <div className="w-full h-full rounded-full bg-soft-50 flex items-center justify-center">
-                  <User size={30} className="text-foreground/20" strokeWidth={2} />
+                  <User size={30} className="text-slate-400" strokeWidth={2} />
                 </div>
               )}
               {isEditing && (
@@ -159,38 +174,46 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
 
         <div className="flex-1 flex justify-around ml-4">
           <div className="flex flex-col items-center">
-            <span className="font-extrabold text-foreground text-[17px]">{liveMediaCount}</span>
-            <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">posts</span>
+            <span className="font-extrabold text-slate-900 text-[17px]">{liveMediaCount}</span>
+            <span className="text-[12px] text-slate-500 font-medium">posts</span>
           </div>
           <div className="flex flex-col items-center">
             {isEditing ? (
-              <input value={profile.followers} onChange={(e) => setProfile({...profile, followers: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-slate-400 bg-transparent" />
+              <input 
+                value={profile.followers} 
+                onChange={(e) => setProfile({...profile, followers: e.target.value})} 
+                className="font-extrabold text-slate-900 text-sm text-center w-16 outline-none bg-soft-100 border border-soft-200 focus:border-slate-800 focus:bg-white rounded-lg px-1.5 py-0.5 transition-all shadow-xs" 
+              />
             ) : (
-              <span className="font-extrabold text-foreground text-[17px]">{profile.followers}</span>
+              <span className="font-extrabold text-slate-900 text-[17px]">{profile.followers}</span>
             )}
-            <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">followers</span>
+            <span className="text-[12px] text-slate-500 font-medium">followers</span>
           </div>
           <div className="flex flex-col items-center">
             {isEditing ? (
-              <input value={profile.following} onChange={(e) => setProfile({...profile, following: e.target.value})} className="font-extrabold text-foreground text-[17px] text-center w-14 outline-none border-b border-slate-400 bg-transparent" />
+              <input 
+                value={profile.following} 
+                onChange={(e) => setProfile({...profile, following: e.target.value})} 
+                className="font-extrabold text-slate-900 text-sm text-center w-16 outline-none bg-soft-100 border border-soft-200 focus:border-slate-800 focus:bg-white rounded-lg px-1.5 py-0.5 transition-all shadow-xs" 
+              />
             ) : (
-              <span className="font-extrabold text-foreground text-[17px]">{profile.following}</span>
+              <span className="font-extrabold text-slate-900 text-[17px]">{profile.following}</span>
             )}
-            <span className="text-[13px] text-foreground/60 -mt-0.5 font-medium">following</span>
+            <span className="text-[12px] text-slate-500 font-medium">following</span>
           </div>
         </div>
       </div>
       
-      {/* Bio - Minimal Style */}
-      <div className="px-3 mt-4 mb-2">
+      {/* Bio Block */}
+      <div className="mt-4 mb-1">
         {isEditing ? (
           <textarea 
             value={profile.bio}
             onChange={(e) => setProfile({...profile, bio: e.target.value})}
-            className="w-full text-[14px] text-foreground/80 leading-[1.4] tracking-tight font-medium outline-none border border-slate-300 rounded-xl p-2 resize-none h-20 bg-soft-50"
+            className="w-full text-[13px] text-slate-800 leading-snug tracking-tight font-medium outline-none border border-soft-200 focus:border-slate-800 focus:bg-white rounded-2xl p-3 resize-none h-20 bg-soft-50 transition-all shadow-xs"
           />
         ) : (
-          <div className="text-[14px] text-foreground/80 leading-[1.4] whitespace-pre-line tracking-tight font-medium">
+          <div className="text-[13px] text-slate-800 leading-snug whitespace-pre-line tracking-tight font-medium px-1">
             {profile.bio}
           </div>
         )}
