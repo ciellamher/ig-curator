@@ -266,56 +266,56 @@ export function DashboardClient() {
         {/* Main Planner Workspace */}
         <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
           {/* View Toggle & Tabs */}
-          <div className="flex justify-between items-center px-8 pt-6 pb-2">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-8 pt-4 sm:pt-6 pb-2 gap-2">
+            <div className="flex items-center gap-2 sm:gap-4">
               {status === "authenticated" && (
                 <button 
                   onClick={handleManualSync}
                   disabled={syncStatus === "Saving..."}
-                  className="text-sm font-medium px-4 py-2 rounded-full bg-white shadow-sm border border-soft-200 text-foreground/70 hover:text-foreground transition-all flex items-center gap-2"
+                  className="text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white shadow-sm border border-soft-200 text-foreground/70 hover:text-foreground transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <RefreshCw size={14} className={syncStatus === "Saving..." ? "animate-spin" : ""} />
-                  {syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}
+                  <RefreshCw size={13} className={syncStatus === "Saving..." ? "animate-spin" : ""} />
+                  <span>{syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}</span>
                 </button>
               )}
             </div>
             
-            <div className="flex items-center bg-white rounded-full p-1 shadow-sm">
+            <div className="flex items-center bg-white rounded-full p-1 shadow-sm border border-soft-200">
               <button 
                 onClick={() => setDeviceView("phone")}
-                className={`p-2 rounded-full transition-colors ${deviceView === "phone" ? "bg-pastel-100 text-pastel-700" : "text-foreground/40 hover:text-foreground"}`}
+                className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "phone" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
                 title="Phone View"
               >
-                <Smartphone size={18} />
+                <Smartphone size={16} />
               </button>
               <button 
                 onClick={() => setDeviceView("desktop")}
-                className={`p-2 rounded-full transition-colors ${deviceView === "desktop" ? "bg-pastel-100 text-pastel-700" : "text-foreground/40 hover:text-foreground"}`}
+                className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "desktop" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
                 title="Desktop View"
               >
-                <Monitor size={18} />
+                <Monitor size={16} />
               </button>
             </div>
           </div>
 
           {/* Grid Workspace */}
-          <div className="flex-1 overflow-y-auto p-8 relative flex justify-center">
+          <div className="flex-1 overflow-y-auto p-2 sm:p-6 md:p-8 relative flex justify-center">
             {activeTab === "CREATE" && (
               /* Dynamic View Container (Phone or Desktop) */
               <div className={`
                 ${deviceView === "phone" 
-                  ? "w-full max-w-[360px] border-[12px] border-slate-900 ring-[2px] ring-slate-800 rounded-[3.5rem] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] overflow-hidden relative bg-white flex flex-col mx-auto h-[780px]" 
-                  : "w-full max-w-4xl border border-soft-200 rounded-xl shadow-xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[800px]"
+                  ? "w-full max-w-full sm:max-w-[360px] sm:border-[12px] sm:border-slate-900 sm:ring-[2px] sm:ring-slate-800 sm:rounded-[3.5rem] shadow-2xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[600px] sm:h-[780px]" 
+                  : "w-full max-w-4xl border border-soft-200 rounded-xl shadow-xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[700px]"
                 } transition-all duration-300 ease-in-out
               `}>
                 {deviceView === "phone" && (
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 w-[100px] h-[26px] bg-black rounded-full z-50 shadow-inner flex items-center justify-between px-3">
+                  <div className="hidden sm:flex absolute top-2 left-1/2 -translate-x-1/2 w-[100px] h-[26px] bg-black rounded-full z-50 shadow-inner items-center justify-between px-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-800/80"></div>
                     <div className="w-2 h-2 rounded-full bg-blue-900/40"></div>
                   </div>
                 )}
                 
-                <div className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "pt-1" : ""}`}>
+                <div className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-1" : ""}`}>
                   <ProfileHeader 
                     session={session} 
                     status={status}
@@ -353,7 +353,7 @@ export function DashboardClient() {
                   />
                   
                   {/* Grid Tabs */}
-                  <div className="flex items-center justify-around border-t border-b border-soft-100 py-3 sticky top-0 bg-white/95 backdrop-blur-md z-40">
+                  <div className="flex items-center justify-around border-t border-b border-soft-100 py-2.5 sticky top-0 bg-white/95 backdrop-blur-md z-40">
                     <button 
                       onClick={() => setGridFilter("All")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "All" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
@@ -427,27 +427,32 @@ export function DashboardClient() {
               </div>
             )}
 
-            {/* Floating Editor Panel Side-pane when slot is active */}
+            {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
             {activeTab === "CREATE" && activeSlotId && (
               <div 
-                className="absolute right-6 top-16 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border border-soft-200 rounded-2xl z-50 overflow-hidden flex flex-col transition-shadow"
-                style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+                className="max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute md:right-6 md:top-16 md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200"
+                style={{
+                  transform: typeof window !== "undefined" && window.innerWidth >= 768 ? `translate(${modalPos.x}px, ${modalPos.y}px)` : "none"
+                }}
               >
                 <div 
-                  className="h-8 bg-soft-100/60 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100 transition-colors"
+                  className="h-9 bg-soft-100/70 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100 transition-colors"
                   onPointerDown={handleModalPointerDown}
                   onPointerMove={handleModalPointerMove}
                   onPointerUp={handleModalPointerUp}
                   onPointerCancel={handleModalPointerUp}
                 >
-                  <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none select-none">Drag panel</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-1 bg-soft-400 rounded-full md:hidden"></div>
+                    <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none select-none">Drag panel</span>
+                  </div>
                   <button 
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveSlotId(null);
                     }}
-                    className="text-[11px] font-bold text-foreground/50 hover:text-foreground pointer-events-auto cursor-pointer"
+                    className="text-[11px] font-bold text-foreground/60 hover:text-foreground pointer-events-auto cursor-pointer"
                   >
                     Close
                   </button>
@@ -462,7 +467,6 @@ export function DashboardClient() {
                       setActiveSlotId(null);
                     }}
                   />
-                </div>
               </div>
             )}
 
