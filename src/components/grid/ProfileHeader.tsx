@@ -57,9 +57,9 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
 
   return (
     <div className="w-full bg-white flex flex-col pt-8 pb-4 px-5 select-none">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
+      {/* Top Bar - Centered Layout */}
+      <div className="relative flex items-center justify-center mb-5 min-h-[36px]">
+        <div className="absolute left-0 flex items-center gap-3">
           {status === "authenticated" && (
             <button onClick={onAddRow} title="Add Row" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
               <Plus size={22} strokeWidth={2.2} />
@@ -72,7 +72,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 cursor-pointer">
+        <div className="flex items-center gap-1.5 cursor-pointer mx-auto z-10">
           {isEditing && status === "authenticated" ? (
             <input 
               value={profile.username}
@@ -87,7 +87,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="absolute right-0 flex items-center gap-2">
           {status === "authenticated" && (
             <button 
               onClick={isEditing ? saveProfile : () => setIsEditing(true)} 
