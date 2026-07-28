@@ -91,7 +91,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
   };
 
   return (
-    <div className="p-5 flex flex-col gap-4 h-full max-h-[85vh] overflow-hidden text-foreground">
+    <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-hidden text-foreground">
       <input
         type="file"
         ref={fileInputRef}
@@ -101,39 +101,22 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         multiple
       />
 
-      {/* Header */}
-      <div className="flex justify-between items-center pb-1">
-        <div className="flex items-center gap-2">
-          <Sparkles size={18} className="text-pastel-500" />
-          <h3 className="font-bold text-lg text-foreground tracking-tight">Edit Slot</h3>
-        </div>
-        {onClose && (
-          <button 
-            onClick={onClose}
-            className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors"
-            title="Close Panel"
-          >
-            <X size={18} />
-          </button>
-        )}
-      </div>
-
       {/* Quick Action Toolbar */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 p-2 bg-soft-50 border border-soft-200 rounded-xl">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-pastel-300 rounded-lg text-xs font-semibold text-foreground shadow-sm hover:text-pastel-600 transition-all cursor-pointer"
+            className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-white border border-soft-200 hover:border-pastel-300 hover:bg-pastel-50/50 rounded-xl text-xs font-semibold text-foreground shadow-xs hover:text-pastel-700 transition-all cursor-pointer"
           >
-            <Upload size={14} />
+            <Upload size={14} className="text-pastel-500" />
             <span>{isUploading ? "Uploading..." : "Upload Image"}</span>
           </button>
 
           {onDeleteSlot && (
             <button
               onClick={() => onDeleteSlot(activeSlot.id)}
-              className="flex items-center justify-center p-2 bg-white border border-soft-200 hover:border-red-300 rounded-lg text-foreground/60 hover:text-red-500 shadow-sm transition-all cursor-pointer"
+              className="flex items-center justify-center p-2 bg-white border border-soft-200 hover:border-red-300 hover:bg-red-50/50 rounded-xl text-foreground/60 hover:text-red-500 shadow-xs transition-all cursor-pointer"
               title="Delete Slot"
             >
               <Trash2 size={15} />
@@ -141,43 +124,40 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           )}
         </div>
 
-        {/* Carousel Navigation & Photo Switcher in Drag Panel */}
+        {/* Carousel Navigation & Photo Switcher */}
         {activeSlot.urls && activeSlot.urls.length > 0 && (
-          <div className="flex flex-col gap-2 p-2.5 bg-pastel-50/80 border border-pastel-200 rounded-xl shadow-inner">
+          <div className="flex flex-col gap-2 p-2.5 bg-soft-50/80 border border-soft-200/80 rounded-2xl">
             <div className="flex items-center justify-between">
               <button 
                 onClick={prevImage}
                 disabled={activeSlot.urls.length <= 1}
-                className={`px-3 py-1.5 bg-white border border-pastel-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
+                className={`px-3 py-1.5 bg-white border border-soft-200 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 shadow-xs ${
                   activeSlot.urls.length > 1 
-                    ? "hover:bg-pastel-500 hover:text-white hover:border-pastel-500 cursor-pointer text-foreground" 
+                    ? "hover:bg-soft-100 hover:text-foreground cursor-pointer text-foreground/80" 
                     : "opacity-40 cursor-not-allowed text-foreground/40"
                 }`}
                 title="Previous Photo"
               >
-                <ChevronLeft size={16} strokeWidth={2.5} />
-                <span>Left</span>
+                <ChevronLeft size={14} strokeWidth={2.5} />
+                <span>Prev</span>
               </button>
 
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-extrabold text-pastel-800 tracking-tight">
-                  Photo {(activeSlot.currentUrlIndex || 0) + 1} of {activeSlot.urls.length}
-                </span>
-                <span className="text-[10px] text-pastel-600 font-medium">Carousel Navigation</span>
-              </div>
+              <span className="text-xs font-bold text-foreground/80 tracking-tight">
+                Photo {(activeSlot.currentUrlIndex || 0) + 1} of {activeSlot.urls.length}
+              </span>
 
               <button 
                 onClick={nextImage}
                 disabled={activeSlot.urls.length <= 1}
-                className={`px-3 py-1.5 bg-white border border-pastel-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm ${
+                className={`px-3 py-1.5 bg-white border border-soft-200 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 shadow-xs ${
                   activeSlot.urls.length > 1 
-                    ? "hover:bg-pastel-500 hover:text-white hover:border-pastel-500 cursor-pointer text-foreground" 
+                    ? "hover:bg-soft-100 hover:text-foreground cursor-pointer text-foreground/80" 
                     : "opacity-40 cursor-not-allowed text-foreground/40"
                 }`}
                 title="Next Photo"
               >
-                <span>Right</span>
-                <ChevronRight size={16} strokeWidth={2.5} />
+                <span>Next</span>
+                <ChevronRight size={14} strokeWidth={2.5} />
               </button>
             </div>
 
@@ -188,10 +168,10 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                   <button
                     key={idx}
                     onClick={() => updateSlot(activeSlot.id, { currentUrlIndex: idx })}
-                    className={`relative w-10 h-10 rounded-md overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                    className={`relative w-9 h-9 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
                       idx === (activeSlot.currentUrlIndex || 0)
-                        ? "border-pastel-500 ring-2 ring-pastel-400 scale-105"
-                        : "border-white opacity-60 hover:opacity-100"
+                        ? "border-pastel-500 ring-2 ring-pastel-400/50 scale-105"
+                        : "border-transparent opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={url} alt={`Thumb ${idx}`} className="w-full h-full object-cover" />
@@ -203,17 +183,25 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-soft-100 pb-2">
+      {/* iOS Segmented Tabs */}
+      <div className="bg-soft-100/80 p-1 rounded-xl flex gap-1 border border-soft-200/60">
         <button 
           onClick={() => setActiveTab("details")}
-          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors cursor-pointer ${activeTab === "details" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
+          className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
+            activeTab === "details" 
+              ? "bg-white text-foreground font-bold shadow-xs" 
+              : "text-foreground/50 hover:text-foreground"
+          }`}
         >
           Details
         </button>
         <button 
           onClick={() => setActiveTab("appearance")}
-          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors cursor-pointer ${activeTab === "appearance" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
+          className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
+            activeTab === "appearance" 
+              ? "bg-white text-foreground font-bold shadow-xs" 
+              : "text-foreground/50 hover:text-foreground"
+          }`}
         >
           Placeholder / Filler
         </button>

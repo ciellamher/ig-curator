@@ -436,25 +436,29 @@ export function DashboardClient() {
                 }}
               >
                 <div 
-                  className="h-9 bg-soft-100/70 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100 transition-colors"
+                  className="py-3 px-4 bg-white/90 backdrop-blur border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
                   onPointerDown={handleModalPointerDown}
                   onPointerMove={handleModalPointerMove}
                   onPointerUp={handleModalPointerUp}
                   onPointerCancel={handleModalPointerUp}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-1 bg-soft-400 rounded-full md:hidden"></div>
-                    <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none select-none">Drag panel</span>
+                    <Sparkles size={16} className="text-pastel-500" />
+                    <h3 className="font-bold text-base text-foreground tracking-tight">Edit Slot</h3>
                   </div>
+
+                  <div className="w-10 h-1 bg-soft-300 rounded-full md:hidden"></div>
+
                   <button 
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActiveSlotId(null);
                     }}
-                    className="text-[11px] font-bold text-foreground/60 hover:text-foreground pointer-events-auto cursor-pointer"
+                    className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors pointer-events-auto cursor-pointer"
+                    title="Close"
                   >
-                    Close
+                    <X size={18} />
                   </button>
                 </div>
                 <div className="pointer-events-auto">
