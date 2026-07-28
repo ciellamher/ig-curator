@@ -197,7 +197,19 @@ export function DashboardClient() {
     )
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveSlotId(null);
+        setPreviewSlotId(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const handleModalPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("button, input, textarea")) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
     modalDragRef.current = { 
@@ -398,23 +410,27 @@ export function DashboardClient() {
               </div>
             )}
 
-            {/* Optional Editor Panel Popup or Side-pane when slot is active */}
+            {/* Floating Editor Panel Side-pane when slot is active */}
             {activeTab === "CREATE" && activeSlotId && (
               <div 
-                className="absolute right-4 top-24 w-80 bg-white/95 backdrop-blur shadow-2xl border border-soft-200 rounded-2xl z-50 overflow-hidden flex flex-col"
+                className="absolute right-6 top-16 w-80 bg-white/95 backdrop-blur-xl shadow-2xl border border-soft-200 rounded-2xl z-50 overflow-hidden flex flex-col transition-shadow"
                 style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
               >
                 <div 
-                  className="h-10 bg-soft-50 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100/50 transition-colors"
+                  className="h-8 bg-soft-100/60 border-b border-soft-200 flex justify-between items-center px-4 cursor-move shrink-0 active:cursor-grabbing hover:bg-soft-100 transition-colors"
                   onPointerDown={handleModalPointerDown}
                   onPointerMove={handleModalPointerMove}
                   onPointerUp={handleModalPointerUp}
                   onPointerCancel={handleModalPointerUp}
                 >
-                  <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none">Drag to move</span>
+                  <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest pointer-events-none select-none">Drag panel</span>
                   <button 
-                    onClick={() => setActiveSlotId(null)}
-                    className="text-xs font-bold text-foreground/50 hover:text-foreground pointer-events-auto"
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSlotId(null);
+                    }}
+                    className="text-[11px] font-bold text-foreground/50 hover:text-foreground pointer-events-auto cursor-pointer"
                   >
                     Close
                   </button>
@@ -423,6 +439,11 @@ export function DashboardClient() {
                   <EditorPanel 
                     activeSlot={activeSlot} 
                     updateSlot={updateItem} 
+                    onClose={() => setActiveSlotId(null)}
+                    onDeleteSlot={(id) => {
+                      updateItems(prev => prev.filter(item => item.id !== id));
+                      setActiveSlotId(null);
+                    }}
                   />
                 </div>
               </div>

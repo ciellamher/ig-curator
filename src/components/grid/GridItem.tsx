@@ -186,10 +186,10 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         }
       }}
       onDoubleClick={onDoubleClick}
-      className={`relative w-full overflow-visible ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all group ${
+      className={`relative w-full overflow-hidden ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all group ${
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
-        isActive ? "ring-2 ring-pastel-400 ring-offset-0 z-10" : ""
+        isActive ? "ring-2 ring-pastel-500 ring-inset z-20" : ""
       }`}
     >
       <input
@@ -312,76 +312,20 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
         )}
       </div>
 
-      {/* Hover/Edit Controls (Hidden if locked) */}
+      {/* Done Button when Adjusting Image */}
       {!item.isLocked && item.urls.length > 0 && isAdjusting && (
         <div 
-          className="absolute top-2 right-2 flex items-center gap-2 z-50 bg-pastel-500 text-white px-3 py-1.5 rounded-full shadow-lg cursor-pointer hover:bg-pastel-600 transition-colors"
+          className="absolute top-2 right-2 flex items-center gap-1.5 z-50 bg-pastel-500 text-white px-3 py-1 rounded-full shadow-lg cursor-pointer hover:bg-pastel-600 transition-colors"
           onClick={saveAdjustment}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <Check size={16} />
+          <Check size={14} />
           <span className="text-xs font-bold">Done</span>
         </div>
       )}
 
-      {!item.isLocked && !isAdjusting && (
-        <div 
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-full shadow-sm z-40"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setTempSettings(item.imageSettings?.[item.currentUrlIndex] || { scale: 1, x: 0, y: 0 });
-              setIsAdjusting(true);
-            }}
-            className="text-foreground hover:text-pastel-500 transition-colors p-1"
-            title="Adjust Image"
-          >
-            <Crop size={16} />
-          </button>
-          
-          <div className="w-[1px] h-4 bg-soft-200 mx-1"></div>
-
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              fileInputRef.current?.click();
-            }}
-            className="text-foreground hover:text-pastel-500 transition-colors p-1"
-            title="Upload Image"
-          >
-            <Upload size={16} />
-          </button>
-          
-          {onDelete && (
-            <>
-              <div className="w-[1px] h-4 bg-soft-200 mx-1"></div>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (item.urls.length > 1) {
-                    const newUrls = item.urls.filter((_, i) => i !== item.currentUrlIndex);
-                    updateItem(item.id, { 
-                      urls: newUrls,
-                      currentUrlIndex: Math.max(0, item.currentUrlIndex - 1)
-                    });
-                  } else {
-                    onDelete(item.id);
-                  }
-                }}
-                className="text-foreground hover:text-red-500 transition-colors p-1"
-                title="Delete Box"
-              >
-                <Trash2 size={16} />
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
       {isUploading && (
-        <div className="absolute inset-0 bg-white/50 flex items-center justify-center backdrop-blur-sm pointer-events-none">
+        <div className="absolute inset-0 bg-white/60 flex items-center justify-center backdrop-blur-sm pointer-events-none z-50">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-pastel-500"></div>
         </div>
       )}
