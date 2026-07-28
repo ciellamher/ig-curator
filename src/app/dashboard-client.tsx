@@ -437,7 +437,9 @@ export function DashboardClient() {
                 />
 
                 <div 
-                  className="max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute md:right-6 md:top-16 md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-4"
+                  className={`max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute ${
+                    deviceView === "phone" ? "md:left-[calc(50%+195px)] md:top-20" : "md:right-6 md:top-16"
+                  } md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-4`}
                   style={{
                     transform: typeof window !== "undefined" && window.innerWidth >= 768 ? `translate(${modalPos.x}px, ${modalPos.y}px)` : "none"
                   }}

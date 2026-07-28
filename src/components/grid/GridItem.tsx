@@ -246,11 +246,17 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
           style={{ backgroundColor: item.hexColor }}
         >
           {item.text ? (
-            <span className="text-white text-center font-extrabold text-sm drop-shadow-md leading-tight w-full break-words px-2">
+            <span 
+              className="text-white text-center font-extrabold drop-shadow-md leading-tight w-full break-words px-2"
+              style={{ fontSize: `${item.fontSize || 14}px` }}
+            >
               {item.text}
             </span>
           ) : (
-            <span className="text-white/90 text-center font-extrabold text-sm drop-shadow-md leading-tight w-full break-words px-2">
+            <span 
+              className="text-white/90 text-center font-extrabold drop-shadow-md leading-tight w-full break-words px-2"
+              style={{ fontSize: `${item.fontSize || 14}px` }}
+            >
               Slot
             </span>
           )}

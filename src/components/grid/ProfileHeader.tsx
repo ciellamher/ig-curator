@@ -60,9 +60,11 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
-          <button onClick={onAddRow} title="Add Row" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
-            <Plus size={22} strokeWidth={2.2} />
-          </button>
+          {status === "authenticated" && (
+            <button onClick={onAddRow} title="Add Row" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
+              <Plus size={22} strokeWidth={2.2} />
+            </button>
+          )}
           {canUndo && (
             <button onClick={onUndo} title="Undo" className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800">
               <Undo2 size={20} strokeWidth={2.2} />
@@ -71,7 +73,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
         </div>
 
         <div className="flex items-center gap-1.5 cursor-pointer">
-          {isEditing ? (
+          {isEditing && status === "authenticated" ? (
             <input 
               value={profile.username}
               onChange={(e) => setProfile({...profile, username: e.target.value})}
@@ -86,22 +88,19 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
-            onClick={isEditing ? saveProfile : () => setIsEditing(true)} 
-            className="px-3 py-1 bg-soft-100 border border-soft-200 hover:bg-slate-900 hover:text-white rounded-full text-xs font-bold text-slate-800 transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
-          >
-            {isEditing ? (
-              <>
-                <Check size={14} strokeWidth={2.5} />
-                <span>Save</span>
-              </>
-            ) : (
-              <>
-                <Edit3 size={13} strokeWidth={2} />
-                <span>Edit</span>
-              </>
-            )}
-          </button>
+          {status === "authenticated" && (
+            <button 
+              onClick={isEditing ? saveProfile : () => setIsEditing(true)} 
+              className="p-2 bg-soft-100 border border-soft-200 hover:bg-slate-900 hover:text-white rounded-full text-slate-800 transition-all shadow-xs cursor-pointer flex items-center justify-center"
+              title={isEditing ? "Save Profile" : "Edit Profile"}
+            >
+              {isEditing ? (
+                <Check size={16} strokeWidth={2.5} />
+              ) : (
+                <Edit3 size={16} strokeWidth={2} />
+              )}
+            </button>
+          )}
           <button className="p-1.5 rounded-full hover:bg-soft-100 transition-colors cursor-pointer text-slate-800" title="Settings">
             <Settings size={20} strokeWidth={2} />
           </button>
