@@ -169,15 +169,15 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
       <div className="flex gap-2 border-b border-soft-100 pb-2">
         <button 
           onClick={() => setActiveTab("details")}
-          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${activeTab === "details" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
+          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors cursor-pointer ${activeTab === "details" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
         >
           Details
         </button>
         <button 
           onClick={() => setActiveTab("appearance")}
-          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors ${activeTab === "appearance" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
+          className={`text-xs font-semibold px-4 py-1.5 rounded-full transition-colors cursor-pointer ${activeTab === "appearance" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/50 hover:bg-soft-100"}`}
         >
-          Appearance
+          Placeholder / Filler
         </button>
       </div>
 
@@ -223,7 +223,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         ) : (
           <>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Hex Color</label>
+              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Filler Color (Hex)</label>
               <div className="flex gap-3 items-center">
                 <input
                   type="text"
@@ -240,12 +240,12 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
             </div>
 
             <div className="flex flex-col gap-1.5 mt-2">
-              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Overlay Text</label>
+              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Placeholder Label / Text</label>
               <input
                 type="text"
                 value={activeSlot.text || ""}
                 onChange={(e) => updateSlot(activeSlot.id, { text: e.target.value })}
-                placeholder="Placeholder label..."
+                placeholder="e.g. Quote box, Product teaser..."
                 className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-pastel-400 focus:bg-white text-xs transition-all"
               />
             </div>
