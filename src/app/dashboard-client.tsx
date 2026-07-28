@@ -319,7 +319,7 @@ export function DashboardClient() {
                   <ProfileHeader 
                     session={session} 
                     status={status}
-                    liveMediaCount={items.filter(i => i.isLocked && !i.folderId && i.contentType !== "StoryFolder").length}
+                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
                     onAddRow={() => {
                       if (gridFilter === "Story" && !activeStoryFolderId) {
                         const newFolder: SlotItem = {
