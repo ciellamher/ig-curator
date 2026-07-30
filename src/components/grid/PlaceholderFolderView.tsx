@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SlotItem } from "@/types";
-import { ChevronLeft, Plus, CheckSquare, Square, Trash2, Edit3, Image as ImageIcon, Check, ArrowUpToLine } from "lucide-react";
+import { ChevronLeft, Plus, CheckSquare, Square, Check, ArrowUpToLine, Camera, Video, GalleryHorizontal, Clock } from "lucide-react";
 
 interface PlaceholderFolderViewProps {
   folder: SlotItem;
@@ -68,12 +68,6 @@ export function PlaceholderFolderView({
     updateItems((prev) => [newPlaceholder, ...prev]);
   };
 
-  const handleDeletePlaceholder = (id: string) => {
-    updateItems((prev) => prev.filter((item) => item.id !== id));
-    setSelectedIds((prev) => prev.filter((item) => item !== id));
-    if (activeSlotId === id) setActiveSlotId(null);
-  };
-
   const handleTransfer = () => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
@@ -85,7 +79,7 @@ export function PlaceholderFolderView({
 
   return (
     <div className="w-full flex flex-col bg-white h-full relative overflow-hidden select-none">
-      {/* Minimal Header */}
+      {/* Minimal Top Header */}
       <div className="px-4 py-2.5 border-b border-soft-100 bg-white/95 backdrop-blur-md sticky top-0 z-30 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -145,13 +139,10 @@ export function PlaceholderFolderView({
         </div>
       )}
 
-      {/* Grid View */}
-      <div className="flex-1 overflow-y-auto p-3 pb-24">
+      {/* Main Dashboard Style Grid */}
+      <div className="flex-1 overflow-y-auto pb-24 bg-white">
         {placeholders.length === 0 ? (
           <div className="flex flex-col items-center justify-center pt-16 pb-8 text-center">
-            <div className="w-10 h-10 bg-soft-100 rounded-xl flex items-center justify-center mb-2 text-foreground/30">
-              <ImageIcon size={20} />
-            </div>
             <p className="text-xs font-bold text-foreground/70">Folder is empty</p>
             <button
               onClick={handleAddPlaceholder}
@@ -161,75 +152,78 @@ export function PlaceholderFolderView({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-3 gap-[1px] bg-white w-full">
             {placeholders.map((item) => {
               const isSelected = selectedIds.includes(item.id);
+              const isActive = activeSlotId === item.id;
               const hasImage = item.type === "image" && item.urls && item.urls.length > 0;
 
               return (
                 <div
                   key={item.id}
-                  onClick={() => toggleSelect(item.id)}
+                  onClick={() => {
+                    toggleSelect(item.id);
+                    setActiveSlotId(item.id);
+                  }}
                   className={`
-                    relative w-full aspect-[4/5] rounded-xl overflow-hidden border transition-all duration-150 cursor-pointer group select-none
-                    ${isSelected ? "border-slate-900 ring-2 ring-slate-900 shadow-sm" : "border-soft-200 hover:border-slate-400"}
+                    relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-150
+                    ${isActive ? "ring-4 ring-slate-900 ring-inset z-20" : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"}
+                    ${isSelected ? "brightness-95" : ""}
                   `}
-                  style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
                 >
                   {hasImage ? (
-                    <img
-                      src={item.urls[item.currentUrlIndex || 0]}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="w-full h-full relative overflow-hidden bg-soft-100">
+                      <img
+                        src={item.urls[item.currentUrlIndex || 0]}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   ) : (
-                    <div className="w-full h-full p-1.5 flex flex-col justify-between items-center text-center">
-                      <div className="w-full flex justify-end">
-                        {/* Empty spacer */}
-                      </div>
-                      {item.text && (
-                        <p className="text-[11px] font-bold text-foreground/80 line-clamp-3 px-0.5">
+                    <div
+                      className="w-full h-full flex flex-col items-center justify-center p-2 relative"
+                      style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
+                    >
+                      {item.text ? (
+                        <span
+                          className="text-white text-center font-extrabold drop-shadow-md leading-tight w-full break-words px-2"
+                          style={{ fontSize: `${item.fontSize || 14}px` }}
+                        >
                           {item.text}
-                        </p>
+                        </span>
+                      ) : (
+                        <span
+                          className="text-white/90 text-center font-extrabold drop-shadow-md leading-tight w-full break-words px-2"
+                          style={{ fontSize: `${item.fontSize || 14}px` }}
+                        >
+                          Slot
+                        </span>
                       )}
-                      <span className="text-[9px] text-foreground/40 font-semibold uppercase">
-                        Box
-                      </span>
                     </div>
                   )}
 
-                  {/* Selection Badge */}
+                  {/* Selection Checkbox Badge */}
                   <div
                     className={`
-                      absolute top-1.5 left-1.5 w-5 h-5 rounded-md flex items-center justify-center transition-all z-20 shadow-2xs
-                      ${isSelected ? "bg-slate-900 text-white" : "bg-white/80 text-foreground/30 hover:bg-white"}
+                      absolute top-2 left-2 w-5 h-5 rounded-md flex items-center justify-center transition-all z-30 shadow-xs
+                      ${isSelected ? "bg-slate-900 text-white scale-105" : "bg-white/80 text-foreground/40 hover:bg-white"}
                     `}
                   >
-                    {isSelected ? <Check size={12} strokeWidth={3} /> : <Square size={12} />}
+                    {isSelected ? <Check size={13} strokeWidth={3} /> : <Square size={13} />}
                   </div>
 
-                  {/* Hover Buttons */}
-                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSlotId(item.id);
-                      }}
-                      className="p-1 bg-white/90 hover:bg-white text-slate-800 rounded shadow-xs"
-                      title="Edit"
-                    >
-                      <Edit3 size={11} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeletePlaceholder(item.id);
-                      }}
-                      className="p-1 bg-white/90 hover:bg-red-50 text-red-600 rounded shadow-xs"
-                      title="Delete"
-                    >
-                      <Trash2 size={11} />
-                    </button>
+                  {/* Content Type Badges (same as main grid) */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none z-20">
+                    {item.contentType === "Reel" && (
+                      <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-xs">
+                        <Video size={11} />
+                      </div>
+                    )}
+                    {item.contentType === "Carousel" && (
+                      <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-xs">
+                        <GalleryHorizontal size={11} />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
