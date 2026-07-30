@@ -10,6 +10,67 @@ export type CaptionItem = {
   isUsed: boolean;
 };
 
+const PREDEFINED_CATEGORIES = [
+  "Birthday",
+  "Family",
+  "Food",
+  "Friends",
+  "Holidays",
+  "Me",
+  "Others",
+  "Pet",
+  "Relationship",
+  "Summer",
+  "Things",
+  "Throwback",
+  "University",
+  "View",
+];
+
+function CategorySelector({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full text-left bg-soft-100/50 hover:bg-soft-100 text-slate-600 text-[11px] font-semibold px-3 py-1.5 rounded-full outline-none focus:bg-soft-200 focus:text-slate-900 transition-colors truncate"
+      >
+        {value || "Select..."}
+      </button>
+
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute top-full left-0 mt-1 w-40 bg-white border border-soft-200 shadow-xl rounded-xl z-50 max-h-64 overflow-y-auto py-1 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+            {PREDEFINED_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  onChange(cat);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2 text-[12px] font-medium hover:bg-soft-50 transition-colors ${value === cat ? "bg-soft-100 text-slate-900" : "text-slate-700"}`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CaptionsDatabaseView() {
   const [captions, setCaptions] = useState<CaptionItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -92,26 +153,6 @@ export function CaptionsDatabaseView() {
         </button>
       </div>
 
-      <div className="flex items-center gap-4 mb-6 pb-4 max-w-4xl">
-        <button className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 hover:bg-soft-100 px-3 py-1.5 rounded-lg transition-colors">
-          <Filter size={16} />
-          Options
-        </button>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 hover:bg-soft-100 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          <Plus size={16} />
-          Add
-        </button>
-        <button className="flex items-center gap-2 text-sm font-semibold text-slate-900 bg-soft-100 px-3 py-1.5 rounded-lg transition-colors">
-          <div className="w-4 h-4 bg-slate-900 rounded-[4px] flex items-center justify-center text-white text-[10px]">
-            C
-          </div>
-          Categories
-        </button>
-      </div>
-
       <div className="flex flex-col gap-1 w-full max-w-4xl pb-24">
         {captions.map((caption) => (
           <div
@@ -148,15 +189,12 @@ export function CaptionsDatabaseView() {
               }`}
             />
 
-            <div className="w-24 shrink-0 mt-0.5">
-              <input
-                type="text"
+            <div className="w-28 shrink-0 mt-0.5">
+              <CategorySelector
                 value={caption.category}
-                onChange={(e) =>
-                  handleUpdate(caption.id, { category: e.target.value })
+                onChange={(newCat) =>
+                  handleUpdate(caption.id, { category: newCat })
                 }
-                placeholder="Category"
-                className="w-full bg-soft-100/50 hover:bg-soft-100 text-slate-600 text-[11px] font-semibold px-3 py-1.5 rounded-full outline-none focus:bg-soft-200 focus:text-slate-900 transition-colors"
               />
             </div>
 
