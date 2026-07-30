@@ -1,8 +1,17 @@
-"use client"
+"use client";
 
 import { useState } from "react";
 import { SlotItem } from "@/types";
-import { Plus, FolderHeart, Trash2, Image as ImageIcon, Sparkles, X, Circle, Grid3X3 } from "lucide-react";
+import {
+  Plus,
+  FolderHeart,
+  Trash2,
+  Image as ImageIcon,
+  Sparkles,
+  X,
+  Circle,
+  Grid3X3,
+} from "lucide-react";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -67,9 +76,14 @@ export function InspoFolderListView({
 
       {/* Create Folder Modal */}
       {isCreating && (
-        <form onSubmit={handleCreate} className="mb-6 p-4 bg-white border border-soft-200 rounded-2xl shadow-lg flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <form
+          onSubmit={handleCreate}
+          className="mb-6 p-4 bg-white border border-soft-200 rounded-2xl shadow-lg flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200"
+        >
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">Create Inspo Folder</h3>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+              Create Inspo Folder
+            </h3>
             <button
               type="button"
               onClick={() => setIsCreating(false)}
@@ -80,7 +94,9 @@ export function InspoFolderListView({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-foreground/60">Folder Name</label>
+            <label className="text-[11px] font-bold text-foreground/60">
+              Folder Name
+            </label>
             <input
               type="text"
               autoFocus
@@ -92,7 +108,9 @@ export function InspoFolderListView({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-foreground/60">Theme Color</label>
+            <label className="text-[11px] font-bold text-foreground/60">
+              Theme Color
+            </label>
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
               {FOLDER_COLORS.map((color) => (
                 <button
@@ -100,7 +118,9 @@ export function InspoFolderListView({
                   type="button"
                   onClick={() => setSelectedColor(color)}
                   className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer shrink-0 ${
-                    selectedColor === color ? "border-slate-900 scale-110 shadow-xs" : "border-transparent opacity-80 hover:opacity-100"
+                    selectedColor === color
+                      ? "border-slate-900 scale-110 shadow-xs"
+                      : "border-transparent opacity-80 hover:opacity-100"
                   }`}
                   style={{ backgroundColor: color }}
                 />
@@ -133,9 +153,16 @@ export function InspoFolderListView({
           <div className="w-14 h-14 bg-pastel-100 rounded-full flex items-center justify-center mb-3 text-slate-800">
             <FolderHeart size={26} strokeWidth={1.8} />
           </div>
-          <h3 className="text-sm font-bold text-slate-900">No Inspo Folders Yet</h3>
+          <h3 className="text-sm font-bold text-slate-900">
+            No Inspo Folders Yet
+          </h3>
           <p className="text-xs text-foreground/50 max-w-xs mt-1 mb-4">
-            Create folders like <span className="font-semibold text-slate-800">Japan</span> or <span className="font-semibold text-slate-800">Minimal Moodboard</span> to save real photos for Posts & Stories.
+            Create folders like{" "}
+            <span className="font-semibold text-slate-800">Japan</span> or{" "}
+            <span className="font-semibold text-slate-800">
+              Minimal Moodboard
+            </span>{" "}
+            to save real photos for Posts & Stories.
           </p>
           <button
             onClick={() => setIsCreating(true)}
@@ -148,10 +175,22 @@ export function InspoFolderListView({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-5">
           {folders.map((folder) => {
-            const folderItems = allItems.filter((i) => i.folderId === folder.id);
-            const postCount = folderItems.filter((i) => i.contentType === "InspoPost" || !i.contentType || i.contentType === "Post").length;
-            const storyCount = folderItems.filter((i) => i.contentType === "InspoStory" || i.contentType === "Story").length;
-            const firstImage = folderItems.find((i) => i.urls && i.urls.length > 0)?.urls[0];
+            const folderItems = allItems.filter(
+              (i) => i.folderId === folder.id,
+            );
+            const postCount = folderItems.filter(
+              (i) =>
+                i.contentType === "InspoPost" ||
+                !i.contentType ||
+                i.contentType === "Post",
+            ).length;
+            const storyCount = folderItems.filter(
+              (i) =>
+                i.contentType === "InspoStory" || i.contentType === "Story",
+            ).length;
+            const firstImage = folderItems.find(
+              (i) => i.urls && i.urls.length > 0,
+            )?.urls[0];
 
             return (
               <div
@@ -173,7 +212,9 @@ export function InspoFolderListView({
                   ) : (
                     <div className="flex flex-col items-center justify-center gap-1 text-slate-800/60">
                       <FolderHeart size={28} strokeWidth={1.8} />
-                      <span className="text-[10px] font-extrabold tracking-wider uppercase opacity-60">Inspo</span>
+                      <span className="text-[10px] font-extrabold tracking-wider uppercase opacity-60">
+                        Inspo
+                      </span>
                     </div>
                   )}
 
@@ -181,7 +222,11 @@ export function InspoFolderListView({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete inspo folder "${folder.text}" and all its photos?`)) {
+                      if (
+                        confirm(
+                          `Delete inspo folder "${folder.text}" and all its photos?`,
+                        )
+                      ) {
                         onDeleteFolder(folder.id);
                       }
                     }}
