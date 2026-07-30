@@ -237,7 +237,16 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     const timer = setTimeout(async () => {
       try {
-        const payloadString = JSON.stringify(items);
+        let payloadString = "";
+        try {
+          payloadString = JSON.stringify(items);
+        } catch (stringifyError) {
+          console.warn("Payload too massive to stringify, skipping cloud sync.");
+          setSyncStatus("Saved Locally");
+          setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
+          return;
+        }
+
         if (payloadString.length > 4 * 1024 * 1024) {
           setSyncStatus("Saved Locally");
           setTimeout(
@@ -261,29 +270,16 @@ export function DashboardClient() {
         const res = await response.json();
         if (res.success) {
           setSyncStatus("Saved");
-          setTimeout(
-            () => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)),
-            2000,
-          );
+          setTimeout(() => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)), 2000);
         } else {
-          alert("Auto-sync failed: " + res.error);
           console.error("Auto-sync failed:", res.error);
           setSyncStatus("Error");
-          setTimeout(
-            () =>
-              setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
-            2000,
-          );
+          setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
         }
       } catch (e: any) {
-        alert("Auto-sync exception: " + (e.message || e));
         console.error("Auto-sync exception:", e);
         setSyncStatus("Error");
-        setTimeout(
-          () =>
-            setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
-          2000,
-        );
+        setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
       }
     }, 2000);
 
@@ -384,7 +380,16 @@ export function DashboardClient() {
     if (status !== "authenticated") return;
     setSyncStatus("Saving...");
     try {
-      const payloadString = JSON.stringify(items);
+      let payloadString = "";
+      try {
+        payloadString = JSON.stringify(items);
+      } catch (stringifyError) {
+        console.warn("Payload too massive to stringify, skipping cloud sync.");
+        setSyncStatus("Saved Locally");
+        setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
+        return;
+      }
+
       if (payloadString.length > 4 * 1024 * 1024) {
         setSyncStatus("Saved Locally");
         setTimeout(
@@ -406,28 +411,16 @@ export function DashboardClient() {
       const res = await response.json();
       if (res.success) {
         setSyncStatus("Saved");
-        setTimeout(
-          () => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)),
-          2000,
-        );
+        setTimeout(() => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)), 2000);
       } else {
-        alert("Manual sync failed: " + res.error);
         console.error("Manual sync failed:", res.error);
         setSyncStatus("Error");
-        setTimeout(
-          () =>
-            setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
-          2000,
-        );
+        setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
       }
     } catch (e: any) {
-      alert("Manual sync exception: " + (e.message || e));
       console.error("Manual sync exception:", e);
       setSyncStatus("Error");
-      setTimeout(
-        () => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
-        2000,
-      );
+      setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
     }
   }
 
