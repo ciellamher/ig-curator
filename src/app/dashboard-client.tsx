@@ -558,6 +558,7 @@ export function DashboardClient() {
                 )}
 
                 <div
+                  id="main-scroll-container"
                   className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-1" : ""}`}
                 >
                   <ProfileHeader
