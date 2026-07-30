@@ -234,19 +234,19 @@ export function DashboardClient() {
           );
         } else {
           console.error("Auto-sync failed:", res.error);
-          setSyncStatus("Local Only");
+          setSyncStatus("Error");
           setTimeout(
             () =>
-              setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+              setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
             2000,
           );
         }
       } catch (e) {
         console.error("Auto-sync exception:", e);
-        setSyncStatus("Local Only");
+        setSyncStatus("Error");
         setTimeout(
           () =>
-            setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+            setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
           2000,
         );
       }
@@ -353,18 +353,18 @@ export function DashboardClient() {
         );
       } else {
         console.error("Manual sync failed:", res.error);
-        setSyncStatus("Local Only");
+        setSyncStatus("Error");
         setTimeout(
           () =>
-            setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+            setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
           2000,
         );
       }
     } catch (e) {
       console.error("Manual sync exception:", e);
-      setSyncStatus("Local Only");
+      setSyncStatus("Error");
       setTimeout(
-        () => setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+        () => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)),
         2000,
       );
     }
@@ -516,13 +516,13 @@ export function DashboardClient() {
                   <span>
                     {syncStatus === "Saving..."
                       ? "Syncing..."
-                      : syncStatus === "Local Only"
+                      : syncStatus === "Error"
                         ? "Saved Locally"
                         : syncStatus === "Saved"
                           ? "Saved"
                           : syncStatus === "Saved Locally"
                             ? "Saved Locally"
-                            : "Sync to Cloud"}
+                            : "Up to date"}
                   </span>
                 </button>
               )}

@@ -64,6 +64,8 @@ export function InspoFolderView({
   const [isDragging, setIsDragging] = useState(false);
   const [dragTargetId, setDragTargetId] = useState<string | null>(null);
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-profile");
@@ -131,7 +133,7 @@ export function InspoFolderView({
     fileInputRef.current?.click();
   };
 
-  const processFiles = async (files: File[]) => {
+  const processFiles = async (files: File[], targetFolderId?: string) => {
     if (files.length === 0) return;
 
     setIsUploading(true);
@@ -192,7 +194,7 @@ export function InspoFolderView({
         currentUrlIndex: 0,
         hexColor: "#E5D3C8",
         text: "",
-        folderId: folder.id,
+        folderId: targetFolderId || folder.id,
         contentType: "InspoPost",
       }));
 
@@ -295,6 +297,19 @@ export function InspoFolderView({
 
         <div className="flex items-center gap-1">
           <button
+            onClick={() => {
+              if (isSelectionMode) {
+                setIsSelectionMode(false);
+                setSelectedItems(new Set());
+              } else {
+                setIsSelectionMode(true);
+              }
+            }}
+            className="px-2 py-1 text-sm font-semibold text-slate-800 hover:bg-soft-100 rounded-lg transition-colors cursor-pointer"
+          >
+            {isSelectionMode ? "Done" : "Select"}
+          </button>
+          <button
             onClick={handleAddSubFolder}
             className="p-1.5 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
             title="Add sub-folder"
@@ -369,6 +384,28 @@ export function InspoFolderView({
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragTargetId(null);
+                  
+                  const files = Array.from(e.dataTransfer.files || []);
+                  if (files.length > 0) {
+                    processFiles(files, item.id);
+                    return;
+                  }
+
+                  const draggedIdsStr = e.dataTransfer.getData("application/folder-ids");
+                  if (draggedIdsStr) {
+                    try {
+                      const ids = JSON.parse(draggedIdsStr) as string[];
+                      ids.forEach(id => {
+                        if (id !== item.id) updateItem(id, { folderId: item.id });
+                      });
+                      if (isSelectionMode) {
+                        setIsSelectionMode(false);
+                        setSelectedItems(new Set());
+                      }
+                      return;
+                    } catch (e) {}
+                  }
+
                   const draggedId = e.dataTransfer.getData(
                     "application/folder-id",
                   );
@@ -493,9 +530,35 @@ export function InspoFolderView({
           {postItems.map((item) => (
             <div
               key={item.id}
-              className="relative cursor-pointer group bg-soft-100 overflow-hidden break-inside-avoid mb-2 rounded-xl shadow-sm"
-              onClick={() => setPreviewItem(item)}
+              className={`relative cursor-pointer group bg-soft-100 overflow-hidden break-inside-avoid mb-2 rounded-xl shadow-sm transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-slate-800 ring-offset-1 scale-[0.98]' : ''}`}
+              onClick={() => {
+                if (isSelectionMode) {
+                  setSelectedItems(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(item.id)) newSet.delete(item.id);
+                    else newSet.add(item.id);
+                    return newSet;
+                  });
+                } else {
+                  setPreviewItem(item);
+                }
+              }}
+              draggable
+              onDragStart={(e) => {
+                if (isSelectionMode && selectedItems.has(item.id)) {
+                  e.dataTransfer.setData("application/folder-ids", JSON.stringify(Array.from(selectedItems)));
+                } else {
+                  e.dataTransfer.setData("application/folder-id", item.id);
+                }
+              }}
             >
+              {isSelectionMode && (
+                <div className="absolute top-2 left-2 z-30">
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedItems.has(item.id) ? 'bg-slate-800 border-slate-800' : 'bg-white/50 border-white/80 backdrop-blur-sm'}`}>
+                    {selectedItems.has(item.id) && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+              )}
               {item.urls && item.urls.length > 0 ? (
                 item.urls[item.currentUrlIndex || 0].startsWith(
                   "data:video",
@@ -745,10 +808,26 @@ export function InspoFolderView({
         </div>
       )}
 
+      {/* Bulk Selection Action Bar */}
+      {isSelectionMode && selectedItems.size > 0 && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-5 z-[150] animate-in slide-in-from-bottom-5 border border-white/10">
+          <span className="text-[13px] font-bold">{selectedItems.size} Selected</span>
+          <div className="w-[1px] h-4 bg-white/20" />
+          <button onClick={() => setMovingItemId("bulk")} className="text-[13px] font-bold hover:text-slate-300 transition-colors">Move</button>
+          <button onClick={() => {
+             if (confirm(`Delete ${selectedItems.size} items?`)) {
+               selectedItems.forEach(id => handleDeleteItem(id));
+               setSelectedItems(new Set());
+               setIsSelectionMode(false);
+             }
+          }} className="text-[13px] font-bold text-red-400 hover:text-red-300 transition-colors">Delete</button>
+        </div>
+      )}
+
       {/* Move Photo Modal */}
       {movingItemId && (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
           onClick={() => setMovingItemId(null)}
         >
           <div
@@ -756,7 +835,7 @@ export function InspoFolderView({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-soft-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">Move Photo</h3>
+              <h3 className="font-bold text-slate-800">Move {movingItemId === "bulk" ? `${selectedItems.size} Photos` : "Photo"}</h3>
               <button
                 onClick={() => setMovingItemId(null)}
                 className="p-1 text-slate-400 hover:text-slate-800 rounded-full bg-soft-50 transition-colors cursor-pointer"
@@ -767,7 +846,13 @@ export function InspoFolderView({
             <div className="p-2 overflow-y-auto flex flex-col gap-1">
               <button
                 onClick={() => {
-                  updateItem(movingItemId, { folderId: undefined });
+                  if (movingItemId === "bulk") {
+                    selectedItems.forEach(id => updateItem(id, { folderId: undefined }));
+                    setSelectedItems(new Set());
+                    setIsSelectionMode(false);
+                  } else {
+                    updateItem(movingItemId, { folderId: undefined });
+                  }
                   setMovingItemId(null);
                 }}
                 className="w-full text-left p-3 hover:bg-soft-100 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer text-slate-700"
@@ -785,7 +870,13 @@ export function InspoFolderView({
                   <button
                     key={f.id}
                     onClick={() => {
-                      updateItem(movingItemId, { folderId: f.id });
+                      if (movingItemId === "bulk") {
+                        selectedItems.forEach(id => updateItem(id, { folderId: f.id }));
+                        setSelectedItems(new Set());
+                        setIsSelectionMode(false);
+                      } else {
+                        updateItem(movingItemId, { folderId: f.id });
+                      }
                       setMovingItemId(null);
                     }}
                     className="w-full text-left p-2 hover:bg-soft-100 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 cursor-pointer text-slate-700"
