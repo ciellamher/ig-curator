@@ -113,6 +113,8 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
     }
   };
 
+  const isDraftPlaceholder = activeSlot.folderId === "draft-pool" || activeSlot.id.startsWith("slot-draft");
+
   return (
     <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-hidden text-foreground select-none">
       <input
@@ -124,30 +126,32 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         multiple
       />
 
-      {/* Quick Action Toolbar - Only Add & Trash Icons */}
+      {/* Quick Action Toolbar */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          {/* Add / Upload Photo Button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="flex-1 flex items-center justify-center p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
-            title={isUploading ? "Uploading..." : "Add / Upload Photo"}
-          >
-            <Upload size={18} strokeWidth={2.2} />
-          </button>
+          {/* Add / Upload Photo Button - Hidden for draft placeholders */}
+          {!isDraftPlaceholder && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex-1 flex items-center justify-center p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
+              title={isUploading ? "Uploading..." : "Add / Upload Photo"}
+            >
+              <Upload size={18} strokeWidth={2.2} />
+            </button>
+          )}
 
-          {/* If item is in folder, add Transfer to Grid button */}
+          {/* Transfer to Main Grid (Row 1) Button for draft placeholders */}
           {activeSlot.folderId && (
             <button
               onClick={() => {
                 updateSlot(activeSlot.id, { folderId: undefined });
               }}
-              className="p-2.5 bg-pastel-100 border border-pastel-300 text-slate-900 hover:bg-pastel-200 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold"
+              className="flex-1 p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs"
               title="Transfer to Main Grid (First Row)"
             >
-              <ArrowUpToLine size={18} strokeWidth={2.2} />
-              <span className="hidden sm:inline">Row 1</span>
+              <ArrowUpToLine size={16} strokeWidth={2.2} />
+              <span>Transfer to Row 1</span>
             </button>
           )}
 
@@ -162,7 +166,7 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         </div>
 
         {/* Carousel Navigation & Photo Switcher */}
-        {activeSlot.urls && activeSlot.urls.length > 0 && (
+        {!isDraftPlaceholder && activeSlot.urls && activeSlot.urls.length > 0 && (
           <div className="flex flex-col gap-2 p-2.5 bg-soft-50/80 border border-soft-200/80 rounded-2xl">
             <div className="flex items-center justify-between">
               <button 
@@ -220,70 +224,35 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
         )}
       </div>
 
-      {/* iOS Segmented Tabs */}
-      <div className="bg-soft-100/80 p-1 rounded-xl flex gap-1 border border-soft-200/60">
-        <button 
-          onClick={() => setActiveTab("details")}
-          className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
-            activeTab === "details" 
-              ? "bg-white text-slate-900 font-bold shadow-xs" 
-              : "text-foreground/50 hover:text-foreground"
-          }`}
-        >
-          Details
-        </button>
-        <button 
-          onClick={() => setActiveTab("appearance")}
-          className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
-            activeTab === "appearance" 
-              ? "bg-white text-slate-900 font-bold shadow-xs" 
-              : "text-foreground/50 hover:text-foreground"
-          }`}
-        >
-          Placeholder
-        </button>
-      </div>
+      {/* iOS Segmented Tabs - Hidden for draft placeholders */}
+      {!isDraftPlaceholder && (
+        <div className="bg-soft-100/80 p-1 rounded-xl flex gap-1 border border-soft-200/60">
+          <button 
+            onClick={() => setActiveTab("details")}
+            className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
+              activeTab === "details" 
+                ? "bg-white text-slate-900 font-bold shadow-xs" 
+                : "text-foreground/50 hover:text-foreground"
+            }`}
+          >
+            Details
+          </button>
+          <button 
+            onClick={() => setActiveTab("appearance")}
+            className={`flex-1 text-xs font-semibold py-1.5 px-3 rounded-lg transition-all cursor-pointer text-center ${
+              activeTab === "appearance" 
+                ? "bg-white text-slate-900 font-bold shadow-xs" 
+                : "text-foreground/50 hover:text-foreground"
+            }`}
+          >
+            Placeholder
+          </button>
+        </div>
+      )}
 
-      {/* Tab Content */}
+      {/* Tab Content / Minimal Placeholder Controls */}
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-4 py-1">
-        {activeTab === "details" ? (
-          <>
-            {activeSlot.contentType === "Reel" && (
-              <div className="flex items-center gap-3 bg-soft-50 border border-soft-200 p-3 rounded-xl">
-                <input
-                  type="checkbox"
-                  id="hideFromGrid"
-                  checked={activeSlot.isHiddenFromGrid || false}
-                  onChange={(e) => updateSlot(activeSlot.id, { isHiddenFromGrid: e.target.checked })}
-                  className="w-4 h-4 rounded text-slate-800 focus:ring-slate-800/20 cursor-pointer"
-                />
-                <label htmlFor="hideFromGrid" className="text-xs font-medium text-foreground cursor-pointer">
-                  Hide from Profile Grid
-                </label>
-              </div>
-            )}
-
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Caption & Hashtags</label>
-              <textarea
-                value={activeSlot.caption || ""}
-                onChange={(e) => updateSlot(activeSlot.id, { caption: e.target.value })}
-                placeholder="Write a caption..."
-                className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-sm min-h-[120px] resize-none transition-all"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Schedule Time</label>
-              <input
-                type="datetime-local"
-                value={activeSlot.scheduledTime || ""}
-                onChange={(e) => updateSlot(activeSlot.id, { scheduledTime: e.target.value })}
-                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
-              />
-            </div>
-          </>
-        ) : (
+        {isDraftPlaceholder || activeTab === "appearance" ? (
           <>
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Filler Color (Hex)</label>
@@ -293,11 +262,13 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                   value={activeSlot.hexColor || ""}
                   onChange={(e) => updateSlot(activeSlot.id, { hexColor: e.target.value })}
                   placeholder="#E5D3C8"
-                  className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all uppercase font-mono"
+                  className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all uppercase font-mono font-bold text-slate-800"
                 />
-                <div 
-                  className="w-10 h-10 rounded-xl border border-soft-200 shadow-sm shrink-0" 
-                  style={{ backgroundColor: activeSlot.hexColor }} 
+                <input
+                  type="color"
+                  value={activeSlot.hexColor || "#E5D3C8"}
+                  onChange={(e) => updateSlot(activeSlot.id, { hexColor: e.target.value })}
+                  className="w-10 h-10 rounded-xl border border-soft-200 shadow-sm shrink-0 cursor-pointer p-0.5 bg-white"
                 />
               </div>
             </div>
@@ -308,8 +279,8 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                 type="text"
                 value={activeSlot.text || ""}
                 onChange={(e) => updateSlot(activeSlot.id, { text: e.target.value })}
-                placeholder="e.g. Quote box, Product teaser..."
-                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
+                placeholder="e.g. Selfie, Detail (Perfume), Full Body..."
+                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs font-semibold transition-all"
               />
             </div>
 
@@ -345,6 +316,43 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
                   ))}
                 </div>
               </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {activeSlot.contentType === "Reel" && (
+              <div className="flex items-center gap-3 bg-soft-50 border border-soft-200 p-3 rounded-xl">
+                <input
+                  type="checkbox"
+                  id="hideFromGrid"
+                  checked={activeSlot.isHiddenFromGrid || false}
+                  onChange={(e) => updateSlot(activeSlot.id, { isHiddenFromGrid: e.target.checked })}
+                  className="w-4 h-4 rounded text-slate-800 focus:ring-slate-800/20 cursor-pointer"
+                />
+                <label htmlFor="hideFromGrid" className="text-xs font-medium text-foreground cursor-pointer">
+                  Hide from Profile Grid
+                </label>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5 flex-1">
+              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Caption & Hashtags</label>
+              <textarea
+                value={activeSlot.caption || ""}
+                onChange={(e) => updateSlot(activeSlot.id, { caption: e.target.value })}
+                placeholder="Write a caption..."
+                className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-sm min-h-[120px] resize-none transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Schedule Time</label>
+              <input
+                type="datetime-local"
+                value={activeSlot.scheduledTime || ""}
+                onChange={(e) => updateSlot(activeSlot.id, { scheduledTime: e.target.value })}
+                className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
+              />
             </div>
           </>
         )}

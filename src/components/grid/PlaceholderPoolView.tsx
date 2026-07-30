@@ -156,7 +156,6 @@ export function PlaceholderPoolView({
                   id={`grid-slot-${item.id}`}
                   key={item.id}
                   onClick={() => {
-                    toggleSelect(item.id);
                     setActiveSlotId(item.id);
                   }}
                   className={`
@@ -204,12 +203,17 @@ export function PlaceholderPoolView({
 
                   {/* Selection Checkbox Badge */}
                   <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(item.id);
+                    }}
                     className={`
-                      absolute top-2 left-2 w-5 h-5 rounded-md flex items-center justify-center transition-all z-30 shadow-xs
-                      ${isSelected ? "bg-slate-900 text-white scale-105" : "bg-white/80 text-foreground/40 hover:bg-white"}
+                      absolute top-2 left-2 w-6 h-6 rounded-md flex items-center justify-center transition-all z-30 shadow-xs cursor-pointer active:scale-95
+                      ${isSelected ? "bg-slate-900 text-white scale-105" : "bg-white/80 text-foreground/50 hover:bg-white hover:text-slate-900"}
                     `}
+                    title={isSelected ? "Deselect box" : "Select box for transfer"}
                   >
-                    {isSelected ? <Check size={13} strokeWidth={3} /> : <Square size={13} />}
+                    {isSelected ? <Check size={14} strokeWidth={3} /> : <Square size={14} />}
                   </div>
 
                   {/* Delete Button on Hover */}
