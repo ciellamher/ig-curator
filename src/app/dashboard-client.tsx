@@ -261,6 +261,7 @@ export function DashboardClient() {
             2000,
           );
         } else {
+          alert("Auto-sync failed: " + res.error);
           console.error("Auto-sync failed:", res.error);
           setSyncStatus("Error");
           setTimeout(
@@ -269,7 +270,8 @@ export function DashboardClient() {
             2000,
           );
         }
-      } catch (e) {
+      } catch (e: any) {
+        alert("Auto-sync exception: " + (e.message || e));
         console.error("Auto-sync exception:", e);
         setSyncStatus("Error");
         setTimeout(
@@ -399,6 +401,7 @@ export function DashboardClient() {
           2000,
         );
       } else {
+        alert("Manual sync failed: " + res.error);
         console.error("Manual sync failed:", res.error);
         setSyncStatus("Error");
         setTimeout(
@@ -407,7 +410,8 @@ export function DashboardClient() {
           2000,
         );
       }
-    } catch (e) {
+    } catch (e: any) {
+      alert("Manual sync exception: " + (e.message || e));
       console.error("Manual sync exception:", e);
       setSyncStatus("Error");
       setTimeout(
