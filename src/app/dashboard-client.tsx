@@ -233,11 +233,22 @@ export function DashboardClient() {
             2000,
           );
         } else {
-          setSyncStatus("Error");
+          console.error("Auto-sync failed:", res.error);
+          setSyncStatus("Local Only");
+          setTimeout(
+            () =>
+              setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+            2000,
+          );
         }
       } catch (e) {
-        console.error("Auto-sync failed", e);
-        setSyncStatus("Error");
+        console.error("Auto-sync exception:", e);
+        setSyncStatus("Local Only");
+        setTimeout(
+          () =>
+            setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+          2000,
+        );
       }
     }, 2000);
 
@@ -341,11 +352,21 @@ export function DashboardClient() {
           2000,
         );
       } else {
-        setSyncStatus("Error");
+        console.error("Manual sync failed:", res.error);
+        setSyncStatus("Local Only");
+        setTimeout(
+          () =>
+            setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+          2000,
+        );
       }
     } catch (e) {
-      console.error("Manual sync failed", e);
-      setSyncStatus("Error");
+      console.error("Manual sync exception:", e);
+      setSyncStatus("Local Only");
+      setTimeout(
+        () => setSyncStatus((prev) => (prev === "Local Only" ? "Idle" : prev)),
+        2000,
+      );
     }
   }
 
@@ -495,11 +516,13 @@ export function DashboardClient() {
                   <span>
                     {syncStatus === "Saving..."
                       ? "Syncing..."
-                      : syncStatus === "Error"
-                        ? "Sync Failed"
+                      : syncStatus === "Local Only"
+                        ? "Saved Locally"
                         : syncStatus === "Saved"
                           ? "Saved"
-                          : "Sync to Cloud"}
+                          : syncStatus === "Saved Locally"
+                            ? "Saved Locally"
+                            : "Sync to Cloud"}
                   </span>
                 </button>
               )}
