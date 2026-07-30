@@ -306,8 +306,35 @@ export function InspoFolderView({
 
             {/* Actions & Caption */}
             <div
-              className={`p-4 flex flex-col gap-3 ${previewItem.contentType === "InspoStory" || previewItem.contentType === "Story" ? "bg-black" : "bg-white"}`}
+              className={`p-4 flex flex-col gap-3 ${
+                previewItem.contentType === "InspoStory" ||
+                previewItem.contentType === "Story"
+                  ? "bg-black"
+                  : "bg-white"
+              }`}
             >
+              {/* Highlight Name Input (Stories Only) */}
+              {(previewItem.contentType === "InspoStory" ||
+                previewItem.contentType === "Story") && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">
+                    Highlight Name
+                  </label>
+                  <input
+                    type="text"
+                    value={previewItem.text || ""}
+                    onChange={(e) => {
+                      const newText = e.target.value;
+                      setPreviewItem({ ...previewItem, text: newText });
+                      updateItem(previewItem.id, { text: newText });
+                    }}
+                    placeholder="e.g. Travel, Food..."
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl outline-none focus:border-zinc-600 focus:bg-zinc-800 text-white text-xs"
+                    maxLength={15}
+                  />
+                </div>
+              )}
+
               {/* Caption Input (Posts Only) */}
               {!(
                 previewItem.contentType === "InspoStory" ||
