@@ -42,6 +42,14 @@ import {
   Check,
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
+import {
+  isFileSystemSupported,
+  getStoredHandle,
+  pickFolder,
+  verifyPermission,
+  saveToFolder,
+  loadFromFolder,
+} from "@/lib/fileSystem";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -174,6 +182,21 @@ export function DashboardClient() {
   >("Idle");
 
   const hasLocalItemsRef = useRef(false);
+  const [fsHandle, setFsHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const fsHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+
+  // Try to restore saved folder handle on mount
+  useEffect(() => {
+    if (!isFileSystemSupported()) return;
+    getStoredHandle().then(async (handle) => {
+      if (!handle) return;
+      const ok = await verifyPermission(handle);
+      if (ok) {
+        setFsHandle(handle);
+        fsHandleRef.current = handle;
+      }
+    });
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -199,28 +222,44 @@ export function DashboardClient() {
 
       if (status === "loading") return;
 
-      // 1. Always await local storage first to prevent race conditions
+      // 1. Try local folder first (no quota limits!)
       let localItemsLoaded = false;
       try {
-        const saved = await getItem<SlotItem[]>("ig-curator-items");
-        const emergencyBackup = localStorage.getItem("ig-curator-items");
-        
-        if (emergencyBackup) {
-          try {
-            const parsed = JSON.parse(emergencyBackup);
-            localStorage.removeItem("ig-curator-items");
-            const migrated = await migrateBase64ToBlob(parsed);
-            if (isMounted) setItems(migrated);
-            await setItem("ig-curator-items", migrated).catch(() => {});
-            if (migrated.length > 0) localItemsLoaded = true;
-          } catch (e) {}
-        } else if (saved && saved.length > 0) {
-          const migrated = await migrateBase64ToBlob(saved);
-          if (isMounted) setItems(migrated);
-          localItemsLoaded = true;
+        const handle = fsHandleRef.current;
+        if (handle) {
+          const folderItems = await loadFromFolder(handle);
+          if (folderItems && folderItems.length > 0 && isMounted) {
+            setItems(folderItems as SlotItem[]);
+            localItemsLoaded = true;
+          }
         }
-      } catch (error) {
-        console.error("Failed to load local grid", error);
+      } catch (err) {
+        console.error("Failed to load from folder, falling back to IDB:", err);
+      }
+
+      // 2. Fall back to IDB if no folder data
+      if (!localItemsLoaded) {
+        try {
+          const saved = await getItem<SlotItem[]>("ig-curator-items");
+          const emergencyBackup = localStorage.getItem("ig-curator-items");
+          
+          if (emergencyBackup) {
+            try {
+              const parsed = JSON.parse(emergencyBackup);
+              localStorage.removeItem("ig-curator-items");
+              const migrated = await migrateBase64ToBlob(parsed);
+              if (isMounted) setItems(migrated);
+              await setItem("ig-curator-items", migrated).catch(() => {});
+              if (migrated.length > 0) localItemsLoaded = true;
+            } catch (e) {}
+          } else if (saved && saved.length > 0) {
+            const migrated = await migrateBase64ToBlob(saved);
+            if (isMounted) setItems(migrated);
+            localItemsLoaded = true;
+          }
+        } catch (error) {
+          console.error("Failed to load local grid", error);
+        }
       }
 
       // 2. Only check cloud if local hasn't definitively overridden it, or to sync profile
@@ -360,22 +399,31 @@ export function DashboardClient() {
     const timeoutId = setTimeout(async () => {
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
-      
+
+      // Primary: save to local folder if one is chosen
+      if (fsHandleRef.current) {
+        try {
+          await saveToFolder(fsHandleRef.current, items);
+          return; // folder save succeeded, no need for IDB
+        } catch (err) {
+          console.error("Folder save failed, falling back to IDB:", err);
+        }
+      }
+
+      // Fallback: IDB
       try {
         await setItem("ig-curator-items", items);
       } catch (error: any) {
         console.error("IDB save failed:", error);
-        // Last resort: try stripping base64 history, keep only current url per slot
         try {
           const slim = items.map(item => ({
             ...item,
-            urls: item.urls.slice(0, 1), // keep only the active image
+            urls: item.urls.slice(0, 1),
           }));
           await setItem("ig-curator-items", slim);
-          console.warn("Saved slim version (stripped image history) due to quota.");
         } catch (e2) {
-          console.error("Even slim save failed - quota critically exceeded.", e2);
-          alert("⚠️ Storage full! Your browser cannot save more photos. Please remove some images from your grid.");
+          console.error("Even slim save failed.", e2);
+          alert("⚠️ Storage full! Please choose a Save Folder to store photos on your computer instead.");
         }
       }
     }, 250);
@@ -625,6 +673,40 @@ export function DashboardClient() {
                         : "Up to date"}
                 </span>
               </button>
+
+              {/* Local Folder Save Button */}
+              {isFileSystemSupported() && (
+                <button
+                  onClick={async () => {
+                    if (fsHandle) {
+                      // Save now manually
+                      try {
+                        await saveToFolder(fsHandle, items);
+                        alert("✅ Saved to your local folder!");
+                      } catch (e) {
+                        alert("Folder save failed. Try reconnecting the folder.");
+                      }
+                    } else {
+                      const handle = await pickFolder();
+                      if (handle) {
+                        setFsHandle(handle);
+                        fsHandleRef.current = handle;
+                        await saveToFolder(handle, items);
+                        alert("✅ Folder connected! All your photos will now save here automatically.");
+                      }
+                    }
+                  }}
+                  className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
+                    fsHandle
+                      ? "bg-green-50 text-green-600 border-green-200 cursor-pointer"
+                      : "bg-white border-soft-200 text-foreground/70 hover:text-foreground cursor-pointer"
+                  }`}
+                  title={fsHandle ? "Saving to local folder — click to save now" : "Connect a local folder to save your photos permanently"}
+                >
+                  <FolderHeart size={13} />
+                  <span>{fsHandle ? "Folder Connected ✓" : "Save to Folder"}</span>
+                </button>
+              )}
 
               {/* Grid Search Navigation Bar */}
               <GridSearchNav
