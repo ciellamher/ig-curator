@@ -6,11 +6,10 @@ import {
   Plus,
   FolderHeart,
   Trash2,
-  Image as ImageIcon,
-  Sparkles,
   X,
   Circle,
   Grid3X3,
+  Edit2,
 } from "lucide-react";
 
 interface InspoFolderListViewProps {
@@ -19,6 +18,7 @@ interface InspoFolderListViewProps {
   onFolderClick: (folderId: string) => void;
   onAddFolder: (title: string, hexColor?: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  updateItem?: (id: string, updates: Partial<SlotItem>) => void;
 }
 
 const FOLDER_COLORS = [
@@ -38,23 +38,40 @@ export function InspoFolderListView({
   onFolderClick,
   onAddFolder,
   onDeleteFolder,
+  updateItem,
 }: InspoFolderListViewProps) {
   const [isCreating, setIsCreating] = useState(false);
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [selectedColor, setSelectedColor] = useState(FOLDER_COLORS[0]);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreateOrEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    onAddFolder(newTitle.trim(), selectedColor);
+
+    if (editingFolderId && updateItem) {
+      updateItem(editingFolderId, {
+        text: newTitle.trim(),
+        hexColor: selectedColor,
+      });
+      setEditingFolderId(null);
+    } else {
+      onAddFolder(newTitle.trim(), selectedColor);
+      setIsCreating(false);
+    }
     setNewTitle("");
-    setIsCreating(false);
+  };
+
+  const openEditModal = (folder: SlotItem) => {
+    setEditingFolderId(folder.id);
+    setNewTitle(folder.text || "");
+    setSelectedColor(folder.hexColor || FOLDER_COLORS[0]);
   };
 
   return (
     <div className="w-full flex flex-col p-4 sm:p-6 pb-24">
       {/* Header Bar */}
-      <div className="flex items-center justify-between gap-4 mb-8">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div className="min-w-0">
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <FolderHeart size={22} className="text-slate-800 shrink-0" />
@@ -64,30 +81,24 @@ export function InspoFolderListView({
             Organize real inspiration photos for Posts, Stories, & Highlights
           </p>
         </div>
-
-        <button
-          onClick={() => setIsCreating(true)}
-          className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span className="hidden sm:inline">New Inspo Folder</span>
-          <span className="sm:hidden">New Folder</span>
-        </button>
       </div>
 
-      {/* Create Folder Modal */}
-      {isCreating && (
+      {/* Create / Edit Folder Modal */}
+      {(isCreating || editingFolderId) && (
         <form
-          onSubmit={handleCreate}
+          onSubmit={handleCreateOrEdit}
           className="mb-6 p-4 bg-white border border-soft-200 rounded-2xl shadow-lg flex flex-col gap-3.5 animate-in fade-in slide-in-from-top-2 duration-200"
         >
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
-              Create Inspo Folder
+              {editingFolderId ? "Edit Folder" : "Create Inspo Folder"}
             </h3>
             <button
               type="button"
-              onClick={() => setIsCreating(false)}
+              onClick={() => {
+                setIsCreating(false);
+                setEditingFolderId(null);
+              }}
               className="p-1 text-foreground/40 hover:text-foreground rounded-full cursor-pointer"
             >
               <X size={14} />
@@ -132,7 +143,10 @@ export function InspoFolderListView({
           <div className="flex justify-end gap-2 mt-1">
             <button
               type="button"
-              onClick={() => setIsCreating(false)}
+              onClick={() => {
+                setIsCreating(false);
+                setEditingFolderId(null);
+              }}
               className="px-3 py-1.5 text-xs font-semibold text-foreground/60 hover:text-foreground rounded-lg cursor-pointer"
             >
               Cancel
@@ -142,84 +156,83 @@ export function InspoFolderListView({
               disabled={!newTitle.trim()}
               className="px-4 py-1.5 bg-slate-900 hover:bg-black disabled:opacity-40 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
             >
-              Create Folder
+              {editingFolderId ? "Save Changes" : "Create Folder"}
             </button>
           </div>
         </form>
       )}
 
       {/* Folders Grid */}
-      {folders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-soft-50/60 rounded-[32px] border border-soft-200 shadow-sm my-2">
-          <div className="w-16 h-16 bg-white rounded-full shadow-sm border border-soft-100 flex items-center justify-center mb-5 text-slate-800">
-            <FolderHeart size={28} strokeWidth={1.5} />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-5">
+        {/* Add Folder Box */}
+        <div
+          onClick={() => {
+            setNewTitle("");
+            setSelectedColor(FOLDER_COLORS[0]);
+            setIsCreating(true);
+            setEditingFolderId(null);
+          }}
+          className="group relative bg-soft-50/50 hover:bg-soft-100 border-2 border-dashed border-soft-200 rounded-2xl overflow-hidden transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[160px]"
+        >
+          <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mb-2">
+            <Plus className="text-slate-700" size={20} strokeWidth={2.5} />
           </div>
-          <h3 className="text-base font-bold text-slate-900 mb-2">
-            No Inspo Folders Yet
-          </h3>
-          <p className="text-sm text-foreground/60 max-w-sm mb-7 leading-relaxed">
-            Create folders like{" "}
-            <span className="font-semibold text-slate-900">Japan</span> or{" "}
-            <span className="font-semibold text-slate-900">
-              Minimal Moodboard
-            </span>{" "}
-            to save real photos for Posts & Stories.
-          </p>
-          <button
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-full text-sm font-bold hover:bg-black transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98]"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            <span>Create First Inspo Folder</span>
-          </button>
+          <span className="text-xs font-bold text-slate-600">New Folder</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-5">
-          {folders.map((folder) => {
-            const folderItems = allItems.filter(
-              (i) => i.folderId === folder.id,
-            );
-            const postCount = folderItems.filter(
-              (i) =>
-                i.contentType === "InspoPost" ||
-                !i.contentType ||
-                i.contentType === "Post",
-            ).length;
-            const storyCount = folderItems.filter(
-              (i) =>
-                i.contentType === "InspoStory" || i.contentType === "Story",
-            ).length;
-            const firstImage = folderItems.find(
-              (i) => i.urls && i.urls.length > 0,
-            )?.urls[0];
 
-            return (
+        {folders.map((folder) => {
+          const folderItems = allItems.filter((i) => i.folderId === folder.id);
+          const postCount = folderItems.filter(
+            (i) =>
+              i.contentType === "InspoPost" ||
+              !i.contentType ||
+              i.contentType === "Post",
+          ).length;
+          const storyCount = folderItems.filter(
+            (i) => i.contentType === "InspoStory" || i.contentType === "Story",
+          ).length;
+          const firstImage = folderItems.find(
+            (i) => i.urls && i.urls.length > 0,
+          )?.urls[0];
+
+          return (
+            <div
+              key={folder.id}
+              onClick={() => onFolderClick(folder.id)}
+              className="group relative bg-white border border-soft-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col"
+            >
+              {/* Thumbnail Cover Box */}
               <div
-                key={folder.id}
-                onClick={() => onFolderClick(folder.id)}
-                className="group relative bg-white border border-soft-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col"
+                className="w-full aspect-[4/3] relative flex items-center justify-center overflow-hidden"
+                style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
               >
-                {/* Thumbnail Cover Box */}
-                <div
-                  className="w-full aspect-[4/3] relative flex items-center justify-center overflow-hidden"
-                  style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
-                >
-                  {firstImage ? (
-                    <img
-                      src={firstImage}
-                      alt={folder.text}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-1 text-slate-800/60">
-                      <FolderHeart size={28} strokeWidth={1.8} />
-                      <span className="text-[10px] font-extrabold tracking-wider uppercase opacity-60">
-                        Inspo
-                      </span>
-                    </div>
-                  )}
+                {firstImage ? (
+                  <img
+                    src={firstImage}
+                    alt={folder.text}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-800/60">
+                    <FolderHeart size={28} strokeWidth={1.8} />
+                    <span className="text-[10px] font-extrabold tracking-wider uppercase opacity-60">
+                      Inspo
+                    </span>
+                  </div>
+                )}
 
-                  {/* Delete Button on Hover */}
+                {/* Edit & Delete Buttons (Always visible but subtle) */}
+                <div className="absolute top-2 right-2 flex gap-1.5 z-20">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openEditModal(folder);
+                    }}
+                    className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
+                    title="Edit folder"
+                  >
+                    <Edit2 size={13} />
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -231,32 +244,32 @@ export function InspoFolderListView({
                         onDeleteFolder(folder.id);
                       }
                     }}
-                    className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 text-foreground/40 hover:text-red-600 rounded-lg shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                    className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
                     title="Delete folder"
                   >
                     <Trash2 size={13} />
                   </button>
                 </div>
+              </div>
 
-                {/* Folder Info Footer */}
-                <div className="p-3 flex flex-col justify-between flex-1 bg-white">
-                  <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-slate-800">
-                    {folder.text || "Untitled Folder"}
-                  </h3>
-                  <div className="flex flex-col gap-1 mt-2 text-[10px] font-medium text-foreground/50">
-                    <span className="flex items-center gap-1.5">
-                      <Grid3X3 size={11} /> {postCount} Posts
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Circle size={11} /> {storyCount} Stories
-                    </span>
-                  </div>
+              {/* Folder Info Footer */}
+              <div className="p-3 flex flex-col justify-between flex-1 bg-white">
+                <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-slate-800">
+                  {folder.text || "Untitled Folder"}
+                </h3>
+                <div className="flex flex-col gap-1 mt-2 text-[10px] font-medium text-foreground/50">
+                  <span className="flex items-center gap-1.5">
+                    <Grid3X3 size={11} /> {postCount} Posts
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Circle size={11} /> {storyCount} Stories
+                  </span>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

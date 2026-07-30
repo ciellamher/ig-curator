@@ -1,21 +1,36 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef, useMemo } from "react"
-import { useSession } from "next-auth/react"
-import { Grid } from "@/components/grid/Grid"
-import { EditorPanel } from "@/components/editor/EditorPanel"
-import { SlotItem } from "@/types"
-import { getLiveGrid } from "@/app/actions/instagram"
-import { CalendarView } from "@/components/calendar/CalendarView"
-import { ProfileHeader } from "@/components/grid/ProfileHeader"
-import { StoryListView } from "@/components/grid/StoryListView"
-import { StoryFolderView } from "@/components/grid/StoryFolderView"
-import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView"
-import { InspoFolderListView } from "@/components/grid/InspoFolderListView"
-import { InspoFolderView } from "@/components/grid/InspoFolderView"
-import { GridSearchNav } from "@/components/grid/GridSearchNav"
-import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, SquarePlus, FolderHeart } from "lucide-react"
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { Grid } from "@/components/grid/Grid";
+import { EditorPanel } from "@/components/editor/EditorPanel";
+import { SlotItem } from "@/types";
+import { getLiveGrid } from "@/app/actions/instagram";
+import { CalendarView } from "@/components/calendar/CalendarView";
+import { ProfileHeader } from "@/components/grid/ProfileHeader";
+import { StoryListView } from "@/components/grid/StoryListView";
+import { StoryFolderView } from "@/components/grid/StoryFolderView";
+import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView";
+import { InspoFolderListView } from "@/components/grid/InspoFolderListView";
+import { InspoFolderView } from "@/components/grid/InspoFolderView";
+import { GridSearchNav } from "@/components/grid/GridSearchNav";
+import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
+import {
+  PenTool,
+  Calendar,
+  Image as ImageIcon,
+  Hash,
+  Smartphone,
+  Monitor,
+  Grid3X3,
+  Clapperboard,
+  Circle,
+  RefreshCw,
+  Sparkles,
+  X,
+  SquarePlus,
+  FolderHeart,
+} from "lucide-react";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -26,18 +41,24 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   hexColor: "#E5D3C8",
   text: "",
   contentType: "Post",
-}))
+}));
 
 export function DashboardClient() {
-  const { data: session, status } = useSession()
-  const [items, setItems] = useState<SlotItem[]>(initialItems)
-  const [history, setHistory] = useState<SlotItem[][]>([])
-  const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
-  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Placeholders" | "Inspo">("All")
-  const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
-  const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
-  const [activeInspoFolderId, setActiveInspoFolderId] = useState<string | null>(null);
+  const { data: session, status } = useSession();
+  const [items, setItems] = useState<SlotItem[]>(initialItems);
+  const [history, setHistory] = useState<SlotItem[][]>([]);
+  const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE");
+  const [gridFilter, setGridFilter] = useState<
+    "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
+  >("All");
+  const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone");
+  const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(
+    null,
+  );
+  const [activeInspoFolderId, setActiveInspoFolderId] = useState<string | null>(
+    null,
+  );
 
   // Search & Match Navigation State
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,24 +67,33 @@ export function DashboardClient() {
   const searchMatches = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
-    
-    const currentViewItems = (gridFilter as string) === "Placeholders" 
-      ? items.filter(i => i.folderId === "draft-pool")
-      : (gridFilter as string) === "All"
-      ? items.filter(i => i.contentType !== "StoryFolder" && !i.folderId && !i.isHiddenFromGrid)
-      : items.filter(i => i.contentType === gridFilter && !i.folderId);
+
+    const currentViewItems =
+      (gridFilter as string) === "Placeholders"
+        ? items.filter((i) => i.folderId === "draft-pool")
+        : (gridFilter as string) === "All"
+          ? items.filter(
+              (i) =>
+                i.contentType !== "StoryFolder" &&
+                !i.folderId &&
+                !i.isHiddenFromGrid,
+            )
+          : items.filter((i) => i.contentType === gridFilter && !i.folderId);
 
     return currentViewItems
-      .filter(item => {
+      .filter((item) => {
         const textMatch = item.text?.toLowerCase().includes(q);
         const captionMatch = item.caption?.toLowerCase().includes(q);
         const typeMatch = item.contentType?.toLowerCase().includes(q);
         return Boolean(textMatch || captionMatch || typeMatch);
       })
-      .map(item => item.id);
+      .map((item) => item.id);
   }, [items, searchQuery, gridFilter]);
 
-  const focusedMatchId = searchMatches.length > 0 ? searchMatches[Math.min(currentMatchIndex, searchMatches.length - 1)] : null;
+  const focusedMatchId =
+    searchMatches.length > 0
+      ? searchMatches[Math.min(currentMatchIndex, searchMatches.length - 1)]
+      : null;
 
   useEffect(() => {
     if (!focusedMatchId) return;
@@ -80,7 +110,9 @@ export function DashboardClient() {
 
   const handlePrevMatch = () => {
     if (searchMatches.length === 0) return;
-    setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+    setCurrentMatchIndex(
+      (prev) => (prev - 1 + searchMatches.length) % searchMatches.length,
+    );
   };
 
   const handleClearSearch = () => {
@@ -90,85 +122,103 @@ export function DashboardClient() {
 
   // Floating modal drag state
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
-  const modalDragRef = useRef<{ startX: number; startY: number; initialX: number; initialY: number } | null>(null);
-  const [previewSlotId, setPreviewSlotId] = useState<string | null>(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [syncStatus, setSyncStatus] = useState<"Idle" | "Saving..." | "Saved" | "Error">("Idle")
+  const modalDragRef = useRef<{
+    startX: number;
+    startY: number;
+    initialX: number;
+    initialY: number;
+  } | null>(null);
+  const [previewSlotId, setPreviewSlotId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<
+    "Idle" | "Saving..." | "Saved" | "Error"
+  >("Idle");
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      localStorage.removeItem("ig-curator-items")
-      setItems(initialItems)
-      setIsLoaded(true)
-      return
+      localStorage.removeItem("ig-curator-items");
+      setItems(initialItems);
+      setIsLoaded(true);
+      return;
     }
 
-    const saved = localStorage.getItem("ig-curator-items")
+    const saved = localStorage.getItem("ig-curator-items");
     if (saved) {
-      try { setItems(JSON.parse(saved)) } catch (e) {}
+      try {
+        setItems(JSON.parse(saved));
+      } catch (e) {}
     }
 
     async function loadCloud() {
       if (status === "authenticated") {
         try {
-          const { fetchGridFromCloud } = await import("@/app/actions/grid")
-          const res = await fetchGridFromCloud()
+          const { fetchGridFromCloud } = await import("@/app/actions/grid");
+          const res = await fetchGridFromCloud();
           if (res.success && res.data) {
-            setItems(res.data.items)
+            setItems(res.data.items);
             if (res.data.profile) {
-              localStorage.setItem("ig-curator-profile", JSON.stringify(res.data.profile))
-              window.dispatchEvent(new Event("storage"))
+              localStorage.setItem(
+                "ig-curator-profile",
+                JSON.stringify(res.data.profile),
+              );
+              window.dispatchEvent(new Event("storage"));
             }
           }
         } catch (e) {
-          console.error("Failed to load cloud grid", e)
+          console.error("Failed to load cloud grid", e);
         }
       }
-      setIsLoaded(true)
+      setIsLoaded(true);
     }
-    
+
     if (status !== "loading") {
-      loadCloud()
+      loadCloud();
     }
-  }, [status])
+  }, [status]);
 
   useEffect(() => {
     if (!isLoaded || status !== "authenticated") return;
-    
-    setSyncStatus("Saving...")
+
+    setSyncStatus("Saving...");
     const timer = setTimeout(async () => {
       try {
-        const { syncGridToCloud } = await import("@/app/actions/grid")
-        const profileStr = localStorage.getItem("ig-curator-profile")
-        const profile = profileStr ? JSON.parse(profileStr) : undefined
-        const res = await syncGridToCloud(items, profile)
+        const { syncGridToCloud } = await import("@/app/actions/grid");
+        const profileStr = localStorage.getItem("ig-curator-profile");
+        const profile = profileStr ? JSON.parse(profileStr) : undefined;
+        const res = await syncGridToCloud(items, profile);
         if (res.success) {
-          setSyncStatus("Saved")
-          setTimeout(() => setSyncStatus(prev => prev === "Saved" ? "Idle" : prev), 2000)
+          setSyncStatus("Saved");
+          setTimeout(
+            () => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)),
+            2000,
+          );
         } else {
-          setSyncStatus("Error")
+          setSyncStatus("Error");
         }
       } catch (e) {
-        console.error("Auto-sync failed", e)
-        setSyncStatus("Error")
+        console.error("Auto-sync failed", e);
+        setSyncStatus("Error");
       }
     }, 2000);
-    
-    return () => clearTimeout(timer)
-  }, [items, isLoaded, status])
+
+    return () => clearTimeout(timer);
+  }, [items, isLoaded, status]);
 
   useEffect(() => {
     async function loadLiveGrid() {
       // @ts-ignore
       if (status === "authenticated" && session?.instagramAccessToken) {
-        const res = await getLiveGrid()
+        const res = await getLiveGrid();
         if (res.success && res.liveItems) {
-          setItems(current => {
-            const newItems = [...current]
+          setItems((current) => {
+            const newItems = [...current];
             // Place live posts in the last rows (bottom of the grid)
-            const startIndex = Math.max(0, newItems.length - res.liveItems.length)
+            const startIndex = Math.max(
+              0,
+              newItems.length - res.liveItems.length,
+            );
             res.liveItems.forEach((livePost: any, idx: number) => {
-              const gridIndex = startIndex + idx
+              const gridIndex = startIndex + idx;
               if (gridIndex < newItems.length) {
                 newItems[gridIndex] = {
                   ...newItems[gridIndex],
@@ -178,33 +228,38 @@ export function DashboardClient() {
                   caption: livePost.caption || "",
                   contentType: livePost.contentType,
                   isLocked: true,
-                }
+                };
               }
-            })
-            return newItems
-          })
+            });
+            return newItems;
+          });
         }
       }
     }
-    loadLiveGrid()
-  }, [status, session])
+    loadLiveGrid();
+  }, [status, session]);
 
-  const activeSlot = items.find(item => item.id === activeSlotId) || null
+  const activeSlot = items.find((item) => item.id === activeSlotId) || null;
 
-  function updateItems(newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[])) {
+  function updateItems(
+    newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
+  ) {
     setItems((currentItems) => {
-      const nextItems = typeof newItemsOrUpdater === "function" 
-        ? newItemsOrUpdater(currentItems) 
-        : newItemsOrUpdater;
-      
+      const nextItems =
+        typeof newItemsOrUpdater === "function"
+          ? newItemsOrUpdater(currentItems)
+          : newItemsOrUpdater;
+
       // Save to history and local storage if changed
       if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
-        setHistory(prev => [...prev, currentItems].slice(-30));
+        setHistory((prev) => [...prev, currentItems].slice(-30));
         try {
           localStorage.setItem("ig-curator-items", JSON.stringify(nextItems));
         } catch (error) {
           console.error("Storage quota exceeded!", error);
-          alert("Warning: Local storage is full! Your latest changes might not be saved after a refresh. Please delete some old photos to free up space.");
+          alert(
+            "Warning: Local storage is full! Your latest changes might not be saved after a refresh. Please delete some old photos to free up space.",
+          );
         }
       }
       return nextItems;
@@ -227,28 +282,31 @@ export function DashboardClient() {
 
   async function handleManualSync() {
     if (status !== "authenticated") return;
-    setSyncStatus("Saving...")
+    setSyncStatus("Saving...");
     try {
-      const { syncGridToCloud } = await import("@/app/actions/grid")
-      const profileStr = localStorage.getItem("ig-curator-profile")
-      const profile = profileStr ? JSON.parse(profileStr) : undefined
-      const res = await syncGridToCloud(items, profile)
+      const { syncGridToCloud } = await import("@/app/actions/grid");
+      const profileStr = localStorage.getItem("ig-curator-profile");
+      const profile = profileStr ? JSON.parse(profileStr) : undefined;
+      const res = await syncGridToCloud(items, profile);
       if (res.success) {
-        setSyncStatus("Saved")
-        setTimeout(() => setSyncStatus(prev => prev === "Saved" ? "Idle" : prev), 2000)
+        setSyncStatus("Saved");
+        setTimeout(
+          () => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)),
+          2000,
+        );
       } else {
-        setSyncStatus("Error")
+        setSyncStatus("Error");
       }
     } catch (e) {
-      console.error("Manual sync failed", e)
-      setSyncStatus("Error")
+      console.error("Manual sync failed", e);
+      setSyncStatus("Error");
     }
   }
 
   function updateItem(id: string, updates: Partial<SlotItem>) {
     updateItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    )
+      current.map((item) => (item.id === id ? { ...item, ...updates } : item)),
+    );
   }
 
   useEffect(() => {
@@ -271,7 +329,10 @@ export function DashboardClient() {
         const container = el.closest(".relative");
         if (container) {
           const containerRect = container.getBoundingClientRect();
-          const topOffset = Math.max(-10, Math.min(450, rect.top - containerRect.top - 15));
+          const topOffset = Math.max(
+            -10,
+            Math.min(450, rect.top - containerRect.top - 15),
+          );
           setModalPos({ x: 0, y: topOffset });
         }
       }
@@ -283,11 +344,11 @@ export function DashboardClient() {
     if ((e.target as HTMLElement).closest("button, input, textarea")) return;
     e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-    modalDragRef.current = { 
-      startX: e.clientX, 
+    modalDragRef.current = {
+      startX: e.clientX,
       startY: e.clientY,
       initialX: modalPos.x,
-      initialY: modalPos.y
+      initialY: modalPos.y,
     };
   };
 
@@ -297,7 +358,7 @@ export function DashboardClient() {
     const dy = e.clientY - modalDragRef.current.startY;
     setModalPos({
       x: modalDragRef.current.initialX + dx,
-      y: modalDragRef.current.initialY + dy
+      y: modalDragRef.current.initialY + dy,
     });
   };
 
@@ -307,8 +368,6 @@ export function DashboardClient() {
     modalDragRef.current = null;
   };
 
-
-
   const handleTransferToMainGrid = (selectedSlotIds: string[]) => {
     updateItems((current) => {
       const selectedSet = new Set(selectedSlotIds);
@@ -316,7 +375,9 @@ export function DashboardClient() {
         .filter((item) => selectedSet.has(item.id))
         .map((item) => ({ ...item, folderId: undefined }));
 
-      const remainingItems = current.filter((item) => !selectedSet.has(item.id));
+      const remainingItems = current.filter(
+        (item) => !selectedSet.has(item.id),
+      );
       return [...transferredItems, ...remainingItems];
     });
   };
@@ -335,11 +396,16 @@ export function DashboardClient() {
   };
 
   const handleDeleteInspoFolder = (folderId: string) => {
-    updateItems((curr) => curr.filter((i) => i.id !== folderId && i.folderId !== folderId));
+    updateItems((curr) =>
+      curr.filter((i) => i.id !== folderId && i.folderId !== folderId),
+    );
     if (activeInspoFolderId === folderId) setActiveInspoFolderId(null);
   };
 
-  const handleCopyInspoToGrid = (inspoItem: SlotItem, targetType: "Post" | "Story") => {
+  const handleCopyInspoToGrid = (
+    inspoItem: SlotItem,
+    targetType: "Post" | "Story",
+  ) => {
     const copiedSlot: SlotItem = {
       id: `slot-${Math.floor(Math.random() * 1000000000)}`,
       type: "image",
@@ -350,30 +416,41 @@ export function DashboardClient() {
       contentType: targetType,
     };
     updateItems((curr) => [copiedSlot, ...curr]);
-    alert(`Copied photo to your ${targetType === "Post" ? "Main Grid" : "Stories"}!`);
+    alert(
+      `Copied photo to your ${targetType === "Post" ? "Main Grid" : "Stories"}!`,
+    );
   };
 
   if (!isLoaded) return null;
 
   return (
     <div className="w-full flex flex-col min-h-screen bg-soft-50">
-      
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        
         {/* Main Planner Workspace */}
         <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
           {/* View Toggle & Tabs */}
           <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-8 pt-4 sm:pt-6 pb-2 gap-2">
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
               {status === "authenticated" && (
-                <button 
+                <button
                   onClick={handleManualSync}
                   disabled={syncStatus === "Saving..."}
                   className="text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white shadow-sm border border-soft-200 text-foreground/70 hover:text-foreground transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <RefreshCw size={13} className={syncStatus === "Saving..." ? "animate-spin" : ""} />
-                  <span>{syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}</span>
+                  <RefreshCw
+                    size={13}
+                    className={syncStatus === "Saving..." ? "animate-spin" : ""}
+                  />
+                  <span>
+                    {syncStatus === "Saving..."
+                      ? "Syncing..."
+                      : syncStatus === "Error"
+                        ? "Sync Failed"
+                        : syncStatus === "Saved"
+                          ? "Saved"
+                          : "Sync to Cloud"}
+                  </span>
                 </button>
               )}
 
@@ -385,16 +462,16 @@ export function DashboardClient() {
                 onClearSearch={handleClearSearch}
               />
             </div>
-            
+
             <div className="flex items-center bg-white rounded-full p-1 shadow-sm border border-soft-200">
-              <button 
+              <button
                 onClick={() => setDeviceView("phone")}
                 className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "phone" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
                 title="Phone View"
               >
                 <Smartphone size={16} />
               </button>
-              <button 
+              <button
                 onClick={() => setDeviceView("desktop")}
                 className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "desktop" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
                 title="Desktop View"
@@ -408,24 +485,36 @@ export function DashboardClient() {
           <div className="flex-1 overflow-y-auto p-2 sm:p-6 md:p-8 relative flex justify-center">
             {activeTab === "CREATE" && (
               /* Dynamic View Container (Phone or Desktop) */
-              <div className={`
-                ${deviceView === "phone" 
-                  ? "w-full max-w-full sm:max-w-[360px] sm:border-[12px] sm:border-slate-900 sm:ring-[2px] sm:ring-slate-800 sm:rounded-[3.5rem] shadow-2xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[600px] sm:h-[780px]" 
-                  : "w-full max-w-4xl border border-soft-200 rounded-xl shadow-xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[700px]"
+              <div
+                className={`
+                ${
+                  deviceView === "phone"
+                    ? "w-full max-w-full sm:max-w-[360px] sm:border-[12px] sm:border-slate-900 sm:ring-[2px] sm:ring-slate-800 sm:rounded-[3.5rem] shadow-2xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[600px] sm:h-[780px]"
+                    : "w-full max-w-4xl border border-soft-200 rounded-xl shadow-xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[700px]"
                 } transition-all duration-300 ease-in-out
-              `}>
+              `}
+              >
                 {deviceView === "phone" && (
                   <div className="hidden sm:flex absolute top-2 left-1/2 -translate-x-1/2 w-[100px] h-[26px] bg-black rounded-full z-50 shadow-inner items-center justify-between px-3">
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-800/80"></div>
                     <div className="w-2 h-2 rounded-full bg-blue-900/40"></div>
                   </div>
                 )}
-                
-                <div className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-1" : ""}`}>
-                  <ProfileHeader 
-                    session={session} 
+
+                <div
+                  className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-1" : ""}`}
+                >
+                  <ProfileHeader
+                    session={session}
                     status={status}
-                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
+                    liveMediaCount={
+                      items.filter(
+                        (i) =>
+                          !i.folderId &&
+                          i.contentType !== "StoryFolder" &&
+                          ((i.urls && i.urls.length > 0) || i.isLocked),
+                      ).length
+                    }
                     onAddRow={() => {
                       if (gridFilter === "Placeholders") {
                         const newBox: SlotItem = {
@@ -439,7 +528,10 @@ export function DashboardClient() {
                           folderId: "draft-pool",
                         };
                         updateItems([newBox, ...items]);
-                      } else if (gridFilter === "Story" && !activeStoryFolderId) {
+                      } else if (
+                        gridFilter === "Story" &&
+                        !activeStoryFolderId
+                      ) {
                         const newFolder: SlotItem = {
                           id: `folder-${Math.floor(Math.random() * 1000000000)}`,
                           type: "placeholder",
@@ -452,61 +544,85 @@ export function DashboardClient() {
                         updateItems([newFolder, ...items]);
                       } else {
                         const numItemsToAdd = 1;
-                        const newRows = Array.from({ length: numItemsToAdd }).map((_, i) => ({
+                        const newRows = Array.from({
+                          length: numItemsToAdd,
+                        }).map((_, i) => ({
                           id: `slot-${Math.floor(Math.random() * 1000000000)}-${i}`,
                           type: "placeholder" as const,
                           urls: [],
                           currentUrlIndex: 0,
                           hexColor: "#E5D3C8",
                           text: "",
-                          contentType: ((gridFilter as string) === "All" || (gridFilter as string) === "Placeholders") ? "Post" : (gridFilter as any),
-                          folderId: (gridFilter as string) === "Placeholders" 
-                            ? "draft-pool" 
-                            : (gridFilter === "Story" ? (activeStoryFolderId || undefined) : undefined),
+                          contentType:
+                            (gridFilter as string) === "All" ||
+                            (gridFilter as string) === "Placeholders"
+                              ? "Post"
+                              : (gridFilter as any),
+                          folderId:
+                            (gridFilter as string) === "Placeholders"
+                              ? "draft-pool"
+                              : gridFilter === "Story"
+                                ? activeStoryFolderId || undefined
+                                : undefined,
                         }));
                         updateItems([...newRows, ...items]);
                       }
-                    }} 
+                    }}
                     onUndo={handleUndo}
                     canUndo={history.length > 0}
                   />
-                  
+
                   {/* Grid Tabs */}
                   <div className="flex items-center justify-around border-t border-b border-soft-100 py-2.5 sticky top-0 bg-white/95 backdrop-blur-md z-40">
-                    <button 
+                    <button
                       onClick={() => setGridFilter("All")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "All" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
                       title="Main Grid"
                     >
-                      <Grid3X3 size={22} strokeWidth={gridFilter === "All" ? 2.5 : 2} />
+                      <Grid3X3
+                        size={22}
+                        strokeWidth={gridFilter === "All" ? 2.5 : 2}
+                      />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setGridFilter("Reel")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Reel" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
                       title="Reels"
                     >
-                      <Clapperboard size={22} strokeWidth={gridFilter === "Reel" ? 2.5 : 2} />
+                      <Clapperboard
+                        size={22}
+                        strokeWidth={gridFilter === "Reel" ? 2.5 : 2}
+                      />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setGridFilter("Story")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Story" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
                       title="Stories"
                     >
-                      <Circle size={22} strokeWidth={gridFilter === "Story" ? 2.5 : 2} />
+                      <Circle
+                        size={22}
+                        strokeWidth={gridFilter === "Story" ? 2.5 : 2}
+                      />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setGridFilter("Placeholders")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Placeholders" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
                       title="Draft Placeholders"
                     >
-                      <SquarePlus size={22} strokeWidth={gridFilter === "Placeholders" ? 2.5 : 2} />
+                      <SquarePlus
+                        size={22}
+                        strokeWidth={gridFilter === "Placeholders" ? 2.5 : 2}
+                      />
                     </button>
-                    <button 
+                    <button
                       onClick={() => setGridFilter("Inspo")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Inspo" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
                       title="Inspo Collections"
                     >
-                      <FolderHeart size={22} strokeWidth={gridFilter === "Inspo" ? 2.5 : 2} />
+                      <FolderHeart
+                        size={22}
+                        strokeWidth={gridFilter === "Inspo" ? 2.5 : 2}
+                      />
                     </button>
                   </div>
 
@@ -516,31 +632,47 @@ export function DashboardClient() {
                         <div className="w-16 h-16 bg-soft-100 rounded-full flex items-center justify-center mb-2">
                           <Grid3X3 className="text-soft-400" size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-foreground">Sign up first or login</h3>
-                        <p className="text-foreground/60 max-w-xs text-sm">You need an account to arrange your grid and upload photos.</p>
+                        <h3 className="text-xl font-bold text-foreground">
+                          Sign up first or login
+                        </h3>
+                        <p className="text-foreground/60 max-w-xs text-sm">
+                          You need an account to arrange your grid and upload
+                          photos.
+                        </p>
                       </div>
                     ) : gridFilter === "Inspo" ? (
                       activeInspoFolderId ? (
-                        <InspoFolderView 
-                          folder={items.find(i => i.id === activeInspoFolderId)!}
-                          itemsInFolder={items.filter(i => i.folderId === activeInspoFolderId)}
+                        <InspoFolderView
+                          folder={items.find(
+                            (i) => i.id === activeInspoFolderId,
+                          )!}
+                          itemsInFolder={items.filter(
+                            (i) => i.folderId === activeInspoFolderId,
+                          )}
                           onBack={() => setActiveInspoFolderId(null)}
                           updateItems={updateItems}
                           updateItem={updateItem}
                           onCopyToMainGrid={handleCopyInspoToGrid}
                         />
                       ) : (
-                        <InspoFolderListView 
-                          folders={items.filter(i => i.contentType === "InspoFolder")}
+                        <InspoFolderListView
+                          folders={items.filter(
+                            (i) => i.contentType === "InspoFolder",
+                          )}
                           allItems={items}
-                          onFolderClick={(folderId) => setActiveInspoFolderId(folderId)}
+                          onFolderClick={(folderId) =>
+                            setActiveInspoFolderId(folderId)
+                          }
                           onAddFolder={handleCreateInspoFolder}
                           onDeleteFolder={handleDeleteInspoFolder}
+                          updateItem={updateItem}
                         />
                       )
                     ) : gridFilter === "Placeholders" ? (
-                      <PlaceholderPoolView 
-                        placeholders={items.filter(i => i.folderId === "draft-pool")}
+                      <PlaceholderPoolView
+                        placeholders={items.filter(
+                          (i) => i.folderId === "draft-pool",
+                        )}
                         updateItems={updateItems}
                         updateItem={updateItem}
                         activeSlotId={activeSlotId}
@@ -551,9 +683,13 @@ export function DashboardClient() {
                       />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
-                        <StoryFolderView 
-                          folder={items.find(i => i.id === activeStoryFolderId)!}
-                          stories={items.filter(i => i.folderId === activeStoryFolderId)}
+                        <StoryFolderView
+                          folder={items.find(
+                            (i) => i.id === activeStoryFolderId,
+                          )!}
+                          stories={items.filter(
+                            (i) => i.folderId === activeStoryFolderId,
+                          )}
                           onBack={() => setActiveStoryFolderId(null)}
                           updateItems={updateItems}
                           updateItem={updateItem}
@@ -561,20 +697,41 @@ export function DashboardClient() {
                           setActiveSlotId={setActiveSlotId}
                         />
                       ) : (
-                        <StoryListView 
-                          folders={items.filter(i => i.contentType === "StoryFolder")}
+                        <StoryListView
+                          folders={items.filter(
+                            (i) => i.contentType === "StoryFolder",
+                          )}
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
                           updateItem={updateItem}
-                          onDeleteFolder={(id) => updateItems(prev => prev.filter(item => item.id !== id && item.folderId !== id))}
+                          onDeleteFolder={(id) =>
+                            updateItems((prev) =>
+                              prev.filter(
+                                (item) =>
+                                  item.id !== id && item.folderId !== id,
+                              ),
+                            )
+                          }
                         />
                       )
                     ) : (
-                      <Grid 
-                        items={gridFilter === "All" 
-                          ? items.filter(i => i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && i.contentType !== "InspoFolder" && !i.folderId && !i.isHiddenFromGrid) 
-                          : items.filter(i => i.contentType === gridFilter && !i.folderId)} 
-                        setItems={updateItems} 
+                      <Grid
+                        items={
+                          gridFilter === "All"
+                            ? items.filter(
+                                (i) =>
+                                  i.contentType !== "StoryFolder" &&
+                                  i.contentType !== "PlaceholderFolder" &&
+                                  i.contentType !== "InspoFolder" &&
+                                  !i.folderId &&
+                                  !i.isHiddenFromGrid,
+                              )
+                            : items.filter(
+                                (i) =>
+                                  i.contentType === gridFilter && !i.folderId,
+                              )
+                        }
+                        setItems={updateItems}
                         updateItem={updateItem}
                         activeSlotId={activeSlotId}
                         setActiveSlotId={setActiveSlotId}
@@ -583,7 +740,9 @@ export function DashboardClient() {
                         searchResults={searchMatches}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
                         onDeleteItem={(id) => {
-                          updateItems(prev => prev.filter(item => item.id !== id));
+                          updateItems((prev) =>
+                            prev.filter((item) => item.id !== id),
+                          );
                           if (activeSlotId === id) setActiveSlotId(null);
                           if (previewSlotId === id) setPreviewSlotId(null);
                         }}
@@ -598,20 +757,25 @@ export function DashboardClient() {
             {activeTab === "CREATE" && activeSlotId && (
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
-                <div 
+                <div
                   className="fixed inset-0 bg-black/40 backdrop-blur-xs md:hidden z-40 animate-in fade-in duration-200"
                   onClick={() => setActiveSlotId(null)}
                 />
 
-                <div 
+                <div
                   className={`max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute ${
-                    deviceView === "phone" ? "md:left-[calc(50%+195px)] md:top-20" : "md:right-6 md:top-16"
+                    deviceView === "phone"
+                      ? "md:left-[calc(50%+195px)] md:top-20"
+                      : "md:right-6 md:top-16"
                   } md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-4`}
                   style={{
-                    transform: typeof window !== "undefined" && window.innerWidth >= 768 ? `translate(${modalPos.x}px, ${modalPos.y}px)` : "none"
+                    transform:
+                      typeof window !== "undefined" && window.innerWidth >= 768
+                        ? `translate(${modalPos.x}px, ${modalPos.y}px)`
+                        : "none",
                   }}
                 >
-                  <div 
+                  <div
                     className="py-3 px-4 bg-white/90 backdrop-blur border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
                     onPointerDown={handleModalPointerDown}
                     onPointerMove={handleModalPointerMove}
@@ -620,12 +784,14 @@ export function DashboardClient() {
                   >
                     <div className="flex items-center gap-2">
                       <Sparkles size={16} className="text-slate-700" />
-                      <h3 className="font-bold text-base text-foreground tracking-tight">Edit Slot</h3>
+                      <h3 className="font-bold text-base text-foreground tracking-tight">
+                        Edit Slot
+                      </h3>
                     </div>
 
                     <div className="w-10 h-1 bg-soft-300 rounded-full md:hidden"></div>
 
-                    <button 
+                    <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -638,12 +804,14 @@ export function DashboardClient() {
                     </button>
                   </div>
                   <div className="pointer-events-auto">
-                    <EditorPanel 
-                      activeSlot={activeSlot} 
-                      updateSlot={updateItem} 
+                    <EditorPanel
+                      activeSlot={activeSlot}
+                      updateSlot={updateItem}
                       onClose={() => setActiveSlotId(null)}
                       onDeleteSlot={(id) => {
-                        updateItems(prev => prev.filter(item => item.id !== id));
+                        updateItems((prev) =>
+                          prev.filter((item) => item.id !== id),
+                        );
                         setActiveSlotId(null);
                       }}
                     />
@@ -655,21 +823,19 @@ export function DashboardClient() {
             {/* Instagram Feed / Reel Preview Modal */}
             {activeTab === "CREATE" && previewSlotId && (
               <InstagramPreviewModal
-                item={items.find(i => i.id === previewSlotId)!}
+                item={items.find((i) => i.id === previewSlotId)!}
                 onClose={() => setPreviewSlotId(null)}
               />
             )}
 
-            {activeTab === "CALENDAR" && (
-              <CalendarView items={items} />
-            )}
+            {activeTab === "CALENDAR" && <CalendarView items={items} />}
           </div>
         </div>
       </div>
 
       {/* Native Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-soft-200 py-2 px-6 flex items-center justify-around z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
-        <button 
+        <button
           onClick={() => setActiveTab("CREATE")}
           className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
         >
@@ -677,18 +843,20 @@ export function DashboardClient() {
           <span className="text-[10px] font-semibold">Planner</span>
         </button>
 
-        <button 
+        <button
           onClick={() => {
-            const newRows = [{
-              id: `slot-${Math.floor(Math.random() * 1000000000)}`,
-              type: "placeholder" as const,
-              urls: [],
-              currentUrlIndex: 0,
-              hexColor: "#E5D3C8",
-              text: "",
-              contentType: "Post" as const,
-            }];
-            updateItems(prev => [...newRows, ...prev]);
+            const newRows = [
+              {
+                id: `slot-${Math.floor(Math.random() * 1000000000)}`,
+                type: "placeholder" as const,
+                urls: [],
+                currentUrlIndex: 0,
+                hexColor: "#E5D3C8",
+                text: "",
+                contentType: "Post" as const,
+              },
+            ];
+            updateItems((prev) => [...newRows, ...prev]);
           }}
           className="p-3 bg-slate-900 text-white rounded-full shadow-lg -mt-5 hover:bg-black active:scale-95 transition-all cursor-pointer"
           title="Add New Slot"
@@ -696,14 +864,17 @@ export function DashboardClient() {
           <PenTool size={18} strokeWidth={2.5} />
         </button>
 
-        <button 
+        <button
           onClick={() => setActiveTab("CALENDAR")}
           className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CALENDAR" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
         >
-          <Calendar size={20} strokeWidth={activeTab === "CALENDAR" ? 2.5 : 2} />
+          <Calendar
+            size={20}
+            strokeWidth={activeTab === "CALENDAR" ? 2.5 : 2}
+          />
           <span className="text-[10px] font-semibold">Calendar</span>
         </button>
       </div>
     </div>
-  )
+  );
 }
