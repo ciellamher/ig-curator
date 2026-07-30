@@ -190,11 +190,11 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchResul
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
         isFocusedSearchMatch
-          ? "ring-4 ring-amber-400 ring-offset-2 z-40 shadow-2xl scale-[1.02] animate-pulse"
+          ? "ring-4 ring-slate-800 ring-offset-2 z-40 shadow-2xl scale-[1.02]" 
           : isActive 
           ? "ring-4 ring-slate-900 ring-inset z-20 shadow-md" 
           : isSearchResult
-          ? "ring-3 ring-amber-400/80 ring-inset z-20 shadow-sm"
+          ? "ring-2 ring-slate-400/80 ring-inset z-20 shadow-sm"
           : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"
       }`}
     >
