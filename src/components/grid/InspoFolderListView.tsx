@@ -197,12 +197,12 @@ export function InspoFolderListView({
                   <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-slate-800">
                     {folder.text || "Untitled Folder"}
                   </h3>
-                  <div className="flex items-center gap-2 mt-1.5 text-[10px] font-medium text-foreground/50">
-                    <span className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-[10px] font-medium text-foreground/50">
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Grid3X3 size={11} /> {postCount} Posts
                     </span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1">
+                    <span className="hidden sm:inline">•</span>
+                    <span className="flex items-center gap-1 whitespace-nowrap">
                       <Circle size={11} /> {storyCount} Stories
                     </span>
                   </div>

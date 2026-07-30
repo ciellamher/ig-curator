@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { SlotItem } from "@/types";
-import { ChevronLeft, Plus, Upload, Trash2, Grid3X3, ArrowUpToLine, X, PlaySquare, UserSquare2 } from "lucide-react";
+import { ChevronLeft, Plus, Upload, Trash2, Grid3X3, ArrowUpToLine, X, PlaySquare, UserSquare2, Download } from "lucide-react";
 
 interface InspoFolderViewProps {
   folder: SlotItem;
@@ -230,17 +230,16 @@ export function InspoFolderView({
             </div>
 
             {/* Photo Preview */}
-            <div className="w-full bg-soft-100 relative overflow-hidden flex items-center justify-center" style={{ maxHeight: '60vh' }}>
+            <div className={`w-full bg-soft-100 relative overflow-hidden flex items-center justify-center ${(previewItem.contentType === "InspoStory" || previewItem.contentType === "Story") ? "aspect-[9/16]" : "aspect-[4/5]"}`}>
               {previewItem.urls && previewItem.urls.length > 0 ? (
                 <img
                   src={previewItem.urls[previewItem.currentUrlIndex || 0]}
                   alt=""
                   className="w-full h-full object-contain"
-                  style={{ maxHeight: '60vh' }}
                 />
               ) : (
                 <div
-                  className="w-full aspect-[4/5] flex items-center justify-center"
+                  className="w-full h-full flex items-center justify-center"
                   style={{ backgroundColor: previewItem.hexColor || "#E5D3C8" }}
                 >
                   <span className="text-white font-bold">{previewItem.text}</span>
@@ -248,27 +247,49 @@ export function InspoFolderView({
               )}
             </div>
 
-            {/* Actions */}
-            <div className="p-5 flex flex-col gap-3 bg-white">
-              <button
-                onClick={() => {
-                  const targetType = (previewItem.contentType === "InspoStory" || previewItem.contentType === "Story") ? "Story" : "Post";
-                  onCopyToMainGrid(previewItem, targetType);
-                  setPreviewItem(null);
-                }}
-                className="w-full py-3 bg-slate-900 hover:bg-black text-white text-sm font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                <ArrowUpToLine size={18} strokeWidth={2} />
-                <span>Copy to {(previewItem.contentType === "InspoStory" || previewItem.contentType === "Story") ? "Story Feed" : "Main Feed"}</span>
-              </button>
+            {/* Actions & Caption */}
+            <div className="p-4 flex flex-col gap-3 bg-white">
+              {/* Caption Input */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-wider">Caption / Notes</label>
+                <textarea
+                  value={previewItem.text || ""}
+                  onChange={(e) => {
+                    const newText = e.target.value;
+                    setPreviewItem({ ...previewItem, text: newText });
+                    updateItem(previewItem.id, { text: newText });
+                  }}
+                  placeholder="Write a caption or idea..."
+                  className="w-full p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs resize-none min-h-[60px]"
+                />
+              </div>
 
-              <button
-                onClick={() => handleDeleteItem(previewItem.id)}
-                className="w-full py-2.5 text-red-500 hover:text-red-600 hover:bg-red-50 text-sm font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                <Trash2 size={16} />
-                <span>Delete Photo</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (previewItem.urls && previewItem.urls.length > 0) {
+                      const link = document.createElement('a');
+                      link.href = previewItem.urls[previewItem.currentUrlIndex || 0];
+                      link.download = `inspo-${previewItem.id}.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }
+                  }}
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                >
+                  <Download size={16} strokeWidth={2.2} />
+                  <span>Download</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeleteItem(previewItem.id)}
+                  className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                >
+                  <Trash2 size={14} />
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
