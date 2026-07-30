@@ -62,6 +62,7 @@ export function InspoFolderView({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [dragTargetId, setDragTargetId] = useState<string | null>(null);
+  const [movingItemId, setMovingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-profile");
@@ -531,6 +532,16 @@ export function InspoFolderView({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    setMovingItemId(item.id);
+                  }}
+                  className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
+                  title="Move to another folder"
+                >
+                  <FolderPlus size={13} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (confirm("Delete this media?")) {
                       handleDeleteItem(item.id);
                     }
@@ -717,6 +728,65 @@ export function InspoFolderView({
               <div className="text-[11px] uppercase text-slate-500 font-medium tracking-wide">
                 September 7, 2020
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Photo Modal */}
+      {movingItemId && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in"
+          onClick={() => setMovingItemId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh] shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-soft-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Move Photo</h3>
+              <button
+                onClick={() => setMovingItemId(null)}
+                className="p-1 text-slate-400 hover:text-slate-800 rounded-full bg-soft-50 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-2 overflow-y-auto flex flex-col gap-1">
+              <button
+                onClick={() => {
+                  updateItem(movingItemId, { folderId: undefined });
+                  setMovingItemId(null);
+                }}
+                className="w-full text-left p-3 hover:bg-soft-100 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer text-slate-700"
+              >
+                <div className="w-8 h-8 rounded-lg bg-soft-200 flex items-center justify-center">
+                  <Grid3X3 size={16} className="text-slate-600" />
+                </div>
+                Move to Root (Ideas)
+              </button>
+
+              {allItems
+                .filter((i) => i.contentType === "InspoFolder")
+                .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
+                .map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      updateItem(movingItemId, { folderId: f.id });
+                      setMovingItemId(null);
+                    }}
+                    className="w-full text-left p-2 hover:bg-soft-100 rounded-xl text-sm font-semibold transition-colors flex items-center gap-3 cursor-pointer text-slate-700"
+                  >
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center border border-soft-200"
+                      style={{ backgroundColor: f.hexColor || "#E5D3C8" }}
+                    >
+                      <FolderPlus size={14} className="text-slate-900/50" />
+                    </div>
+                    {f.text || "Untitled Folder"}
+                  </button>
+                ))}
             </div>
           </div>
         </div>
