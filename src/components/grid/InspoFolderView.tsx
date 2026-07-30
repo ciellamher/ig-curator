@@ -105,9 +105,9 @@ export function InspoFolderView({
   };
 
   // Sub-folders
-  const subFolders = itemsInFolder.filter(
-    (i) => i.contentType === "InspoFolder",
-  );
+  const subFolders = itemsInFolder
+    .filter((i) => i.contentType === "InspoFolder")
+    .sort((a, b) => (a.text || "").localeCompare(b.text || ""));
 
   const postItems = itemsInFolder.filter(
     (i) =>
