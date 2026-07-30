@@ -18,6 +18,7 @@ import {
   Repeat,
   Send,
   Bookmark,
+  FolderPlus,
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 
@@ -33,6 +34,7 @@ interface InspoFolderViewProps {
   onCopyToMainGrid: (item: SlotItem, targetType: "Post" | "Story") => void;
   activeSlotId: string | null;
   setActiveSlotId: (id: string | null) => void;
+  onFolderClick?: (id: string) => void;
 }
 
 export function InspoFolderView({
@@ -45,6 +47,7 @@ export function InspoFolderView({
   onCopyToMainGrid,
   activeSlotId,
   setActiveSlotId,
+  onFolderClick,
 }: InspoFolderViewProps) {
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(
     null,
@@ -70,12 +73,9 @@ export function InspoFolderView({
     }
   }, []);
 
-  // Treat all old InspoStories and new InspoHighlights as Highlight Folders
-  const highlightFolders = itemsInFolder.filter(
-    (i) =>
-      i.contentType === "InspoHighlight" ||
-      i.contentType === "InspoStory" ||
-      i.contentType === "Story",
+  // Sub-folders
+  const subFolders = itemsInFolder.filter(
+    (i) => i.contentType === "InspoFolder",
   );
 
   const postItems = itemsInFolder.filter(
@@ -84,26 +84,6 @@ export function InspoFolderView({
       !i.contentType ||
       i.contentType === "Post",
   );
-
-  // If a highlight is open, render the StoryFolderView!
-  if (activeHighlightId) {
-    const highlightFolder = itemsInFolder.find(
-      (i) => i.id === activeHighlightId,
-    );
-    if (highlightFolder) {
-      return (
-        <StoryFolderView
-          folder={highlightFolder}
-          stories={allItems.filter((i) => i.folderId === activeHighlightId)}
-          onBack={() => setActiveHighlightId(null)}
-          updateItems={updateItems}
-          updateItem={updateItem}
-          activeSlotId={activeSlotId}
-          setActiveSlotId={setActiveSlotId}
-        />
-      );
-    }
-  }
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -205,19 +185,18 @@ export function InspoFolderView({
     await processFiles(files);
   };
 
-  const handleAddHighlight = () => {
-    const newHighlight: SlotItem = {
-      id: `inspo-highlight-${Math.floor(Math.random() * 1000000000)}`,
+  const handleAddSubFolder = () => {
+    const newFolder: SlotItem = {
+      id: `inspo-folder-${Math.floor(Math.random() * 1000000000)}`,
       type: "placeholder",
       urls: [],
       currentUrlIndex: 0,
       hexColor: "#E5D3C8",
-      text: "New Folder",
+      text: "New Sub-Folder",
       folderId: folder.id,
-      contentType: "InspoHighlight",
+      contentType: "InspoFolder",
     };
-    updateItems((curr) => [newHighlight, ...curr]);
-    setActiveHighlightId(newHighlight.id); // auto-open it
+    updateItems((curr) => [newFolder, ...curr]);
   };
 
   const handleDeleteItem = (itemId: string) => {
@@ -268,18 +247,27 @@ export function InspoFolderView({
           <ChevronLeft size={28} strokeWidth={1.5} />
         </button>
 
-        <h2 className="text-base font-bold text-slate-900 leading-tight">
+        <h2 className="text-base font-bold text-slate-900 leading-tight truncate px-2">
           {folder.text || "Inspo Folder"}
         </h2>
 
-        <button
-          onClick={handleUploadClick}
-          disabled={isUploading}
-          className="p-1 -mr-1 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
-          title="Add new post inspo"
-        >
-          <Plus size={28} strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleAddSubFolder}
+            className="p-1.5 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
+            title="Add sub-folder"
+          >
+            <FolderPlus size={24} strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={handleUploadClick}
+            disabled={isUploading}
+            className="p-1.5 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
+            title="Add new post inspo"
+          >
+            <Plus size={28} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -304,14 +292,58 @@ export function InspoFolderView({
         </div>
       </div>
 
+      {/* Sub-Folders Section */}
+      {subFolders.length > 0 && (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 px-4 py-4 border-b border-soft-100 bg-white">
+          {subFolders.map((item) => (
+            <div
+              key={item.id}
+              className="flex flex-col gap-2 cursor-pointer group"
+              onClick={() => onFolderClick && onFolderClick(item.id)}
+            >
+              <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
+                {/* Folder Thumbnail */}
+                <div className="absolute inset-0 p-3 flex flex-col items-center justify-center gap-1.5 opacity-60">
+                  <div className="w-8 h-8 rounded-lg border-2 border-slate-400/50 flex items-center justify-center">
+                    <Grid3X3 size={16} className="text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      confirm(`Delete folder "${item.text}" and its contents?`)
+                    ) {
+                      handleDeleteItem(item.id);
+                    }
+                  }}
+                  className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-xs font-bold text-slate-800 text-center truncate px-1">
+                  {item.text || "Sub-Folder"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Grid (Posts) Section */}
       {postItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center text-foreground/40">
+        <div className="flex flex-col items-center justify-center p-12 text-center text-foreground/40 bg-white">
           <div className="w-16 h-16 rounded-full border-2 border-dashed border-soft-200 flex items-center justify-center mb-4">
             <Plus size={24} className="text-soft-300" />
           </div>
           <p className="text-sm font-medium mb-1">No post inspo yet</p>
-          <p className="text-xs">Tap + at top right to add photos</p>
+          <p className="text-xs">
+            Tap + at top right to add photos, or create a sub-folder!
+          </p>
         </div>
       ) : (
         <div className="columns-2 sm:columns-3 gap-2 px-2 pb-24 bg-white mt-2">

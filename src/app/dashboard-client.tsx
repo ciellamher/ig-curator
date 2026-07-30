@@ -706,7 +706,19 @@ export function DashboardClient() {
                             (i) => i.folderId === activeInspoFolderId,
                           )}
                           allItems={items}
-                          onBack={() => setActiveInspoFolderId(null)}
+                          onBack={() => {
+                            const currentFolder = items.find(
+                              (i) => i.id === activeInspoFolderId,
+                            );
+                            if (currentFolder && currentFolder.folderId) {
+                              setActiveInspoFolderId(currentFolder.folderId);
+                            } else {
+                              setActiveInspoFolderId(null);
+                            }
+                          }}
+                          onFolderClick={(folderId) =>
+                            setActiveInspoFolderId(folderId)
+                          }
                           updateItems={updateItems}
                           updateItem={updateItem}
                           activeSlotId={activeSlotId}
