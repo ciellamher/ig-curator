@@ -274,7 +274,39 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
               />
             </div>
 
-
+            {/* Custom Font Size Control */}
+            <div className="flex flex-col gap-2 mt-1">
+              <div className="flex justify-between items-center">
+                <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">Text Font Size</label>
+                <span className="text-xs font-bold text-slate-800">{activeSlot.fontSize || 14}px</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="10"
+                  max="36"
+                  value={activeSlot.fontSize || 14}
+                  onChange={(e) => updateSlot(activeSlot.id, { fontSize: parseInt(e.target.value) })}
+                  className="flex-1 accent-slate-800 cursor-pointer"
+                />
+                <div className="flex gap-1">
+                  {[12, 14, 18, 24].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => updateSlot(activeSlot.id, { fontSize: size })}
+                      className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                        (activeSlot.fontSize || 14) === size 
+                          ? "bg-slate-900 text-white border-slate-900" 
+                          : "bg-white border-soft-200 text-foreground/70 hover:bg-soft-100"
+                      }`}
+                    >
+                      {size === 12 ? "S" : size === 14 ? "M" : size === 18 ? "L" : "XL"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </>
         ) : (
           <>
