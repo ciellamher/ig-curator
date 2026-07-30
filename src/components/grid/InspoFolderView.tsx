@@ -19,6 +19,7 @@ import {
   Send,
   Bookmark,
   FolderPlus,
+  Edit2,
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 
