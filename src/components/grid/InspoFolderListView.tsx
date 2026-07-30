@@ -54,23 +54,24 @@ export function InspoFolderListView({
   return (
     <div className="w-full flex flex-col p-4 sm:p-6 pb-24">
       {/* Header Bar */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <FolderHeart size={20} className="text-slate-800" />
-            <span>Inspo Collections</span>
+      <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="min-w-0">
+          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <FolderHeart size={22} className="text-slate-800 shrink-0" />
+            <span className="truncate">Inspo Collections</span>
           </h2>
-          <p className="text-xs text-foreground/50 mt-0.5">
+          <p className="text-xs text-foreground/50 mt-1 truncate">
             Organize real inspiration photos for Posts, Stories, & Highlights
           </p>
         </div>
 
         <button
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-full shadow-sm transition-all cursor-pointer active:scale-95"
+          className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-full shadow-md hover:shadow-lg transition-all cursor-pointer active:scale-[0.98]"
         >
-          <Plus size={14} strokeWidth={2.5} />
-          <span>New Inspo Folder</span>
+          <Plus size={16} strokeWidth={2.5} />
+          <span className="hidden sm:inline">New Inspo Folder</span>
+          <span className="sm:hidden">New Folder</span>
         </button>
       </div>
 
@@ -149,26 +150,26 @@ export function InspoFolderListView({
 
       {/* Folders Grid */}
       {folders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-3xl border border-dashed border-soft-300 my-4">
-          <div className="w-14 h-14 bg-pastel-100 rounded-full flex items-center justify-center mb-3 text-slate-800">
-            <FolderHeart size={26} strokeWidth={1.8} />
+        <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-soft-50/60 rounded-[32px] border border-soft-200 shadow-sm my-2">
+          <div className="w-16 h-16 bg-white rounded-full shadow-sm border border-soft-100 flex items-center justify-center mb-5 text-slate-800">
+            <FolderHeart size={28} strokeWidth={1.5} />
           </div>
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-base font-bold text-slate-900 mb-2">
             No Inspo Folders Yet
           </h3>
-          <p className="text-xs text-foreground/50 max-w-xs mt-1 mb-4">
+          <p className="text-sm text-foreground/60 max-w-sm mb-7 leading-relaxed">
             Create folders like{" "}
-            <span className="font-semibold text-slate-800">Japan</span> or{" "}
-            <span className="font-semibold text-slate-800">
+            <span className="font-semibold text-slate-900">Japan</span> or{" "}
+            <span className="font-semibold text-slate-900">
               Minimal Moodboard
             </span>{" "}
             to save real photos for Posts & Stories.
           </p>
           <button
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-full text-xs font-bold hover:bg-black transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-full text-sm font-bold hover:bg-black transition-all cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98]"
           >
-            <Plus size={14} strokeWidth={2.5} />
+            <Plus size={16} strokeWidth={2.5} />
             <span>Create First Inspo Folder</span>
           </button>
         </div>
