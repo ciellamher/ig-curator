@@ -218,11 +218,14 @@ export function DashboardClient() {
 
     async function init() {
       if (status === "unauthenticated") {
-        removeItem("ig-curator-items").catch(() => {});
-        if (isMounted) {
-          setItems(initialItems);
-          setIsLoaded(true);
-        }
+        // NEVER delete local data - just show it as-is
+        try {
+          const saved = await getItem<SlotItem[]>("ig-curator-items");
+          if (saved && saved.length > 0 && isMounted) {
+            setItems(saved);
+          }
+        } catch (e) {}
+        if (isMounted) setIsLoaded(true);
         return;
       }
 
