@@ -238,7 +238,7 @@ export function DashboardClient() {
     const timer = setTimeout(async () => {
       try {
         const payloadString = JSON.stringify(items);
-        if (payloadString.length > 800 * 1024) {
+        if (payloadString.length > 4 * 1024 * 1024) {
           setSyncStatus("Saved Locally");
           setTimeout(
             () =>
@@ -378,7 +378,7 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     try {
       const payloadString = JSON.stringify(items);
-      if (payloadString.length > 800 * 1024) {
+      if (payloadString.length > 4 * 1024 * 1024) {
         setSyncStatus("Saved Locally");
         setTimeout(
           () =>
