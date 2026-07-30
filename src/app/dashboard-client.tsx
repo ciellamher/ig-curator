@@ -13,6 +13,7 @@ import { StoryFolderView } from "@/components/grid/StoryFolderView";
 import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView";
 import { InspoFolderListView } from "@/components/grid/InspoFolderListView";
 import { InspoFolderView } from "@/components/grid/InspoFolderView";
+import { CaptionsDatabaseView } from "@/components/captions/CaptionsDatabaseView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
 import {
@@ -30,6 +31,14 @@ import {
   X,
   SquarePlus,
   FolderHeart,
+  Film,
+  Plus,
+  Play,
+  Settings,
+  MoreHorizontal,
+  ChevronLeft,
+  PlusCircle,
+  Type,
 } from "lucide-react";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
@@ -48,7 +57,7 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"CREATE">("CREATE");
+  const [activeTab, setActiveTab] = useState<"CREATE" | "CAPTIONS">("CREATE");
   const [gridFilter, setGridFilter] = useState<
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
@@ -133,12 +142,14 @@ export function DashboardClient() {
   const [syncStatus, setSyncStatus] = useState<
     "Idle" | "Saving..." | "Saved" | "Saved Locally" | "Error"
   >("Idle");
-  
+
   const hasLocalItemsRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      import("@/lib/idb").then(({ removeItem }) => removeItem("ig-curator-items"));
+      import("@/lib/idb").then(({ removeItem }) =>
+        removeItem("ig-curator-items"),
+      );
       setItems(initialItems);
       setIsLoaded(true);
       return;
@@ -202,7 +213,10 @@ export function DashboardClient() {
         if (payloadString.length > 4.5 * 1024 * 1024) {
           setSyncStatus("Saved Locally");
           setTimeout(
-            () => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
+            () =>
+              setSyncStatus((prev) =>
+                prev === "Saved Locally" ? "Idle" : prev,
+              ),
             2000,
           );
           return;
@@ -309,7 +323,8 @@ export function DashboardClient() {
       if (payloadString.length > 4.5 * 1024 * 1024) {
         setSyncStatus("Saved Locally");
         setTimeout(
-          () => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
+          () =>
+            setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
           2000,
         );
         return;
@@ -413,7 +428,11 @@ export function DashboardClient() {
     });
   };
 
-  const handleCreateInspoFolder = (title: string, hexColor?: string, coverUrl?: string) => {
+  const handleCreateInspoFolder = (
+    title: string,
+    hexColor?: string,
+    coverUrl?: string,
+  ) => {
     const newFolder: SlotItem = {
       id: `folder-inspo-${Math.floor(Math.random() * 1000000000)}`,
       type: "placeholder",
@@ -862,7 +881,7 @@ export function DashboardClient() {
               />
             )}
 
-            {/* Removed CalendarView */}
+            {activeTab === "CAPTIONS" && <CaptionsDatabaseView />}
           </div>
         </div>
       </div>
@@ -900,10 +919,21 @@ export function DashboardClient() {
 
         <button
           onClick={() => setActiveTab("CREATE")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer text-slate-900 font-bold`}
+          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
         >
-          <FolderHeart size={20} strokeWidth={2.5} />
+          <FolderHeart
+            size={20}
+            strokeWidth={activeTab === "CREATE" ? 2.5 : 2}
+          />
           <span className="text-[10px] font-semibold">Saved</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("CAPTIONS")}
+          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CAPTIONS" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+        >
+          <Type size={20} strokeWidth={activeTab === "CAPTIONS" ? 2.5 : 2} />
+          <span className="text-[10px] font-semibold">Captions</span>
         </button>
       </div>
     </div>
