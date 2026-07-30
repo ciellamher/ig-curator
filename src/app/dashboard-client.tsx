@@ -10,8 +10,10 @@ import { CalendarView } from "@/components/calendar/CalendarView"
 import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
+import { PlaceholderFolderListView } from "@/components/grid/PlaceholderFolderListView"
+import { PlaceholderFolderView } from "@/components/grid/PlaceholderFolderView"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X } from "lucide-react"
+import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, Folder } from "lucide-react"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -30,9 +32,10 @@ export function DashboardClient() {
   const [history, setHistory] = useState<SlotItem[][]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
-  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story">("All")
+  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Folders">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
+  const [activePlaceholderFolderId, setActivePlaceholderFolderId] = useState<string | null>(null);
 
   // Floating modal drag state
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
@@ -255,6 +258,18 @@ export function DashboardClient() {
 
 
 
+  const handleTransferToMainGrid = (selectedSlotIds: string[]) => {
+    updateItems((current) => {
+      const selectedSet = new Set(selectedSlotIds);
+      const transferredItems = current
+        .filter((item) => selectedSet.has(item.id))
+        .map((item) => ({ ...item, folderId: undefined }));
+
+      const remainingItems = current.filter((item) => !selectedSet.has(item.id));
+      return [...transferredItems, ...remainingItems];
+    });
+  };
+
   if (!isLoaded) return null;
 
   return (
@@ -319,9 +334,20 @@ export function DashboardClient() {
                   <ProfileHeader 
                     session={session} 
                     status={status}
-                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
+                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
                     onAddRow={() => {
-                      if (gridFilter === "Story" && !activeStoryFolderId) {
+                      if (gridFilter === "Folders" && !activePlaceholderFolderId) {
+                        const newFolder: SlotItem = {
+                          id: `folder-ph-${Math.floor(Math.random() * 1000000000)}`,
+                          type: "placeholder",
+                          urls: [],
+                          currentUrlIndex: 0,
+                          hexColor: "#E5D3C8",
+                          text: "New Placeholder Folder",
+                          contentType: "PlaceholderFolder",
+                        };
+                        updateItems([newFolder, ...items]);
+                      } else if (gridFilter === "Story" && !activeStoryFolderId) {
                         const newFolder: SlotItem = {
                           id: `folder-${Math.floor(Math.random() * 1000000000)}`,
                           type: "placeholder",
@@ -333,7 +359,6 @@ export function DashboardClient() {
                         };
                         updateItems([newFolder, ...items]);
                       } else {
-                        const newId = items.length;
                         const numItemsToAdd = 1;
                         const newRows = Array.from({ length: numItemsToAdd }).map((_, i) => ({
                           id: `slot-${Math.floor(Math.random() * 1000000000)}-${i}`,
@@ -342,8 +367,10 @@ export function DashboardClient() {
                           currentUrlIndex: 0,
                           hexColor: "#E5D3C8",
                           text: "",
-                          contentType: gridFilter === "All" ? "Post" : gridFilter as any,
-                          folderId: gridFilter === "Story" ? (activeStoryFolderId || undefined) : undefined,
+                          contentType: gridFilter === "All" ? "Post" : (gridFilter === "Folders" ? "Post" : gridFilter as any),
+                          folderId: gridFilter === "Folders" 
+                            ? (activePlaceholderFolderId || undefined) 
+                            : (gridFilter === "Story" ? (activeStoryFolderId || undefined) : undefined),
                         }));
                         updateItems([...newRows, ...items]);
                       }
@@ -357,12 +384,14 @@ export function DashboardClient() {
                     <button 
                       onClick={() => setGridFilter("All")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "All" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
+                      title="Main Grid"
                     >
                       <Grid3X3 size={22} strokeWidth={gridFilter === "All" ? 2.5 : 2} />
                     </button>
                     <button 
                       onClick={() => setGridFilter("Reel")}
                       className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Reel" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
+                      title="Reels"
                     >
                       <Clapperboard size={22} strokeWidth={gridFilter === "Reel" ? 2.5 : 2} />
                     </button>
@@ -372,6 +401,16 @@ export function DashboardClient() {
                       title="Stories"
                     >
                       <Circle size={22} strokeWidth={gridFilter === "Story" ? 2.5 : 2} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setGridFilter("Folders");
+                        setActivePlaceholderFolderId(null);
+                      }}
+                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Folders" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
+                      title="Placeholder Folders"
+                    >
+                      <Folder size={22} strokeWidth={gridFilter === "Folders" ? 2.5 : 2} />
                     </button>
                   </div>
 
@@ -384,6 +423,39 @@ export function DashboardClient() {
                         <h3 className="text-xl font-bold text-foreground">Sign up first or login</h3>
                         <p className="text-foreground/60 max-w-xs text-sm">You need an account to arrange your grid and upload photos.</p>
                       </div>
+                    ) : gridFilter === "Folders" ? (
+                      activePlaceholderFolderId ? (
+                        <PlaceholderFolderView 
+                          folder={items.find(i => i.id === activePlaceholderFolderId)!}
+                          placeholders={items.filter(i => i.folderId === activePlaceholderFolderId)}
+                          onBack={() => setActivePlaceholderFolderId(null)}
+                          updateItems={updateItems}
+                          updateItem={updateItem}
+                          activeSlotId={activeSlotId}
+                          setActiveSlotId={setActiveSlotId}
+                          onTransferToMainGrid={handleTransferToMainGrid}
+                        />
+                      ) : (
+                        <PlaceholderFolderListView 
+                          folders={items.filter(i => i.contentType === "PlaceholderFolder")}
+                          allItems={items}
+                          onFolderClick={(id) => setActivePlaceholderFolderId(id)}
+                          updateItem={updateItem}
+                          onCreateFolder={(name) => {
+                            const newFolder: SlotItem = {
+                              id: `folder-ph-${Math.floor(Math.random() * 1000000000)}`,
+                              type: "placeholder",
+                              urls: [],
+                              currentUrlIndex: 0,
+                              hexColor: "#E5D3C8",
+                              text: name,
+                              contentType: "PlaceholderFolder",
+                            };
+                            updateItems(prev => [newFolder, ...prev]);
+                          }}
+                          onDeleteFolder={(id) => updateItems(prev => prev.filter(item => item.id !== id && item.folderId !== id))}
+                        />
+                      )
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
                         <StoryFolderView 
@@ -407,7 +479,7 @@ export function DashboardClient() {
                     ) : (
                       <Grid 
                         items={gridFilter === "All" 
-                          ? items.filter(i => i.contentType !== "StoryFolder" && !i.folderId && !i.isHiddenFromGrid) 
+                          ? items.filter(i => i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && !i.folderId && !i.isHiddenFromGrid) 
                           : items.filter(i => i.contentType === gridFilter && !i.folderId)} 
                         setItems={updateItems} 
                         updateItem={updateItem}

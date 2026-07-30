@@ -1,4 +1,4 @@
-export type ContentType = "Post" | "Reel" | "Carousel" | "Story" | "StoryFolder" | "TikTok";
+export type ContentType = "Post" | "Reel" | "Carousel" | "Story" | "StoryFolder" | "PlaceholderFolder" | "TikTok";
 
 export type SlotItem = {
   id: string;

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { SlotItem } from "@/types"
-import { Upload, Trash2, X, Sparkles, ChevronLeft, ChevronRight, ImageMinus } from "lucide-react"
+import { Upload, Trash2, X, Sparkles, ChevronLeft, ChevronRight, ImageMinus, ArrowUpToLine } from "lucide-react"
 
 interface EditorPanelProps {
   activeSlot: SlotItem | null;
@@ -136,6 +136,20 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
           >
             <Upload size={18} strokeWidth={2.2} />
           </button>
+
+          {/* If item is in folder, add Transfer to Grid button */}
+          {activeSlot.folderId && (
+            <button
+              onClick={() => {
+                updateSlot(activeSlot.id, { folderId: undefined });
+              }}
+              className="p-2.5 bg-pastel-100 border border-pastel-300 text-slate-900 hover:bg-pastel-200 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center gap-1 text-xs font-bold"
+              title="Transfer to Main Grid (First Row)"
+            >
+              <ArrowUpToLine size={18} strokeWidth={2.2} />
+              <span className="hidden sm:inline">Row 1</span>
+            </button>
+          )}
 
           {/* Single Photo Trash Button */}
           <button
