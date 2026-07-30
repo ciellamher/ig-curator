@@ -23,6 +23,7 @@ export function InspoFolderListView({
 }: InspoFolderListViewProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newCoverUrl, setNewCoverUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -139,7 +140,7 @@ export function InspoFolderListView({
               <label className="text-[11px] font-bold text-foreground/60">
                 Cover Photo
               </label>
-              
+
               <input
                 type="file"
                 ref={fileInputRef}
@@ -150,7 +151,10 @@ export function InspoFolderListView({
 
               {newCoverUrl ? (
                 <div className="relative w-20 h-20 rounded-xl overflow-hidden group">
-                  <img src={newCoverUrl} className="w-full h-full object-cover" />
+                  <img
+                    src={newCoverUrl}
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
@@ -167,7 +171,9 @@ export function InspoFolderListView({
                   className="w-20 h-20 rounded-xl border-2 border-dashed border-soft-200 flex flex-col items-center justify-center gap-1 hover:border-slate-400 hover:bg-soft-50 transition-colors text-slate-500 cursor-pointer"
                 >
                   <Plus size={20} />
-                  <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider">
+                    Upload
+                  </span>
                 </button>
               )}
             </div>
@@ -200,69 +206,95 @@ export function InspoFolderListView({
             .slice()
             .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
             .map((folder) => {
-            const folderItems = allItems.filter(
-              (i) => i.folderId === folder.id,
-            );
-            const firstImage = folder.urls?.[0] || folderItems.find(
-              (i) => i.urls && i.urls.length > 0,
-            )?.urls[0];
+              const folderItems = allItems.filter(
+                (i) => i.folderId === folder.id,
+              );
+              const firstImage =
+                folder.urls?.[0] ||
+                folderItems.find((i) => i.urls && i.urls.length > 0)?.urls[0];
 
-            return (
-              <div
-                key={folder.id}
-                onClick={() => onFolderClick(folder.id)}
-                className="group cursor-pointer flex flex-col gap-2"
-              >
+              return (
                 <div
-                  className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
-                  style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
+                  key={folder.id}
+                  onClick={() => onFolderClick(folder.id)}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("application/folder-id", folder.id);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault(); // Necessary to allow dropping
+                    setDragTargetId(folder.id);
+                  }}
+                  onDragLeave={() => {
+                    setDragTargetId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragTargetId(null);
+                    const draggedId = e.dataTransfer.getData(
+                      "application/folder-id",
+                    );
+                    if (draggedId && draggedId !== folder.id && updateItem) {
+                      // Update the dragged folder to have the target folder as its parent!
+                      updateItem(draggedId, { folderId: folder.id });
+                    }
+                  }}
+                  className={`group cursor-pointer flex flex-col gap-2 rounded-xl transition-all ${
+                    dragTargetId === folder.id
+                      ? "ring-2 ring-slate-800 ring-offset-2 scale-105"
+                      : ""
+                  }`}
                 >
-                  {firstImage && (
-                    <img
-                      src={firstImage}
-                      alt={folder.text}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  )}
+                  <div
+                    className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
+                    style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
+                  >
+                    {firstImage && (
+                      <img
+                        src={firstImage}
+                        alt={folder.text}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
 
-                  {/* Subtle Edit & Delete Buttons on hover */}
-                  <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(folder);
-                      }}
-                      className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-slate-900 rounded-lg shadow-sm"
-                      title="Edit folder"
-                    >
-                      <Edit2 size={13} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (
-                          confirm(
-                            `Delete inspo folder "${folder.text}" and all its photos?`,
-                          )
-                        ) {
-                          onDeleteFolder(folder.id);
-                        }
-                      }}
-                      className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-red-600 rounded-lg shadow-sm"
-                      title="Delete folder"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {/* Subtle Edit & Delete Buttons on hover */}
+                    <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(folder);
+                        }}
+                        className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-slate-900 rounded-lg shadow-sm"
+                        title="Edit folder"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            confirm(
+                              `Delete inspo folder "${folder.text}" and all its photos?`,
+                            )
+                          ) {
+                            onDeleteFolder(folder.id);
+                          }
+                        }}
+                        className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-red-600 rounded-lg shadow-sm"
+                        title="Delete folder"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Folder Title */}
-                <h3 className="text-[13px] font-semibold text-slate-900 truncate">
-                  {folder.text || "Untitled Folder"}
-                </h3>
-              </div>
-            );
-          })}
+                  {/* Folder Title */}
+                  <h3 className="text-[13px] font-semibold text-slate-900 truncate">
+                    {folder.text || "Untitled Folder"}
+                  </h3>
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>

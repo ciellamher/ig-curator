@@ -61,6 +61,7 @@ export function InspoFolderView({
     "https://i.pravatar.cc/150?img=44",
   );
   const [isDragging, setIsDragging] = useState(false);
+  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-profile");
@@ -298,8 +299,33 @@ export function InspoFolderView({
           {subFolders.map((item) => (
             <div
               key={item.id}
-              className="flex flex-col gap-2 cursor-pointer group"
+              className={`flex flex-col gap-2 cursor-pointer group rounded-2xl transition-all ${
+                dragTargetId === item.id
+                  ? "ring-2 ring-slate-800 ring-offset-2 scale-105"
+                  : ""
+              }`}
               onClick={() => onFolderClick && onFolderClick(item.id)}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("application/folder-id", item.id);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragTargetId(item.id);
+              }}
+              onDragLeave={() => {
+                setDragTargetId(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragTargetId(null);
+                const draggedId = e.dataTransfer.getData(
+                  "application/folder-id",
+                );
+                if (draggedId && draggedId !== item.id) {
+                  updateItem(draggedId, { folderId: item.id });
+                }
+              }}
             >
               <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
                 {/* Folder Thumbnail */}

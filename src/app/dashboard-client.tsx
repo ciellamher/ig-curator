@@ -728,7 +728,8 @@ export function DashboardClient() {
                       ) : (
                         <InspoFolderListView
                           folders={items.filter(
-                            (i) => i.contentType === "InspoFolder",
+                            (i) =>
+                              i.contentType === "InspoFolder" && !i.folderId,
                           )}
                           allItems={items}
                           onFolderClick={(folderId) =>
