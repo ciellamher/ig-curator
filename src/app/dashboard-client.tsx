@@ -649,9 +649,12 @@ export function DashboardClient() {
                           itemsInFolder={items.filter(
                             (i) => i.folderId === activeInspoFolderId,
                           )}
+                          allItems={items}
                           onBack={() => setActiveInspoFolderId(null)}
                           updateItems={updateItems}
                           updateItem={updateItem}
+                          activeSlotId={activeSlotId}
+                          setActiveSlotId={setActiveSlotId}
                           onCopyToMainGrid={handleCopyInspoToGrid}
                         />
                       ) : (
