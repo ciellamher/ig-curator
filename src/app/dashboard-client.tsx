@@ -41,6 +41,7 @@ import {
   Type,
   Check,
 } from "lucide-react";
+import { setItem, getItem, removeItem } from "@/lib/idb";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -149,31 +150,27 @@ export function DashboardClient() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      import("@/lib/idb").then(({ removeItem }) =>
-        removeItem("ig-curator-items"),
-      );
+      removeItem("ig-curator-items").catch(() => {});
       setItems(initialItems);
       setIsLoaded(true);
       return;
     }
 
-    import("@/lib/idb").then(({ getItem, setItem }) => {
-      getItem<SlotItem[]>("ig-curator-items").then((saved) => {
-        if (saved && saved.length > 0) {
-          setItems(saved);
-          hasLocalItemsRef.current = true;
-        } else {
-          const oldSaved = localStorage.getItem("ig-curator-items");
-          if (oldSaved) {
-            try {
-              const parsed = JSON.parse(oldSaved);
-              setItems(parsed);
-              setItem("ig-curator-items", parsed);
-              if (parsed.length > 0) hasLocalItemsRef.current = true;
-            } catch (e) {}
-          }
+    getItem<SlotItem[]>("ig-curator-items").then((saved) => {
+      if (saved && saved.length > 0) {
+        setItems(saved);
+        hasLocalItemsRef.current = true;
+      } else {
+        const oldSaved = localStorage.getItem("ig-curator-items");
+        if (oldSaved) {
+          try {
+            const parsed = JSON.parse(oldSaved);
+            setItems(parsed);
+            setItem("ig-curator-items", parsed).catch(() => {});
+            if (parsed.length > 0) hasLocalItemsRef.current = true;
+          } catch (e) {}
         }
-      });
+      }
     });
 
     async function loadCloud() {
@@ -309,13 +306,13 @@ export function DashboardClient() {
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
       
-      import("@/lib/idb").then(({ setItem }) => {
-        setItem("ig-curator-items", items).then(() => {
-          setLocalSaveStatus("Saved");
-          setTimeout(() => setLocalSaveStatus("Idle"), 2000);
-        }).catch((error) => {
-          console.error("Storage quota exceeded in IDB!", error);
-        });
+      setItem("ig-curator-items", items).then(() => {
+        setLocalSaveStatus("Saved");
+        setTimeout(() => {
+          setLocalSaveStatus((prev) => (prev === "Saved" ? "Idle" : prev));
+        }, 2000);
+      }).catch((error) => {
+        console.error("Storage quota exceeded in IDB!", error);
       });
     }, 250);
 
@@ -348,9 +345,7 @@ export function DashboardClient() {
       if (prev.length === 0) return prev;
       const previousState = prev[prev.length - 1];
       setItems(previousState);
-      import("@/lib/idb").then(({ setItem }) => {
-        setItem("ig-curator-items", previousState).catch(() => {});
-      });
+      setItem("ig-curator-items", previousState).catch(() => {});
       return prev.slice(0, -1);
     });
   }
