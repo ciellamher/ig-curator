@@ -249,11 +249,16 @@ export function DashboardClient() {
           );
           return;
         }
-
-        const { syncGridToCloud } = await import("@/app/actions/grid");
         const profileStr = localStorage.getItem("ig-curator-profile");
         const profile = profileStr ? JSON.parse(profileStr) : undefined;
-        const res = await syncGridToCloud(items, profile);
+        
+        const response = await fetch("/api/grid/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items, profile }),
+        });
+        
+        const res = await response.json();
         if (res.success) {
           setSyncStatus("Saved");
           setTimeout(
@@ -389,11 +394,16 @@ export function DashboardClient() {
         );
         return;
       }
-
-      const { syncGridToCloud } = await import("@/app/actions/grid");
       const profileStr = localStorage.getItem("ig-curator-profile");
       const profile = profileStr ? JSON.parse(profileStr) : undefined;
-      const res = await syncGridToCloud(items, profile);
+      
+      const response = await fetch("/api/grid/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, profile }),
+      });
+      
+      const res = await response.json();
       if (res.success) {
         setSyncStatus("Saved");
         setTimeout(
