@@ -226,7 +226,7 @@ export function InspoFolderListView({
                 </div>
 
                 {/* Folder Title */}
-                <h3 className="text-[13px] font-bold text-slate-900 truncate px-1">
+                <h3 className="text-[13px] font-semibold text-slate-900 truncate">
                   {folder.text || "Untitled Folder"}
                 </h3>
               </div>
