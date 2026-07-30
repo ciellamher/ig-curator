@@ -624,52 +624,6 @@ export function DashboardClient() {
                 </span>
               </button>
 
-              {/* Local Folder Save Button */}
-              {isFileSystemSupported() && (
-                <button
-                  onClick={async () => {
-                    if (fsHandle) {
-                      try {
-                        await saveToFolder(fsHandle, items);
-                        alert("✅ Saved to your local folder!");
-                      } catch (e: any) {
-                        console.error("Folder save error:", e);
-                        // Permission may have expired - re-pick folder
-                        const newHandle = await pickFolder();
-                        if (newHandle) {
-                          setFsHandle(newHandle);
-                          fsHandleRef.current = newHandle;
-                          try {
-                            await saveToFolder(newHandle, items);
-                            alert("✅ Folder reconnected and saved!");
-                          } catch (e2) {
-                            console.error("Retry failed:", e2);
-                            alert("❌ Save failed: " + String(e2));
-                          }
-                        }
-                      }
-                    } else {
-                      const handle = await pickFolder();
-                      if (handle) {
-                        setFsHandle(handle);
-                        fsHandleRef.current = handle;
-                        await saveToFolder(handle, items);
-                        alert("✅ Folder connected! All your photos will now save here automatically.");
-                      }
-                    }
-                  }}
-                  className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
-                    fsHandle
-                      ? "bg-green-50 text-green-600 border-green-200 cursor-pointer"
-                      : "bg-white border-soft-200 text-foreground/70 hover:text-foreground cursor-pointer"
-                  }`}
-                  title={fsHandle ? "Saving to local folder — click to save now" : "Connect a local folder to save your photos permanently"}
-                >
-                  <FolderHeart size={13} />
-                  <span>{fsHandle ? "Folder Connected ✓" : "Save to Folder"}</span>
-                </button>
-              )}
-
               {/* Grid Search Navigation Bar */}
               <GridSearchNav
                 searchQuery={searchQuery}
