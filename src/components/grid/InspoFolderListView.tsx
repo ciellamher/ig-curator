@@ -288,20 +288,42 @@ export function InspoFolderListView({
                             key={idx}
                             className="w-full h-full overflow-hidden bg-soft-100"
                           >
-                            <img
-                              src={url}
-                              alt=""
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
+                            {url.startsWith("data:video") ? (
+                              <video
+                                src={url}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                muted
+                                loop
+                                autoPlay
+                                playsInline
+                              />
+                            ) : (
+                              <img
+                                src={url}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
                     ) : folderImages.length > 0 ? (
-                      <img
-                        src={folderImages[0]}
-                        alt={folder.text}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
+                      folderImages[0].startsWith("data:video") ? (
+                        <video
+                          src={folderImages[0]}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          muted
+                          loop
+                          autoPlay
+                          playsInline
+                        />
+                      ) : (
+                        <img
+                          src={folderImages[0]}
+                          alt={folder.text}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      )
                     ) : null}
 
                     {/* Subtle Edit & Delete Buttons on hover */}

@@ -373,20 +373,42 @@ export function InspoFolderView({
                           key={idx}
                           className="w-full h-full overflow-hidden bg-soft-100"
                         >
-                          <img
-                            src={url}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
+                          {url.startsWith("data:video") ? (
+                            <video
+                              src={url}
+                              className="w-full h-full object-cover"
+                              muted
+                              loop
+                              autoPlay
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={url}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : folderImages.length > 0 ? (
-                    <img
-                      src={folderImages[0]}
-                      alt={item.text}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+                    folderImages[0].startsWith("data:video") ? (
+                      <video
+                        src={folderImages[0]}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        muted
+                        loop
+                        autoPlay
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        src={folderImages[0]}
+                        alt={item.text}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )
                   ) : (
                     <div className="absolute inset-0 p-3 flex flex-col items-center justify-center gap-1.5 opacity-60">
                       <div className="w-8 h-8 rounded-lg border-2 border-slate-400/50 flex items-center justify-center">
@@ -395,22 +417,41 @@ export function InspoFolderView({
                     </div>
                   )}
 
-                  {/* Delete Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (
-                        confirm(
-                          `Delete folder "${item.text}" and its contents?`,
-                        )
-                      ) {
-                        handleDeleteItem(item.id);
-                      }
-                    }}
-                    className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {/* Edit & Delete Buttons */}
+                  <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const newName = prompt(
+                          "Enter new folder name:",
+                          item.text,
+                        );
+                        if (newName && newName.trim() !== "") {
+                          updateItem(item.id, { text: newName.trim() });
+                        }
+                      }}
+                      className="w-7 h-7 bg-white/90 rounded-full shadow-sm text-slate-700 hover:text-slate-900 flex items-center justify-center"
+                      title="Edit folder"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (
+                          confirm(
+                            `Delete folder "${item.text}" and its contents?`,
+                          )
+                        ) {
+                          handleDeleteItem(item.id);
+                        }
+                      }}
+                      className="w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center"
+                      title="Delete folder"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center justify-center gap-1">
                   <span className="text-xs font-bold text-slate-800 text-center truncate px-1">
