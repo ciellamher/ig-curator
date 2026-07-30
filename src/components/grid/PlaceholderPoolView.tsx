@@ -11,6 +11,8 @@ interface PlaceholderPoolViewProps {
   activeSlotId: string | null;
   setActiveSlotId: (id: string | null) => void;
   onTransferToMainGrid: (selectedSlotIds: string[]) => void;
+  searchResults?: string[];
+  focusedMatchId?: string | null;
 }
 
 const PASTEL_COLORS = [
@@ -31,6 +33,8 @@ export function PlaceholderPoolView({
   activeSlotId,
   setActiveSlotId,
   onTransferToMainGrid,
+  searchResults = [],
+  focusedMatchId,
 }: PlaceholderPoolViewProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -144,9 +148,12 @@ export function PlaceholderPoolView({
               const isSelected = selectedIds.includes(item.id);
               const isActive = activeSlotId === item.id;
               const hasImage = item.type === "image" && item.urls && item.urls.length > 0;
+              const isSearchResult = searchResults.includes(item.id);
+              const isFocusedSearchMatch = focusedMatchId === item.id;
 
               return (
                 <div
+                  id={`grid-slot-${item.id}`}
                   key={item.id}
                   onClick={() => {
                     toggleSelect(item.id);
@@ -154,7 +161,13 @@ export function PlaceholderPoolView({
                   }}
                   className={`
                     relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-150
-                    ${isActive ? "ring-4 ring-slate-900 ring-inset z-20" : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"}
+                    ${isFocusedSearchMatch 
+                      ? "ring-4 ring-amber-400 ring-offset-2 z-40 shadow-2xl scale-[1.02] animate-pulse" 
+                      : isActive 
+                      ? "ring-4 ring-slate-900 ring-inset z-20" 
+                      : isSearchResult
+                      ? "ring-3 ring-amber-400/80 ring-inset z-20 shadow-sm"
+                      : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"}
                     ${isSelected ? "brightness-95" : ""}
                   `}
                 >

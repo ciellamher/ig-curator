@@ -12,12 +12,14 @@ interface GridItemProps {
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   gridFilter: string;
   isActive: boolean;
+  isSearchResult?: boolean;
+  isFocusedSearchMatch?: boolean;
   onClick: () => void;
   onDoubleClick?: () => void;
   onDelete?: (id: string) => void;
 }
 
-export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDoubleClick, onDelete }: GridItemProps) {
+export function GridItem({ item, updateItem, gridFilter, isActive, isSearchResult, isFocusedSearchMatch, onClick, onDoubleClick, onDelete }: GridItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
@@ -187,8 +189,12 @@ export function GridItem({ item, updateItem, gridFilter, isActive, onClick, onDo
       className={`relative w-full overflow-hidden ${isAdjusting ? 'cursor-move' : 'cursor-grab active:cursor-grabbing'} transition-all duration-150 group ${
         ["Reel", "Story", "TikTok"].includes(gridFilter) ? "aspect-[9/16]" : "aspect-[4/5]"
       } ${isDragging ? "shadow-2xl scale-105 z-50 rounded-xl" : ""} ${
-        isActive 
+        isFocusedSearchMatch
+          ? "ring-4 ring-amber-400 ring-offset-2 z-40 shadow-2xl scale-[1.02] animate-pulse"
+          : isActive 
           ? "ring-4 ring-slate-900 ring-inset z-20 shadow-md" 
+          : isSearchResult
+          ? "ring-3 ring-amber-400/80 ring-inset z-20 shadow-sm"
           : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"
       }`}
     >

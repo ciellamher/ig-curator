@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { Grid } from "@/components/grid/Grid"
 import { EditorPanel } from "@/components/editor/EditorPanel"
@@ -11,6 +11,7 @@ import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
 import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView"
+import { GridSearchNav } from "@/components/grid/GridSearchNav"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
 import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, SquarePlus } from "lucide-react"
 
@@ -34,6 +35,55 @@ export function DashboardClient() {
   const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Placeholders">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
+
+  // Search & Match Navigation State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  const searchMatches = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    
+    const currentViewItems = (gridFilter as string) === "Placeholders" 
+      ? items.filter(i => i.folderId === "draft-pool")
+      : (gridFilter as string) === "All"
+      ? items.filter(i => i.contentType !== "StoryFolder" && !i.folderId && !i.isHiddenFromGrid)
+      : items.filter(i => i.contentType === gridFilter && !i.folderId);
+
+    return currentViewItems
+      .filter(item => {
+        const textMatch = item.text?.toLowerCase().includes(q);
+        const captionMatch = item.caption?.toLowerCase().includes(q);
+        const typeMatch = item.contentType?.toLowerCase().includes(q);
+        return Boolean(textMatch || captionMatch || typeMatch);
+      })
+      .map(item => item.id);
+  }, [items, searchQuery, gridFilter]);
+
+  const focusedMatchId = searchMatches.length > 0 ? searchMatches[Math.min(currentMatchIndex, searchMatches.length - 1)] : null;
+
+  useEffect(() => {
+    if (!focusedMatchId) return;
+    const el = document.getElementById(`grid-slot-${focusedMatchId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [focusedMatchId]);
+
+  const handleNextMatch = () => {
+    if (searchMatches.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
+  };
+
+  const handlePrevMatch = () => {
+    if (searchMatches.length === 0) return;
+    setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setCurrentMatchIndex(0);
+  };
 
   // Floating modal drag state
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
@@ -280,7 +330,7 @@ export function DashboardClient() {
         <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
           {/* View Toggle & Tabs */}
           <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-8 pt-4 sm:pt-6 pb-2 gap-2">
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
               {status === "authenticated" && (
                 <button 
                   onClick={handleManualSync}
@@ -291,6 +341,17 @@ export function DashboardClient() {
                   <span>{syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}</span>
                 </button>
               )}
+
+              {/* Grid Search & Navigation Bar */}
+              <GridSearchNav
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                matchCount={searchMatches.length}
+                currentMatchIndex={currentMatchIndex}
+                onNextMatch={handleNextMatch}
+                onPrevMatch={handlePrevMatch}
+                onClearSearch={handleClearSearch}
+              />
             </div>
             
             <div className="flex items-center bg-white rounded-full p-1 shadow-sm border border-soft-200">
@@ -427,6 +488,8 @@ export function DashboardClient() {
                         activeSlotId={activeSlotId}
                         setActiveSlotId={setActiveSlotId}
                         onTransferToMainGrid={handleTransferToMainGrid}
+                        searchResults={searchMatches}
+                        focusedMatchId={focusedMatchId}
                       />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
@@ -458,6 +521,8 @@ export function DashboardClient() {
                         activeSlotId={activeSlotId}
                         setActiveSlotId={setActiveSlotId}
                         gridFilter={gridFilter}
+                        searchResults={searchMatches}
+                        focusedMatchId={focusedMatchId}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
                         onDeleteItem={(id) => {
                           updateItems(prev => prev.filter(item => item.id !== id));
