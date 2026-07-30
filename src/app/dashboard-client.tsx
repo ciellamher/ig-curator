@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   PlusCircle,
   Type,
+  Check,
 } from "lucide-react";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
@@ -142,6 +143,7 @@ export function DashboardClient() {
   const [syncStatus, setSyncStatus] = useState<
     "Idle" | "Saving..." | "Saved" | "Saved Locally" | "Error"
   >("Idle");
+  const [localSaveStatus, setLocalSaveStatus] = useState<"Idle" | "Saving..." | "Saved">("Idle");
 
   const hasLocalItemsRef = useRef(false);
 
@@ -303,11 +305,15 @@ export function DashboardClient() {
     if (items === lastSavedItemsRef.current) return;
 
     const timeoutId = setTimeout(() => {
+      setLocalSaveStatus("Saving...");
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
       
       import("@/lib/idb").then(({ setItem }) => {
-        setItem("ig-curator-items", items).catch((error) => {
+        setItem("ig-curator-items", items).then(() => {
+          setLocalSaveStatus("Saved");
+          setTimeout(() => setLocalSaveStatus("Idle"), 2000);
+        }).catch((error) => {
           console.error("Storage quota exceeded in IDB!", error);
         });
       });
@@ -549,6 +555,23 @@ export function DashboardClient() {
                   </span>
                 </button>
               )}
+
+              <div
+                className={`text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all duration-300 ${
+                  localSaveStatus === "Saving..."
+                    ? "bg-amber-50 text-amber-600 border border-amber-200"
+                    : localSaveStatus === "Saved"
+                      ? "bg-green-50 text-green-600 border border-green-200"
+                      : "opacity-0 scale-95 pointer-events-none"
+                }`}
+              >
+                {localSaveStatus === "Saving..." ? (
+                  <RefreshCw size={12} className="animate-spin" />
+                ) : (
+                  <Check size={12} />
+                )}
+                <span>{localSaveStatus}</span>
+              </div>
 
               {/* Grid Search Navigation Bar */}
               <GridSearchNav
