@@ -131,8 +131,10 @@ export function DashboardClient() {
   const [previewSlotId, setPreviewSlotId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<
-    "Idle" | "Saving..." | "Saved" | "Error"
+    "Idle" | "Saving..." | "Saved" | "Saved Locally" | "Error"
   >("Idle");
+  
+  const hasLocalItemsRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -144,8 +146,9 @@ export function DashboardClient() {
 
     import("@/lib/idb").then(({ getItem, setItem }) => {
       getItem<SlotItem[]>("ig-curator-items").then((saved) => {
-        if (saved) {
+        if (saved && saved.length > 0) {
           setItems(saved);
+          hasLocalItemsRef.current = true;
         } else {
           const oldSaved = localStorage.getItem("ig-curator-items");
           if (oldSaved) {
@@ -153,6 +156,7 @@ export function DashboardClient() {
               const parsed = JSON.parse(oldSaved);
               setItems(parsed);
               setItem("ig-curator-items", parsed);
+              if (parsed.length > 0) hasLocalItemsRef.current = true;
             } catch (e) {}
           }
         }
@@ -165,7 +169,9 @@ export function DashboardClient() {
           const { fetchGridFromCloud } = await import("@/app/actions/grid");
           const res = await fetchGridFromCloud();
           if (res.success && res.data) {
-            setItems(res.data.items);
+            if (!hasLocalItemsRef.current) {
+              setItems(res.data.items);
+            }
             if (res.data.profile) {
               localStorage.setItem(
                 "ig-curator-profile",
@@ -192,6 +198,16 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     const timer = setTimeout(async () => {
       try {
+        const payloadString = JSON.stringify(items);
+        if (payloadString.length > 4.5 * 1024 * 1024) {
+          setSyncStatus("Saved Locally");
+          setTimeout(
+            () => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
+            2000,
+          );
+          return;
+        }
+
         const { syncGridToCloud } = await import("@/app/actions/grid");
         const profileStr = localStorage.getItem("ig-curator-profile");
         const profile = profileStr ? JSON.parse(profileStr) : undefined;
@@ -289,6 +305,16 @@ export function DashboardClient() {
     if (status !== "authenticated") return;
     setSyncStatus("Saving...");
     try {
+      const payloadString = JSON.stringify(items);
+      if (payloadString.length > 4.5 * 1024 * 1024) {
+        setSyncStatus("Saved Locally");
+        setTimeout(
+          () => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
+          2000,
+        );
+        return;
+      }
+
       const { syncGridToCloud } = await import("@/app/actions/grid");
       const profileStr = localStorage.getItem("ig-curator-profile");
       const profile = profileStr ? JSON.parse(profileStr) : undefined;
