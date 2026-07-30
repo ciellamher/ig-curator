@@ -232,7 +232,7 @@ export function InspoFolderView({
           {postItems.map((item) => (
             <div
               key={item.id}
-              className="aspect-square relative cursor-pointer group bg-soft-100"
+              className="aspect-[4/3] relative cursor-pointer group bg-soft-100"
               onClick={() => setPreviewItem(item)}
             >
               {item.urls && item.urls.length > 0 ? (
