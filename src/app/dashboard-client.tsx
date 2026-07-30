@@ -292,6 +292,8 @@ export function DashboardClient() {
 
   const activeSlot = items.find((item) => item.id === activeSlotId) || null;
 
+  const saveTimeoutRef = useRef<any>(null);
+
   function updateItems(
     newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
   ) {
@@ -303,12 +305,15 @@ export function DashboardClient() {
 
       // Save to history and local storage if changed
       if (currentItems !== nextItems) {
-        setHistory((prev) => [...prev, currentItems].slice(-30));
-        import("@/lib/idb").then(({ setItem }) => {
-          setItem("ig-curator-items", nextItems).catch((error) => {
-            console.error("Storage quota exceeded in IDB!", error);
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => {
+          setHistory((prev) => [...prev, currentItems].slice(-30));
+          import("@/lib/idb").then(({ setItem }) => {
+            setItem("ig-curator-items", nextItems).catch((error) => {
+              console.error("Storage quota exceeded in IDB!", error);
+            });
           });
-        });
+        }, 800);
       }
       return nextItems;
     });
