@@ -679,12 +679,24 @@ export function DashboardClient() {
                 <button
                   onClick={async () => {
                     if (fsHandle) {
-                      // Save now manually
                       try {
                         await saveToFolder(fsHandle, items);
                         alert("✅ Saved to your local folder!");
-                      } catch (e) {
-                        alert("Folder save failed. Try reconnecting the folder.");
+                      } catch (e: any) {
+                        console.error("Folder save error:", e);
+                        // Permission may have expired - re-pick folder
+                        const newHandle = await pickFolder();
+                        if (newHandle) {
+                          setFsHandle(newHandle);
+                          fsHandleRef.current = newHandle;
+                          try {
+                            await saveToFolder(newHandle, items);
+                            alert("✅ Folder reconnected and saved!");
+                          } catch (e2) {
+                            console.error("Retry failed:", e2);
+                            alert("❌ Save failed: " + String(e2));
+                          }
+                        }
                       }
                     } else {
                       const handle = await pickFolder();
