@@ -74,6 +74,34 @@ export function InspoFolderView({
     }
   }, []);
 
+  // Helper to recursively find up to 4 images inside a folder (including sub-folders)
+  const getFolderImages = (
+    folderId: string,
+    max: number = 4,
+    visited = new Set<string>(),
+  ): string[] => {
+    if (visited.has(folderId)) return [];
+    visited.add(folderId);
+
+    let images: string[] = [];
+    const children = allItems.filter((i) => i.folderId === folderId);
+
+    for (const child of children) {
+      if (images.length >= max) break;
+      if (child.urls && child.urls.length > 0) {
+        images.push(child.urls[0]);
+      } else if (child.contentType === "InspoFolder") {
+        const subImages = getFolderImages(
+          child.id,
+          max - images.length,
+          visited,
+        );
+        images.push(...subImages);
+      }
+    }
+    return images.slice(0, max);
+  };
+
   // Sub-folders
   const subFolders = itemsInFolder.filter(
     (i) => i.contentType === "InspoFolder",
@@ -296,67 +324,99 @@ export function InspoFolderView({
       {/* Sub-Folders Section */}
       {subFolders.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 px-4 py-4 border-b border-soft-100 bg-white">
-          {subFolders.map((item) => (
-            <div
-              key={item.id}
-              className={`flex flex-col gap-2 cursor-pointer group rounded-2xl transition-all ${
-                dragTargetId === item.id
-                  ? "ring-2 ring-slate-800 ring-offset-2 scale-105"
-                  : ""
-              }`}
-              onClick={() => onFolderClick && onFolderClick(item.id)}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("application/folder-id", item.id);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragTargetId(item.id);
-              }}
-              onDragLeave={() => {
-                setDragTargetId(null);
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragTargetId(null);
-                const draggedId = e.dataTransfer.getData(
-                  "application/folder-id",
-                );
-                if (draggedId && draggedId !== item.id) {
-                  updateItem(draggedId, { folderId: item.id });
-                }
-              }}
-            >
-              <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
-                {/* Folder Thumbnail */}
-                <div className="absolute inset-0 p-3 flex flex-col items-center justify-center gap-1.5 opacity-60">
-                  <div className="w-8 h-8 rounded-lg border-2 border-slate-400/50 flex items-center justify-center">
-                    <Grid3X3 size={16} className="text-slate-400" />
-                  </div>
-                </div>
+          {subFolders.map((item) => {
+            const customCover = item.urls?.[0];
+            const folderImages = customCover
+              ? [customCover]
+              : getFolderImages(item.id);
 
-                {/* Delete Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (
-                      confirm(`Delete folder "${item.text}" and its contents?`)
-                    ) {
-                      handleDeleteItem(item.id);
-                    }
-                  }}
-                  className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                >
-                  <Trash2 size={14} />
-                </button>
+            return (
+              <div
+                key={item.id}
+                className={`flex flex-col gap-2 cursor-pointer group rounded-2xl transition-all ${
+                  dragTargetId === item.id
+                    ? "ring-2 ring-slate-800 ring-offset-2 scale-105"
+                    : ""
+                }`}
+                onClick={() => onFolderClick && onFolderClick(item.id)}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/folder-id", item.id);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragTargetId(item.id);
+                }}
+                onDragLeave={() => {
+                  setDragTargetId(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragTargetId(null);
+                  const draggedId = e.dataTransfer.getData(
+                    "application/folder-id",
+                  );
+                  if (draggedId && draggedId !== item.id) {
+                    updateItem(draggedId, { folderId: item.id });
+                  }
+                }}
+              >
+                <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
+                  {/* Folder Thumbnail */}
+                  {!customCover && folderImages.length >= 4 ? (
+                    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-[1px] bg-white">
+                      {folderImages.slice(0, 4).map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="w-full h-full overflow-hidden bg-soft-100"
+                        >
+                          <img
+                            src={url}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : folderImages.length > 0 ? (
+                    <img
+                      src={folderImages[0]}
+                      alt={item.text}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 p-3 flex flex-col items-center justify-center gap-1.5 opacity-60">
+                      <div className="w-8 h-8 rounded-lg border-2 border-slate-400/50 flex items-center justify-center">
+                        <Grid3X3 size={16} className="text-slate-400" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delete Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (
+                        confirm(
+                          `Delete folder "${item.text}" and its contents?`,
+                        )
+                      ) {
+                        handleDeleteItem(item.id);
+                      }
+                    }}
+                    className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <span className="text-xs font-bold text-slate-800 text-center truncate px-1">
+                    {item.text || "Sub-Folder"}
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-xs font-bold text-slate-800 text-center truncate px-1">
-                  {item.text || "Sub-Folder"}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

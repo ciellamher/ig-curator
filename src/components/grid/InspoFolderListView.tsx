@@ -29,6 +29,34 @@ export function InspoFolderListView({
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Helper to recursively find up to 4 images inside a folder (including sub-folders)
+  const getFolderImages = (
+    folderId: string,
+    max: number = 4,
+    visited = new Set<string>(),
+  ): string[] => {
+    if (visited.has(folderId)) return [];
+    visited.add(folderId);
+
+    let images: string[] = [];
+    const children = allItems.filter((i) => i.folderId === folderId);
+
+    for (const child of children) {
+      if (images.length >= max) break;
+      if (child.urls && child.urls.length > 0) {
+        images.push(child.urls[0]);
+      } else if (child.contentType === "InspoFolder") {
+        const subImages = getFolderImages(
+          child.id,
+          max - images.length,
+          visited,
+        );
+        images.push(...subImages);
+      }
+    }
+    return images.slice(0, max);
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -206,12 +234,10 @@ export function InspoFolderListView({
             .slice()
             .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
             .map((folder) => {
-              const folderItems = allItems.filter(
-                (i) => i.folderId === folder.id,
-              );
-              const firstImage =
-                folder.urls?.[0] ||
-                folderItems.find((i) => i.urls && i.urls.length > 0)?.urls[0];
+              const customCover = folder.urls?.[0];
+              const folderImages = customCover
+                ? [customCover]
+                : getFolderImages(folder.id);
 
               return (
                 <div
@@ -249,13 +275,28 @@ export function InspoFolderListView({
                     className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
                     style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
                   >
-                    {firstImage && (
+                    {!customCover && folderImages.length >= 4 ? (
+                      <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-[2px] bg-white">
+                        {folderImages.slice(0, 4).map((url, idx) => (
+                          <div
+                            key={idx}
+                            className="w-full h-full overflow-hidden bg-soft-100"
+                          >
+                            <img
+                              src={url}
+                              alt=""
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : folderImages.length > 0 ? (
                       <img
-                        src={firstImage}
+                        src={folderImages[0]}
                         alt={folder.text}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                    )}
+                    ) : null}
 
                     {/* Subtle Edit & Delete Buttons on hover */}
                     <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
