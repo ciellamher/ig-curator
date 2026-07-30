@@ -42,14 +42,6 @@ import {
   Check,
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
-import {
-  isFileSystemSupported,
-  getStoredHandle,
-  pickFolder,
-  verifyPermission,
-  saveToFolder,
-  loadFromFolder,
-} from "@/lib/fileSystem";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -182,21 +174,6 @@ export function DashboardClient() {
   >("Idle");
 
   const hasLocalItemsRef = useRef(false);
-  const [fsHandle, setFsHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const fsHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
-
-  // Try to restore saved folder handle on mount
-  useEffect(() => {
-    if (!isFileSystemSupported()) return;
-    getStoredHandle().then(async (handle) => {
-      if (!handle) return;
-      const ok = await verifyPermission(handle);
-      if (ok) {
-        setFsHandle(handle);
-        fsHandleRef.current = handle;
-      }
-    });
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -222,44 +199,28 @@ export function DashboardClient() {
 
       if (status === "loading") return;
 
-      // 1. Try local folder first (no quota limits!)
+      // 1. Always await local storage first to prevent race conditions
       let localItemsLoaded = false;
       try {
-        const handle = fsHandleRef.current;
-        if (handle) {
-          const folderItems = await loadFromFolder(handle);
-          if (folderItems && folderItems.length > 0 && isMounted) {
-            setItems(folderItems as SlotItem[]);
-            localItemsLoaded = true;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load from folder, falling back to IDB:", err);
-      }
-
-      // 2. Fall back to IDB if no folder data
-      if (!localItemsLoaded) {
-        try {
-          const saved = await getItem<SlotItem[]>("ig-curator-items");
-          const emergencyBackup = localStorage.getItem("ig-curator-items");
-          
-          if (emergencyBackup) {
-            try {
-              const parsed = JSON.parse(emergencyBackup);
-              localStorage.removeItem("ig-curator-items");
-              const migrated = await migrateBase64ToBlob(parsed);
-              if (isMounted) setItems(migrated);
-              await setItem("ig-curator-items", migrated).catch(() => {});
-              if (migrated.length > 0) localItemsLoaded = true;
-            } catch (e) {}
-          } else if (saved && saved.length > 0) {
-            const migrated = await migrateBase64ToBlob(saved);
+        const saved = await getItem<SlotItem[]>("ig-curator-items");
+        const emergencyBackup = localStorage.getItem("ig-curator-items");
+        
+        if (emergencyBackup) {
+          try {
+            const parsed = JSON.parse(emergencyBackup);
+            localStorage.removeItem("ig-curator-items");
+            const migrated = await migrateBase64ToBlob(parsed);
             if (isMounted) setItems(migrated);
-            localItemsLoaded = true;
-          }
-        } catch (error) {
-          console.error("Failed to load local grid", error);
+            await setItem("ig-curator-items", migrated).catch(() => {});
+            if (migrated.length > 0) localItemsLoaded = true;
+          } catch (e) {}
+        } else if (saved && saved.length > 0) {
+          const migrated = await migrateBase64ToBlob(saved);
+          if (isMounted) setItems(migrated);
+          localItemsLoaded = true;
         }
+      } catch (error) {
+        console.error("Failed to load local grid", error);
       }
 
       // 2. Only check cloud if local hasn't definitively overridden it, or to sync profile
@@ -400,17 +361,6 @@ export function DashboardClient() {
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
 
-      // Primary: save to local folder if one is chosen
-      if (fsHandleRef.current) {
-        try {
-          await saveToFolder(fsHandleRef.current, items);
-          return; // folder save succeeded, no need for IDB
-        } catch (err) {
-          console.error("Folder save failed, falling back to IDB:", err);
-        }
-      }
-
-      // Fallback: IDB
       try {
         await setItem("ig-curator-items", items);
       } catch (error: any) {
@@ -423,7 +373,7 @@ export function DashboardClient() {
           await setItem("ig-curator-items", slim);
         } catch (e2) {
           console.error("Even slim save failed.", e2);
-          alert("⚠️ Storage full! Please choose a Save Folder to store photos on your computer instead.");
+          alert("⚠️ Storage full! Your browser cannot save more photos. Please remove some images.");
         }
       }
     }, 250);
