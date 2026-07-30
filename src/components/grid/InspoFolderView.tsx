@@ -262,17 +262,23 @@ export function InspoFolderView({
 
       {/* Tabs */}
       <div className="flex border-b border-soft-100">
-        <div className="flex-1 py-3 text-center border-b-2 border-slate-900 text-slate-900 font-bold text-sm">
-          <Grid3X3 className="inline-block mr-2 -mt-1" size={16} />
-          Feed Inspo
+        <div
+          className="flex-1 flex justify-center items-center py-3 border-b-2 border-slate-900 text-slate-900"
+          title="Feed Inspo"
+        >
+          <Grid3X3 size={22} />
         </div>
-        <div className="flex-1 py-3 text-center border-b-2 border-transparent text-foreground/40 font-bold text-sm">
-          <PlaySquare className="inline-block mr-2 -mt-1" size={16} />
-          Reels
+        <div
+          className="flex-1 flex justify-center items-center py-3 border-b-2 border-transparent text-foreground/40"
+          title="Reels"
+        >
+          <PlaySquare size={22} />
         </div>
-        <div className="flex-1 py-3 text-center border-b-2 border-transparent text-foreground/40 font-bold text-sm">
-          <UserSquare2 className="inline-block mr-2 -mt-1" size={16} />
-          Tags
+        <div
+          className="flex-1 flex justify-center items-center py-3 border-b-2 border-transparent text-foreground/40"
+          title="Tags"
+        >
+          <UserSquare2 size={22} />
         </div>
       </div>
 
