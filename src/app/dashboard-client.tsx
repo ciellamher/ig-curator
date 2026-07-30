@@ -71,6 +71,34 @@ export function DashboardClient() {
     null,
   );
 
+  // Restore UI State on mount
+  useEffect(() => {
+    try {
+      const savedUI = localStorage.getItem("ig-curator-ui-state");
+      if (savedUI) {
+        const state = JSON.parse(savedUI);
+        if (state.activeTab) setActiveTab(state.activeTab);
+        if (state.gridFilter) setGridFilter(state.gridFilter);
+        if (state.deviceView) setDeviceView(state.deviceView);
+        if (state.activeStoryFolderId !== undefined) setActiveStoryFolderId(state.activeStoryFolderId);
+        if (state.activeInspoFolderId !== undefined) setActiveInspoFolderId(state.activeInspoFolderId);
+      }
+    } catch (e) {}
+  }, []);
+
+  // Persist UI State on change
+  useEffect(() => {
+    try {
+      localStorage.setItem("ig-curator-ui-state", JSON.stringify({
+        activeTab,
+        gridFilter,
+        deviceView,
+        activeStoryFolderId,
+        activeInspoFolderId,
+      }));
+    } catch (e) {}
+  }, [activeTab, gridFilter, deviceView, activeStoryFolderId, activeInspoFolderId]);
+
   // Search & Match Navigation State
   const [searchQuery, setSearchQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
