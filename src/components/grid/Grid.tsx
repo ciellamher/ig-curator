@@ -24,7 +24,7 @@ interface GridProps {
   setItems: React.Dispatch<React.SetStateAction<SlotItem[]>>;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   activeSlotId: string | null;
-  setActiveSlotId: (id: string) => void;
+  setActiveSlotId: (id: string | null) => void;
   gridFilter?: string;
   onDoubleClickItem?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
@@ -77,7 +77,7 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
                 isSearchActive={isSearchActive}
                 isSearchResult={searchResults.includes(item.id)}
                 isFocusedSearchMatch={focusedMatchId === item.id}
-                onClick={() => setActiveSlotId(item.id)}
+                onClick={() => setActiveSlotId(activeSlotId === item.id ? null : item.id)}
                 onDoubleClick={() => onDoubleClickItem?.(item.id)}
                 onDelete={onDeleteItem ? () => onDeleteItem(item.id) : undefined}
               />

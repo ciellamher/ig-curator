@@ -192,7 +192,7 @@ export function PlaceholderPoolView({
                   id={`grid-slot-${item.id}`}
                   key={item.id}
                   onClick={() => {
-                    setActiveSlotId(item.id);
+                    setActiveSlotId(isActive ? null : item.id);
                   }}
                   className={`
                     relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-200

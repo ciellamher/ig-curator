@@ -76,7 +76,7 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
                   updateItem={updateItem}
                   gridFilter="Story" 
                   isActive={activeSlotId === item.id}
-                  onClick={() => setActiveSlotId(item.id)}
+                  onClick={() => setActiveSlotId(activeSlotId === item.id ? null : item.id)}
                   onDoubleClick={() => {
                     // Only stories with images can be previewed
                     const validStories = stories.filter(s => s.type === "image" && s.urls.length > 0);
