@@ -128,9 +128,9 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
 
       {/* Quick Action Toolbar */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
           {/* Add / Upload Photo Button - Hidden for draft placeholders */}
-          {!isDraftPlaceholder && (
+          {!isDraftPlaceholder ? (
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
@@ -139,27 +139,17 @@ export function EditorPanel({ activeSlot, updateSlot, onClose, onDeleteSlot }: E
             >
               <Upload size={18} strokeWidth={2.2} />
             </button>
+          ) : (
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider px-1">
+              Edit Draft Box
+            </span>
           )}
 
-          {/* Transfer to Main Grid (Row 1) Button for draft placeholders */}
-          {activeSlot.folderId && (
-            <button
-              onClick={() => {
-                updateSlot(activeSlot.id, { folderId: undefined });
-              }}
-              className="flex-1 p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 text-xs font-bold shadow-xs"
-              title="Transfer to Main Grid (First Row)"
-            >
-              <ArrowUpToLine size={16} strokeWidth={2.2} />
-              <span>Transfer to Row 1</span>
-            </button>
-          )}
-
-          {/* Single Photo Trash Button */}
+          {/* Single Photo / Slot Trash Button */}
           <button
             onClick={handleDelete}
-            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl active:scale-95 transition-all cursor-pointer"
-            title={activeSlot.urls && activeSlot.urls.length > 0 ? "Delete Current Photo" : "Delete Entire Post"}
+            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            title={activeSlot.urls && activeSlot.urls.length > 0 ? "Delete Current Photo" : "Delete Draft Box"}
           >
             <Trash2 size={18} strokeWidth={2.2} />
           </button>
