@@ -73,6 +73,10 @@ export function DashboardClient() {
 
   // Restore UI State on mount
   useEffect(() => {
+    // Request persistent storage to unlock more browser quota
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist();
+    }
     try {
       const savedUI = localStorage.getItem("ig-curator-ui-state");
       if (savedUI) {
@@ -364,16 +368,18 @@ export function DashboardClient() {
       try {
         await setItem("ig-curator-items", items);
       } catch (error: any) {
-        console.error("IDB save failed:", error);
+        console.error("IDB save failed, trying to free space:", error);
+        // Strip extra image alternates to free space, keep only current active image per slot
         try {
           const slim = items.map(item => ({
             ...item,
-            urls: item.urls.slice(0, 1),
+            urls: item.urls.length > 0 ? [item.urls[item.currentUrlIndex ?? 0] ?? item.urls[0]] : [],
           }));
           await setItem("ig-curator-items", slim);
+          setItems(slim);
+          console.warn("Saved slim version - removed image alternates to free space.");
         } catch (e2) {
           console.error("Even slim save failed.", e2);
-          alert("⚠️ Storage full! Your browser cannot save more photos. Please remove some images.");
         }
       }
     }, 250);
