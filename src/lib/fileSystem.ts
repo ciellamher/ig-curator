@@ -38,9 +38,10 @@ export async function pickFolder(): Promise<FileSystemDirectoryHandle | null> {
 
 export async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
   try {
-    const opts = { mode: "readwrite" as const };
-    if ((await handle.queryPermission(opts)) === "granted") return true;
-    if ((await handle.requestPermission(opts)) === "granted") return true;
+    const h = handle as any;
+    const opts = { mode: "readwrite" };
+    if ((await h.queryPermission(opts)) === "granted") return true;
+    if ((await h.requestPermission(opts)) === "granted") return true;
     return false;
   } catch {
     return false;
