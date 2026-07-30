@@ -11,9 +11,11 @@ import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
 import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView"
+import { InspoFolderListView } from "@/components/grid/InspoFolderListView"
+import { InspoFolderView } from "@/components/grid/InspoFolderView"
 import { GridSearchNav } from "@/components/grid/GridSearchNav"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, SquarePlus } from "lucide-react"
+import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, SquarePlus, FolderHeart } from "lucide-react"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -32,9 +34,10 @@ export function DashboardClient() {
   const [history, setHistory] = useState<SlotItem[][]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
-  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Placeholders">("All")
+  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Placeholders" | "Inspo">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
+  const [activeInspoFolderId, setActiveInspoFolderId] = useState<string | null>(null);
 
   // Search & Match Navigation State
   const [searchQuery, setSearchQuery] = useState("");
@@ -318,6 +321,38 @@ export function DashboardClient() {
     });
   };
 
+  const handleCreateInspoFolder = (title: string, hexColor?: string) => {
+    const newFolder: SlotItem = {
+      id: `folder-inspo-${Math.floor(Math.random() * 1000000000)}`,
+      type: "placeholder",
+      urls: [],
+      currentUrlIndex: 0,
+      hexColor: hexColor || "#E5D3C8",
+      text: title,
+      contentType: "InspoFolder",
+    };
+    updateItems((curr) => [newFolder, ...curr]);
+  };
+
+  const handleDeleteInspoFolder = (folderId: string) => {
+    updateItems((curr) => curr.filter((i) => i.id !== folderId && i.folderId !== folderId));
+    if (activeInspoFolderId === folderId) setActiveInspoFolderId(null);
+  };
+
+  const handleCopyInspoToGrid = (inspoItem: SlotItem, targetType: "Post" | "Story") => {
+    const copiedSlot: SlotItem = {
+      id: `slot-${Math.floor(Math.random() * 1000000000)}`,
+      type: "image",
+      urls: [...(inspoItem.urls || [])],
+      currentUrlIndex: 0,
+      hexColor: inspoItem.hexColor || "#E5D3C8",
+      text: inspoItem.text || "",
+      contentType: targetType,
+    };
+    updateItems((curr) => [copiedSlot, ...curr]);
+    alert(`Copied photo to your ${targetType === "Post" ? "Main Grid" : "Stories"}!`);
+  };
+
   if (!isLoaded) return null;
 
   return (
@@ -466,6 +501,13 @@ export function DashboardClient() {
                     >
                       <SquarePlus size={22} strokeWidth={gridFilter === "Placeholders" ? 2.5 : 2} />
                     </button>
+                    <button 
+                      onClick={() => setGridFilter("Inspo")}
+                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Inspo" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
+                      title="Inspo Collections"
+                    >
+                      <FolderHeart size={22} strokeWidth={gridFilter === "Inspo" ? 2.5 : 2} />
+                    </button>
                   </div>
 
                   <div className="w-full flex-1 flex flex-col min-h-0">
@@ -477,6 +519,25 @@ export function DashboardClient() {
                         <h3 className="text-xl font-bold text-foreground">Sign up first or login</h3>
                         <p className="text-foreground/60 max-w-xs text-sm">You need an account to arrange your grid and upload photos.</p>
                       </div>
+                    ) : gridFilter === "Inspo" ? (
+                      activeInspoFolderId ? (
+                        <InspoFolderView 
+                          folder={items.find(i => i.id === activeInspoFolderId)!}
+                          itemsInFolder={items.filter(i => i.folderId === activeInspoFolderId)}
+                          onBack={() => setActiveInspoFolderId(null)}
+                          updateItems={updateItems}
+                          updateItem={updateItem}
+                          onCopyToMainGrid={handleCopyInspoToGrid}
+                        />
+                      ) : (
+                        <InspoFolderListView 
+                          folders={items.filter(i => i.contentType === "InspoFolder")}
+                          allItems={items}
+                          onFolderClick={(folderId) => setActiveInspoFolderId(folderId)}
+                          onAddFolder={handleCreateInspoFolder}
+                          onDeleteFolder={handleDeleteInspoFolder}
+                        />
+                      )
                     ) : gridFilter === "Placeholders" ? (
                       <PlaceholderPoolView 
                         placeholders={items.filter(i => i.folderId === "draft-pool")}
@@ -511,7 +572,7 @@ export function DashboardClient() {
                     ) : (
                       <Grid 
                         items={gridFilter === "All" 
-                          ? items.filter(i => i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && !i.folderId && !i.isHiddenFromGrid) 
+                          ? items.filter(i => i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && i.contentType !== "InspoFolder" && !i.folderId && !i.isHiddenFromGrid) 
                           : items.filter(i => i.contentType === gridFilter && !i.folderId)} 
                         setItems={updateItems} 
                         updateItem={updateItem}
