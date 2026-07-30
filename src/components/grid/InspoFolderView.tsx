@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { SlotItem } from "@/types";
 import {
   ChevronLeft,
@@ -76,6 +76,17 @@ export function InspoFolderView({
     }
   }, []);
 
+  const childrenByFolderId = useMemo(() => {
+    const map = new Map<string, SlotItem[]>();
+    for (const item of allItems) {
+      if (item.folderId) {
+        if (!map.has(item.folderId)) map.set(item.folderId, []);
+        map.get(item.folderId)!.push(item);
+      }
+    }
+    return map;
+  }, [allItems]);
+
   // Helper to recursively find up to 4 images inside a folder (including sub-folders)
   const getFolderImages = (
     folderId: string,
@@ -86,7 +97,7 @@ export function InspoFolderView({
     visited.add(folderId);
 
     let images: string[] = [];
-    const children = allItems.filter((i) => i.folderId === folderId);
+    const children = childrenByFolderId.get(folderId) || [];
 
     for (const child of children) {
       if (images.length >= max) break;
@@ -331,8 +342,8 @@ export function InspoFolderView({
             const folderImages = customCover
               ? [customCover]
               : getFolderImages(item.id);
-            const hasSubFolders = allItems.some(
-              (i) => i.folderId === item.id && i.contentType === "InspoFolder",
+            const hasSubFolders = (childrenByFolderId.get(item.id) || []).some(
+              (i) => i.contentType === "InspoFolder",
             );
 
             return (
