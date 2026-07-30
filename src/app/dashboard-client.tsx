@@ -341,6 +341,14 @@ export function DashboardClient() {
                   <span>{syncStatus === "Saving..." ? "Syncing..." : syncStatus === "Error" ? "Sync Failed" : syncStatus === "Saved" ? "Saved" : "Sync to Cloud"}</span>
                 </button>
               )}
+
+              {/* Grid Search Navigation Bar */}
+              <GridSearchNav
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                matchCount={searchMatches.length}
+                onClearSearch={handleClearSearch}
+              />
             </div>
             
             <div className="flex items-center bg-white rounded-full p-1 shadow-sm border border-soft-200">
@@ -460,19 +468,6 @@ export function DashboardClient() {
                     </button>
                   </div>
 
-                  {/* Sticky Search & Navigation Bar (Follows the user as they scroll) */}
-                  <div className="sticky top-[49px] bg-white/95 backdrop-blur-md border-b border-soft-100 px-3 py-1.5 z-40 flex items-center justify-center shadow-2xs">
-                    <GridSearchNav
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      matchCount={searchMatches.length}
-                      currentMatchIndex={currentMatchIndex}
-                      onNextMatch={handleNextMatch}
-                      onPrevMatch={handlePrevMatch}
-                      onClearSearch={handleClearSearch}
-                    />
-                  </div>
-
                   <div className="w-full flex-1 flex flex-col min-h-0">
                     {status === "unauthenticated" ? (
                       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
@@ -490,8 +485,8 @@ export function DashboardClient() {
                         activeSlotId={activeSlotId}
                         setActiveSlotId={setActiveSlotId}
                         onTransferToMainGrid={handleTransferToMainGrid}
+                        isSearchActive={searchQuery.trim() !== ""}
                         searchResults={searchMatches}
-                        focusedMatchId={focusedMatchId}
                       />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
@@ -523,8 +518,8 @@ export function DashboardClient() {
                         activeSlotId={activeSlotId}
                         setActiveSlotId={setActiveSlotId}
                         gridFilter={gridFilter}
+                        isSearchActive={searchQuery.trim() !== ""}
                         searchResults={searchMatches}
-                        focusedMatchId={focusedMatchId}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
                         onDeleteItem={(id) => {
                           updateItems(prev => prev.filter(item => item.id !== id));

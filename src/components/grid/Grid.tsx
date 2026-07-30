@@ -28,11 +28,12 @@ interface GridProps {
   gridFilter?: string;
   onDoubleClickItem?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
+  isSearchActive?: boolean;
   searchResults?: string[];
   focusedMatchId?: string | null;
 }
 
-export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, searchResults = [], focusedMatchId }: GridProps) {
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId }: GridProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -73,6 +74,7 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
                 updateItem={updateItem}
                 gridFilter={gridFilter}
                 isActive={activeSlotId === item.id}
+                isSearchActive={isSearchActive}
                 isSearchResult={searchResults.includes(item.id)}
                 isFocusedSearchMatch={focusedMatchId === item.id}
                 onClick={() => setActiveSlotId(item.id)}

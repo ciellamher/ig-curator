@@ -11,6 +11,7 @@ interface PlaceholderPoolViewProps {
   activeSlotId: string | null;
   setActiveSlotId: (id: string | null) => void;
   onTransferToMainGrid: (selectedSlotIds: string[]) => void;
+  isSearchActive?: boolean;
   searchResults?: string[];
   focusedMatchId?: string | null;
 }
@@ -33,6 +34,7 @@ export function PlaceholderPoolView({
   activeSlotId,
   setActiveSlotId,
   onTransferToMainGrid,
+  isSearchActive,
   searchResults = [],
   focusedMatchId,
 }: PlaceholderPoolViewProps) {
@@ -159,13 +161,13 @@ export function PlaceholderPoolView({
                     setActiveSlotId(item.id);
                   }}
                   className={`
-                    relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-150
-                    ${isFocusedSearchMatch 
-                      ? "ring-4 ring-slate-800 ring-offset-2 z-40 shadow-2xl scale-[1.02]" 
+                    relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-200
+                    ${isSearchActive
+                      ? isSearchResult
+                        ? "ring-4 ring-slate-900 ring-offset-1 z-30 shadow-xl opacity-100 scale-[1.01]"
+                        : "opacity-40 grayscale-[40%]"
                       : isActive 
                       ? "ring-4 ring-slate-900 ring-inset z-20" 
-                      : isSearchResult
-                      ? "ring-2 ring-slate-400/80 ring-inset z-20 shadow-sm"
                       : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"}
                     ${isSelected ? "brightness-95" : ""}
                   `}
