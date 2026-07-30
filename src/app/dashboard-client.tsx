@@ -178,42 +178,10 @@ export function DashboardClient() {
   useEffect(() => {
     let isMounted = true;
 
-    // Migrates any old base64 images to Vercel Blob URLs automatically
+    // Migration disabled until BLOB_READ_WRITE_TOKEN is confirmed working
+    // base64 images still display fine locally
     async function migrateBase64ToBlob(loadedItems: SlotItem[]): Promise<SlotItem[]> {
-      let didMigrate = false;
-      const migrated = await Promise.all(
-        loadedItems.map(async (item) => {
-          const hasBase64 = item.urls.some((u) => u.startsWith("data:"));
-          if (!hasBase64) return item;
-
-          const newUrls = await Promise.all(
-            item.urls.map(async (url) => {
-              if (!url.startsWith("data:")) return url;
-              try {
-                // Convert base64 to Blob
-                const res = await fetch(url);
-                const blob = await res.blob();
-                const formData = new FormData();
-                formData.append("file", blob, `migrated-${Date.now()}.jpg`);
-                const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-                const data = await uploadRes.json();
-                if (data.success && data.url) {
-                  didMigrate = true;
-                  return data.url as string;
-                }
-              } catch (err) {
-                console.error("Migration failed for one image, keeping base64", err);
-              }
-              return url; // keep original if upload fails
-            })
-          );
-          return { ...item, urls: newUrls };
-        })
-      );
-      if (didMigrate) {
-        await setItem("ig-curator-items", migrated).catch(() => {});
-      }
-      return migrated;
+      return loadedItems;
     }
 
     async function init() {
