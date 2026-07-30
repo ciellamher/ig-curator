@@ -291,7 +291,7 @@ export function DashboardClient() {
           : newItemsOrUpdater;
 
       // Save to history and local storage if changed
-      if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
+      if (currentItems !== nextItems) {
         setHistory((prev) => [...prev, currentItems].slice(-30));
         import("@/lib/idb").then(({ setItem }) => {
           setItem("ig-curator-items", nextItems).catch((error) => {
