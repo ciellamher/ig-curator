@@ -110,7 +110,7 @@ export function InspoFolderListView({
         </button>
 
         <h2 className="text-base font-bold text-slate-900 leading-tight">
-          Inspo Collections
+          Collections
         </h2>
 
         <button
@@ -136,7 +136,7 @@ export function InspoFolderListView({
           >
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
-                {editingFolderId ? "Edit Folder" : "Create Inspo Folder"}
+                {editingFolderId ? "Edit Folder" : "Create Folder"}
               </h3>
               <button
                 type="button"
