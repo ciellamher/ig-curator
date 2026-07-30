@@ -2,7 +2,7 @@ export type ContentType = "Post" | "Reel" | "Carousel" | "Story" | "StoryFolder"
 
 export type SlotItem = {
   id: string;
-  type: "image" | "placeholder";
+  type: "image" | "placeholder" | "video";
   urls: string[];
   currentUrlIndex: number;
   hexColor: string;

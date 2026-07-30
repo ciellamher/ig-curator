@@ -114,50 +114,56 @@ export function InspoFolderView({
 
     setIsUploading(true);
     try {
-      const base64Promises = files.map(
+      const filePromises = files.map(
         (file) =>
-          new Promise<string>((resolve, reject) => {
+          new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
+            const isVideo = file.type.startsWith("video/");
             const reader = new FileReader();
             reader.onload = (e) => {
-              const img = new Image();
-              img.onload = () => {
-                const canvas = document.createElement("canvas");
-                const MAX_SIZE = 1000;
-                let width = img.width;
-                let height = img.height;
+              const result = e.target?.result as string;
+              if (isVideo) {
+                resolve({ url: result, isVideo: true });
+              } else {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement("canvas");
+                  const MAX_SIZE = 1000;
+                  let width = img.width;
+                  let height = img.height;
 
-                if (width > height) {
-                  if (width > MAX_SIZE) {
-                    height = Math.round((height * MAX_SIZE) / width);
-                    width = MAX_SIZE;
+                  if (width > height) {
+                    if (width > MAX_SIZE) {
+                      height = Math.round((height * MAX_SIZE) / width);
+                      width = MAX_SIZE;
+                    }
+                  } else {
+                    if (height > MAX_SIZE) {
+                      width = Math.round((width * MAX_SIZE) / height);
+                      height = MAX_SIZE;
+                    }
                   }
-                } else {
-                  if (height > MAX_SIZE) {
-                    width = Math.round((width * MAX_SIZE) / height);
-                    height = MAX_SIZE;
-                  }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL("image/jpeg", 0.8));
-              };
-              img.onerror = reject;
-              img.src = e.target?.result as string;
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext("2d");
+                  ctx?.drawImage(img, 0, 0, width, height);
+                  resolve({ url: canvas.toDataURL("image/jpeg", 0.8), isVideo: false });
+                };
+                img.onerror = reject;
+                img.src = result;
+              }
             };
             reader.onerror = reject;
             reader.readAsDataURL(file);
           }),
       );
 
-      const newBase64Strings = await Promise.all(base64Promises);
+      const processedFiles = await Promise.all(filePromises);
 
       // Create new InspoPost items
-      const newItems: SlotItem[] = newBase64Strings.map((base64, index) => ({
+      const newItems: SlotItem[] = processedFiles.map((pf, index) => ({
         id: `inspo-item-${Math.floor(Math.random() * 1000000000)}-${index}`,
-        type: "image",
-        urls: [base64],
+        type: pf.isVideo ? "video" : "image",
+        urls: [pf.url],
         currentUrlIndex: 0,
         hexColor: "#E5D3C8",
         text: "",
@@ -245,7 +251,7 @@ export function InspoFolderView({
         ref={fileInputRef}
         onChange={handleUploadPosts}
         className="hidden"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
       />
 
@@ -367,10 +373,21 @@ export function InspoFolderView({
               onClick={() => setPreviewItem(item)}
             >
               {item.urls && item.urls.length > 0 ? (
-                <img
-                  src={item.urls[item.currentUrlIndex || 0]}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                item.urls[item.currentUrlIndex || 0].startsWith("data:video") ? (
+                  <video
+                    src={item.urls[item.currentUrlIndex || 0]}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    muted
+                    loop
+                    autoPlay
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={item.urls[item.currentUrlIndex || 0]}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )
               ) : (
                 <div
                   className="w-full h-full"
@@ -386,13 +403,13 @@ export function InspoFolderView({
                       e.stopPropagation();
                       const link = document.createElement("a");
                       link.href = item.urls[item.currentUrlIndex || 0];
-                      link.download = `inspo-${item.id}.jpg`;
+                      link.download = `inspo-${item.id}.${item.urls[item.currentUrlIndex || 0].startsWith("data:video") ? "mp4" : "jpg"}`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
                     }}
                     className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
-                    title="Download photo"
+                    title="Download media"
                   >
                     <Download size={13} />
                   </button>
@@ -400,12 +417,12 @@ export function InspoFolderView({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm("Delete this photo?")) {
+                    if (confirm("Delete this media?")) {
                       handleDeleteItem(item.id);
                     }
                   }}
                   className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
-                  title="Delete photo"
+                  title="Delete media"
                 >
                   <Trash2 size={13} />
                 </button>
@@ -451,11 +468,22 @@ export function InspoFolderView({
             <div className="relative flex w-full items-center justify-center overflow-hidden bg-black aspect-square bg-soft-100 group">
               {previewItem.urls && previewItem.urls.length > 0 ? (
                 <>
-                  <img
-                    src={previewItem.urls[previewItem.currentUrlIndex || 0]}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  {previewItem.urls[previewItem.currentUrlIndex || 0].startsWith("data:video") ? (
+                    <video
+                      src={previewItem.urls[previewItem.currentUrlIndex || 0]}
+                      className="w-full h-full object-cover"
+                      controls
+                      autoPlay
+                      playsInline
+                      loop
+                    />
+                  ) : (
+                    <img
+                      src={previewItem.urls[previewItem.currentUrlIndex || 0]}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  )}
 
                   {/* Next/Prev Navigation overlay */}
                   {previewItem.urls.length > 1 && (
