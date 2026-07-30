@@ -172,10 +172,10 @@ export function InspoFolderListView({
             setIsCreating(true);
             setEditingFolderId(null);
           }}
-          className="group relative bg-soft-50/50 hover:bg-soft-100 border-2 border-dashed border-soft-200 rounded-2xl overflow-hidden transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[160px]"
+          className="group relative bg-soft-50/50 hover:bg-soft-100 border-2 border-dashed border-soft-200 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-center min-h-[120px]"
         >
-          <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mb-2">
-            <Plus className="text-slate-700" size={20} strokeWidth={2.5} />
+          <div className="w-8 h-8 bg-white rounded-full shadow-sm flex items-center justify-center mb-1.5">
+            <Plus className="text-slate-700" size={16} strokeWidth={2.5} />
           </div>
           <span className="text-xs font-bold text-slate-600">New Folder</span>
         </div>
@@ -199,57 +199,52 @@ export function InspoFolderListView({
             <div
               key={folder.id}
               onClick={() => onFolderClick(folder.id)}
-              className="group relative bg-white border border-soft-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col"
+              className="group relative bg-white border border-soft-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[120px]"
             >
-              <div
-                className="w-full aspect-[4/3] relative overflow-hidden"
-                style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
-              >
-                {/* Edit & Delete Buttons (Always visible but subtle) */}
-                <div className="absolute top-2 right-2 flex gap-1.5 z-20">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(folder);
-                    }}
-                    className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
-                    title="Edit folder"
-                  >
-                    <Edit2 size={13} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (
-                        confirm(
-                          `Delete inspo folder "${folder.text}" and all its photos?`,
-                        )
-                      ) {
-                        onDeleteFolder(folder.id);
-                      }
-                    }}
-                    className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
-                    title="Delete folder"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+              {/* Edit & Delete Buttons (Always visible) */}
+              <div className="absolute top-3 right-3 flex gap-1 z-20">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(folder);
+                  }}
+                  className="p-1.5 bg-soft-50 hover:bg-soft-100 text-slate-500 hover:text-slate-900 rounded-lg transition-all"
+                  title="Edit folder"
+                >
+                  <Edit2 size={13} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (
+                      confirm(
+                        `Delete inspo folder "${folder.text}" and all its photos?`,
+                      )
+                    ) {
+                      onDeleteFolder(folder.id);
+                    }
+                  }}
+                  className="p-1.5 bg-soft-50 hover:bg-red-50 text-slate-500 hover:text-red-600 rounded-lg transition-all"
+                  title="Delete folder"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
 
-              {/* Folder Info Footer */}
-              <div className="p-3 flex flex-col justify-between flex-1 bg-white">
-                <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-slate-800">
+              {/* Folder Info */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 truncate pr-16 group-hover:text-slate-800">
                   {folder.text || "Untitled Folder"}
                 </h3>
-                <div className="flex flex-col gap-1 mt-2 text-[10px] font-medium text-foreground/50 overflow-hidden">
-                  <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
-                    <Grid3X3 size={11} className="shrink-0" /> {postCount} Posts
-                  </span>
-                  <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
-                    <Circle size={11} className="shrink-0" /> {storyCount}{" "}
-                    Stories
-                  </span>
-                </div>
+              </div>
+              
+              <div className="flex flex-col gap-1 mt-4 text-[11px] font-semibold text-slate-500 overflow-hidden">
+                <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
+                  <Grid3X3 size={12} className="shrink-0" /> {postCount} Posts
+                </span>
+                <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
+                  <Circle size={12} className="shrink-0" /> {storyCount} Stories
+                </span>
               </div>
             </div>
           );
