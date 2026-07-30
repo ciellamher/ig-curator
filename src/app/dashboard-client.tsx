@@ -311,10 +311,25 @@ export function DashboardClient() {
           console.error("Storage quota exceeded in IDB!", error);
         });
       });
-    }, 800);
+    }, 250);
 
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded]);
+
+  // Synchronous fail-safe save when user forcefully refreshes/closes the tab before debounce completes
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (items !== lastSavedItemsRef.current) {
+        try {
+          localStorage.setItem("ig-curator-items", JSON.stringify(items));
+        } catch (e) {
+          console.error("Local storage fallback failed (quota exceeded).", e);
+        }
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [items]);
 
   function updateItems(
     newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
