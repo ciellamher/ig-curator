@@ -232,7 +232,7 @@ export function InspoFolderView({
           {postItems.map((item) => (
             <div
               key={item.id}
-              className="aspect-[4/3] relative cursor-pointer group bg-soft-100"
+              className="aspect-[3/4] relative cursor-pointer group bg-soft-100"
               onClick={() => setPreviewItem(item)}
             >
               {item.urls && item.urls.length > 0 ? (
@@ -279,7 +279,12 @@ export function InspoFolderView({
 
             {/* Photo Preview */}
             <div
-              className={`w-full bg-black relative overflow-hidden flex items-center justify-center ${previewItem.contentType === "InspoStory" || previewItem.contentType === "Story" ? "aspect-[9/16]" : "aspect-[4/3] bg-soft-100"}`}
+              className={`relative flex w-full items-center justify-center overflow-hidden bg-black ${
+                previewItem.contentType === "InspoStory" ||
+                previewItem.contentType === "Story"
+                  ? "aspect-[9/16]"
+                  : "aspect-[3/4] bg-soft-100"
+              }`}
             >
               {previewItem.urls && previewItem.urls.length > 0 ? (
                 <img
