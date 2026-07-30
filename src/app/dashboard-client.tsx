@@ -172,7 +172,6 @@ export function DashboardClient() {
   const [syncStatus, setSyncStatus] = useState<
     "Idle" | "Saving..." | "Saved" | "Saved Locally" | "Error"
   >("Idle");
-  const [localSaveStatus, setLocalSaveStatus] = useState<"Idle" | "Saving..." | "Saved">("Idle");
 
   const hasLocalItemsRef = useRef(false);
 
@@ -332,16 +331,10 @@ export function DashboardClient() {
     if (items === lastSavedItemsRef.current) return;
 
     const timeoutId = setTimeout(() => {
-      setLocalSaveStatus("Saving...");
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
       
-      setItem("ig-curator-items", items).then(() => {
-        setLocalSaveStatus("Saved");
-        setTimeout(() => {
-          setLocalSaveStatus((prev) => (prev === "Saved" ? "Idle" : prev));
-        }, 2000);
-      }).catch((error) => {
+      setItem("ig-curator-items", items).catch((error) => {
         console.error("Storage quota exceeded in IDB!", error);
       });
     }, 250);
@@ -559,38 +552,32 @@ export function DashboardClient() {
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
               <button
                 onClick={status === "authenticated" ? handleManualSync : undefined}
-                disabled={syncStatus === "Saving..." || localSaveStatus === "Saving..."}
+                disabled={syncStatus === "Saving..."}
                 className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
-                  localSaveStatus === "Saving..." || syncStatus === "Saving..."
+                  syncStatus === "Saving..."
                     ? "bg-amber-50 text-amber-600 border-amber-200 cursor-default"
-                    : localSaveStatus === "Saved" || syncStatus === "Saved"
+                    : syncStatus === "Saved"
                       ? "bg-green-50 text-green-600 border-green-200 cursor-default"
                       : syncStatus === "Error"
                         ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
                         : "bg-white border-soft-200 text-foreground/70 hover:text-foreground cursor-pointer"
-                } ${status !== "authenticated" && localSaveStatus === "Idle" ? "opacity-0 invisible pointer-events-none" : ""}`}
+                } ${status !== "authenticated" ? "opacity-0 invisible pointer-events-none" : ""}`}
               >
-                {localSaveStatus === "Saving..." || syncStatus === "Saving..." ? (
+                {syncStatus === "Saving..." ? (
                   <RefreshCw size={13} className="animate-spin" />
-                ) : localSaveStatus === "Saved" || syncStatus === "Saved" ? (
+                ) : syncStatus === "Saved" ? (
                   <Check size={13} />
                 ) : (
                   <RefreshCw size={13} />
                 )}
                 <span>
-                  {localSaveStatus === "Saving..."
-                    ? "Saving..."
-                    : syncStatus === "Saving..."
-                      ? "Syncing..."
-                      : localSaveStatus === "Saved"
-                        ? "Saved"
-                        : syncStatus === "Saved"
-                          ? "Saved to cloud"
-                          : syncStatus === "Error"
-                            ? "Sync Error"
-                            : status === "authenticated"
-                              ? "Up to date"
-                              : "Saved locally"}
+                  {syncStatus === "Saving..."
+                    ? "Syncing..."
+                    : syncStatus === "Saved"
+                      ? "Saved to cloud"
+                      : syncStatus === "Error"
+                        ? "Sync Error"
+                        : "Up to date"}
                 </span>
               </button>
 
