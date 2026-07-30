@@ -557,46 +557,42 @@ export function DashboardClient() {
           {/* View Toggle & Tabs */}
           <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-8 pt-4 sm:pt-6 pb-2 gap-2">
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-              {status === "authenticated" && (
-                <button
-                  onClick={handleManualSync}
-                  disabled={syncStatus === "Saving..."}
-                  className="text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white shadow-sm border border-soft-200 text-foreground/70 hover:text-foreground transition-all flex items-center gap-2 cursor-pointer"
-                >
-                  <RefreshCw
-                    size={13}
-                    className={syncStatus === "Saving..." ? "animate-spin" : ""}
-                  />
-                  <span>
-                    {syncStatus === "Saving..."
-                      ? "Syncing..."
+              <button
+                onClick={status === "authenticated" ? handleManualSync : undefined}
+                disabled={syncStatus === "Saving..." || localSaveStatus === "Saving..."}
+                className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
+                  localSaveStatus === "Saving..." || syncStatus === "Saving..."
+                    ? "bg-amber-50 text-amber-600 border-amber-200 cursor-default"
+                    : localSaveStatus === "Saved" || syncStatus === "Saved"
+                      ? "bg-green-50 text-green-600 border-green-200 cursor-default"
                       : syncStatus === "Error"
-                        ? "Saved Locally"
-                        : syncStatus === "Saved"
-                          ? "Saved"
-                          : syncStatus === "Saved Locally"
-                            ? "Saved Locally"
-                            : "Up to date"}
-                  </span>
-                </button>
-              )}
-
-              <div
-                className={`text-xs font-medium px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all duration-300 ${
-                  localSaveStatus === "Saving..."
-                    ? "bg-amber-50 text-amber-600 border border-amber-200"
-                    : localSaveStatus === "Saved"
-                      ? "bg-green-50 text-green-600 border border-green-200"
-                      : "opacity-0 scale-95 pointer-events-none"
-                }`}
+                        ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
+                        : "bg-white border-soft-200 text-foreground/70 hover:text-foreground cursor-pointer"
+                } ${status !== "authenticated" && localSaveStatus === "Idle" ? "opacity-0 invisible pointer-events-none" : ""}`}
               >
-                {localSaveStatus === "Saving..." ? (
-                  <RefreshCw size={12} className="animate-spin" />
+                {localSaveStatus === "Saving..." || syncStatus === "Saving..." ? (
+                  <RefreshCw size={13} className="animate-spin" />
+                ) : localSaveStatus === "Saved" || syncStatus === "Saved" ? (
+                  <Check size={13} />
                 ) : (
-                  <Check size={12} />
+                  <RefreshCw size={13} />
                 )}
-                <span>{localSaveStatus}</span>
-              </div>
+                <span>
+                  {localSaveStatus === "Saving..."
+                    ? "Saving..."
+                    : syncStatus === "Saving..."
+                      ? "Syncing..."
+                      : localSaveStatus === "Saved"
+                        ? "Saved"
+                        : syncStatus === "Saved"
+                          ? "Saved to cloud"
+                          : syncStatus === "Error"
+                            ? "Sync Error"
+                            : status === "authenticated"
+                              ? "Up to date"
+                              : "Saved locally"}
+                </span>
+              </button>
 
               {/* Grid Search Navigation Bar */}
               <GridSearchNav
