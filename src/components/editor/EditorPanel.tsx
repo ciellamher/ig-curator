@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SlotItem } from "@/types";
 import {
   Upload,
@@ -31,6 +31,16 @@ export function EditorPanel({
   );
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [localText, setLocalText] = useState(activeSlot?.text || "");
+  const [localHex, setLocalHex] = useState(activeSlot?.hexColor || "");
+
+  useEffect(() => {
+    if (activeSlot) {
+      setLocalText(activeSlot.text || "");
+      setLocalHex(activeSlot.hexColor || "");
+    }
+  }, [activeSlot?.id]);
 
   if (!activeSlot) return null;
 
@@ -304,19 +314,21 @@ export function EditorPanel({
               <div className="flex gap-3 items-center">
                 <input
                   type="text"
-                  value={activeSlot.hexColor || ""}
-                  onChange={(e) =>
-                    updateSlot(activeSlot.id, { hexColor: e.target.value })
+                  value={localHex}
+                  onChange={(e) => setLocalHex(e.target.value)}
+                  onBlur={() =>
+                    updateSlot(activeSlot.id, { hexColor: localHex })
                   }
                   placeholder="#E5D3C8"
                   className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all uppercase font-mono font-bold text-slate-800"
                 />
                 <input
                   type="color"
-                  value={activeSlot.hexColor || "#E5D3C8"}
-                  onChange={(e) =>
-                    updateSlot(activeSlot.id, { hexColor: e.target.value })
-                  }
+                  value={localHex || "#E5D3C8"}
+                  onChange={(e) => {
+                    setLocalHex(e.target.value);
+                    updateSlot(activeSlot.id, { hexColor: e.target.value });
+                  }}
                   className="w-10 h-10 rounded-xl border border-soft-200 shadow-sm shrink-0 cursor-pointer p-0.5 bg-white"
                 />
               </div>
@@ -328,10 +340,9 @@ export function EditorPanel({
               </label>
               <input
                 type="text"
-                value={activeSlot.text || ""}
-                onChange={(e) =>
-                  updateSlot(activeSlot.id, { text: e.target.value })
-                }
+                value={localText}
+                onChange={(e) => setLocalText(e.target.value)}
+                onBlur={() => updateSlot(activeSlot.id, { text: localText })}
                 placeholder="e.g. Selfie, Detail (Perfume), Full Body..."
                 className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs font-semibold transition-all"
               />
