@@ -238,6 +238,10 @@ export function InspoFolderListView({
               const folderImages = customCover
                 ? [customCover]
                 : getFolderImages(folder.id);
+              const hasSubFolders = allItems.some(
+                (i) =>
+                  i.folderId === folder.id && i.contentType === "InspoFolder",
+              );
 
               return (
                 <div
@@ -275,7 +279,9 @@ export function InspoFolderListView({
                     className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
                     style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
                   >
-                    {!customCover && folderImages.length >= 4 ? (
+                    {!customCover &&
+                    hasSubFolders &&
+                    folderImages.length >= 4 ? (
                       <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-[2px] bg-white">
                         {folderImages.slice(0, 4).map((url, idx) => (
                           <div

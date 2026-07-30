@@ -329,6 +329,9 @@ export function InspoFolderView({
             const folderImages = customCover
               ? [customCover]
               : getFolderImages(item.id);
+            const hasSubFolders = allItems.some(
+              (i) => i.folderId === item.id && i.contentType === "InspoFolder",
+            );
 
             return (
               <div
@@ -363,7 +366,7 @@ export function InspoFolderView({
               >
                 <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
                   {/* Folder Thumbnail */}
-                  {!customCover && folderImages.length >= 4 ? (
+                  {!customCover && hasSubFolders && folderImages.length >= 4 ? (
                     <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-[1px] bg-white">
                       {folderImages.slice(0, 4).map((url, idx) => (
                         <div
