@@ -10,10 +10,9 @@ import { CalendarView } from "@/components/calendar/CalendarView"
 import { ProfileHeader } from "@/components/grid/ProfileHeader"
 import { StoryListView } from "@/components/grid/StoryListView"
 import { StoryFolderView } from "@/components/grid/StoryFolderView"
-import { PlaceholderFolderListView } from "@/components/grid/PlaceholderFolderListView"
-import { PlaceholderFolderView } from "@/components/grid/PlaceholderFolderView"
+import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView"
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal"
-import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, Folder } from "lucide-react"
+import { PenTool, Calendar, Image as ImageIcon, Hash, Smartphone, Monitor, Grid3X3, Clapperboard, Circle, RefreshCw, Sparkles, X, SquarePlus } from "lucide-react"
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -32,10 +31,9 @@ export function DashboardClient() {
   const [history, setHistory] = useState<SlotItem[][]>([])
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE")
-  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Folders">("All")
+  const [gridFilter, setGridFilter] = useState<"All" | "Reel" | "Story" | "Placeholders">("All")
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone")
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(null);
-  const [activePlaceholderFolderId, setActivePlaceholderFolderId] = useState<string | null>(null);
 
   // Floating modal drag state
   const [modalPos, setModalPos] = useState({ x: 0, y: 0 });
@@ -334,19 +332,20 @@ export function DashboardClient() {
                   <ProfileHeader 
                     session={session} 
                     status={status}
-                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && i.contentType !== "PlaceholderFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
+                    liveMediaCount={items.filter(i => !i.folderId && i.contentType !== "StoryFolder" && ((i.urls && i.urls.length > 0) || i.isLocked)).length}
                     onAddRow={() => {
-                      if (gridFilter === "Folders" && !activePlaceholderFolderId) {
-                        const newFolder: SlotItem = {
-                          id: `folder-ph-${Math.floor(Math.random() * 1000000000)}`,
+                      if (gridFilter === "Placeholders") {
+                        const newBox: SlotItem = {
+                          id: `slot-draft-${Math.floor(Math.random() * 1000000000)}`,
                           type: "placeholder",
                           urls: [],
                           currentUrlIndex: 0,
                           hexColor: "#E5D3C8",
-                          text: "New Placeholder Folder",
-                          contentType: "PlaceholderFolder",
+                          text: "",
+                          contentType: "Post",
+                          folderId: "draft-pool",
                         };
-                        updateItems([newFolder, ...items]);
+                        updateItems([newBox, ...items]);
                       } else if (gridFilter === "Story" && !activeStoryFolderId) {
                         const newFolder: SlotItem = {
                           id: `folder-${Math.floor(Math.random() * 1000000000)}`,
@@ -367,9 +366,9 @@ export function DashboardClient() {
                           currentUrlIndex: 0,
                           hexColor: "#E5D3C8",
                           text: "",
-                          contentType: gridFilter === "All" ? "Post" : (gridFilter === "Folders" ? "Post" : gridFilter as any),
-                          folderId: gridFilter === "Folders" 
-                            ? (activePlaceholderFolderId || undefined) 
+                          contentType: ((gridFilter as string) === "All" || (gridFilter as string) === "Placeholders") ? "Post" : (gridFilter as any),
+                          folderId: (gridFilter as string) === "Placeholders" 
+                            ? "draft-pool" 
                             : (gridFilter === "Story" ? (activeStoryFolderId || undefined) : undefined),
                         }));
                         updateItems([...newRows, ...items]);
@@ -403,14 +402,11 @@ export function DashboardClient() {
                       <Circle size={22} strokeWidth={gridFilter === "Story" ? 2.5 : 2} />
                     </button>
                     <button 
-                      onClick={() => {
-                        setGridFilter("Folders");
-                        setActivePlaceholderFolderId(null);
-                      }}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Folders" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Placeholder Folders"
+                      onClick={() => setGridFilter("Placeholders")}
+                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Placeholders" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
+                      title="Draft Placeholders"
                     >
-                      <Folder size={22} strokeWidth={gridFilter === "Folders" ? 2.5 : 2} />
+                      <SquarePlus size={22} strokeWidth={gridFilter === "Placeholders" ? 2.5 : 2} />
                     </button>
                   </div>
 
@@ -423,39 +419,15 @@ export function DashboardClient() {
                         <h3 className="text-xl font-bold text-foreground">Sign up first or login</h3>
                         <p className="text-foreground/60 max-w-xs text-sm">You need an account to arrange your grid and upload photos.</p>
                       </div>
-                    ) : gridFilter === "Folders" ? (
-                      activePlaceholderFolderId ? (
-                        <PlaceholderFolderView 
-                          folder={items.find(i => i.id === activePlaceholderFolderId)!}
-                          placeholders={items.filter(i => i.folderId === activePlaceholderFolderId)}
-                          onBack={() => setActivePlaceholderFolderId(null)}
-                          updateItems={updateItems}
-                          updateItem={updateItem}
-                          activeSlotId={activeSlotId}
-                          setActiveSlotId={setActiveSlotId}
-                          onTransferToMainGrid={handleTransferToMainGrid}
-                        />
-                      ) : (
-                        <PlaceholderFolderListView 
-                          folders={items.filter(i => i.contentType === "PlaceholderFolder")}
-                          allItems={items}
-                          onFolderClick={(id) => setActivePlaceholderFolderId(id)}
-                          updateItem={updateItem}
-                          onCreateFolder={(name) => {
-                            const newFolder: SlotItem = {
-                              id: `folder-ph-${Math.floor(Math.random() * 1000000000)}`,
-                              type: "placeholder",
-                              urls: [],
-                              currentUrlIndex: 0,
-                              hexColor: "#E5D3C8",
-                              text: name,
-                              contentType: "PlaceholderFolder",
-                            };
-                            updateItems(prev => [newFolder, ...prev]);
-                          }}
-                          onDeleteFolder={(id) => updateItems(prev => prev.filter(item => item.id !== id && item.folderId !== id))}
-                        />
-                      )
+                    ) : gridFilter === "Placeholders" ? (
+                      <PlaceholderPoolView 
+                        placeholders={items.filter(i => i.folderId === "draft-pool")}
+                        updateItems={updateItems}
+                        updateItem={updateItem}
+                        activeSlotId={activeSlotId}
+                        setActiveSlotId={setActiveSlotId}
+                        onTransferToMainGrid={handleTransferToMainGrid}
+                      />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId ? (
                         <StoryFolderView 
