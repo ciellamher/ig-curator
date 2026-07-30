@@ -49,55 +49,64 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
 
     setIsUploading(true);
     try {
-      const base64Promises = files.map(file => new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement("canvas");
-            const MAX_SIZE = 800;
-            let width = img.width;
-            let height = img.height;
+      const uploadedUrls: string[] = [];
 
-            if (width > height) {
-              if (width > MAX_SIZE) {
-                height = Math.round((height * MAX_SIZE) / width);
-                width = MAX_SIZE;
+      for (const file of files) {
+        // Resize/compress locally before uploading to save bandwidth and Blob storage
+        const compressedBlob = await new Promise<Blob>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const MAX_SIZE = 1200;
+              let width = img.width;
+              let height = img.height;
+              if (width > height) {
+                if (width > MAX_SIZE) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+              } else {
+                if (height > MAX_SIZE) { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
               }
-            } else {
-              if (height > MAX_SIZE) {
-                width = Math.round((width * MAX_SIZE) / height);
-                height = MAX_SIZE;
-              }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            ctx?.drawImage(img, 0, 0, width, height);
-            
-            // Compress to JPEG to save massive amounts of storage
-            resolve(canvas.toDataURL("image/jpeg", 0.7));
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext("2d");
+              ctx?.drawImage(img, 0, 0, width, height);
+              canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Canvas toBlob failed"));
+              }, "image/jpeg", 0.8);
+            };
+            img.onerror = reject;
+            img.src = ev.target?.result as string;
           };
-          img.onerror = reject;
-          img.src = e.target?.result as string;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      }));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
 
-      const newBase64Strings = await Promise.all(base64Promises);
-      const newUrls = [...item.urls, ...newBase64Strings];
-      
-      updateItem(item.id, {
-        type: "image",
-        urls: newUrls,
-        currentUrlIndex: item.urls.length, // point to the first new option
-      });
+        // Upload to Vercel Blob via API route
+        const formData = new FormData();
+        formData.append("file", compressedBlob, file.name);
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.success && data.url) {
+          uploadedUrls.push(data.url);
+        } else {
+          console.error("Upload failed for file:", file.name, data.error);
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const newUrls = [...item.urls, ...uploadedUrls];
+        updateItem(item.id, {
+          type: "image",
+          urls: newUrls,
+          currentUrlIndex: item.urls.length,
+        });
+      }
     } catch (error) {
       console.error("Upload failed", error);
     } finally {
       setIsUploading(false);
-      // Reset input so the same files can be selected again if needed
       if (e.target) e.target.value = '';
     }
   };
