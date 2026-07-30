@@ -185,19 +185,21 @@ export function DashboardClient() {
     }
 
     getItem<SlotItem[]>("ig-curator-items").then((saved) => {
+      const emergencyBackup = localStorage.getItem("ig-curator-items");
+      if (emergencyBackup) {
+        try {
+          const parsed = JSON.parse(emergencyBackup);
+          setItems(parsed);
+          setItem("ig-curator-items", parsed).catch(() => {});
+          localStorage.removeItem("ig-curator-items");
+          if (parsed.length > 0) hasLocalItemsRef.current = true;
+          return;
+        } catch (e) {}
+      }
+
       if (saved && saved.length > 0) {
         setItems(saved);
         hasLocalItemsRef.current = true;
-      } else {
-        const oldSaved = localStorage.getItem("ig-curator-items");
-        if (oldSaved) {
-          try {
-            const parsed = JSON.parse(oldSaved);
-            setItems(parsed);
-            setItem("ig-curator-items", parsed).catch(() => {});
-            if (parsed.length > 0) hasLocalItemsRef.current = true;
-          } catch (e) {}
-        }
       }
     });
 
