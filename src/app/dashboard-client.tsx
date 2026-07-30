@@ -292,31 +292,34 @@ export function DashboardClient() {
 
   const activeSlot = items.find((item) => item.id === activeSlotId) || null;
 
-  const saveTimeoutRef = useRef<any>(null);
+  const lastSavedItemsRef = useRef<SlotItem[]>(items);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      lastSavedItemsRef.current = items;
+      return;
+    }
+
+    if (items === lastSavedItemsRef.current) return;
+
+    const timeoutId = setTimeout(() => {
+      setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
+      lastSavedItemsRef.current = items;
+      
+      import("@/lib/idb").then(({ setItem }) => {
+        setItem("ig-curator-items", items).catch((error) => {
+          console.error("Storage quota exceeded in IDB!", error);
+        });
+      });
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [items, isLoaded]);
 
   function updateItems(
     newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
   ) {
-    setItems((currentItems) => {
-      const nextItems =
-        typeof newItemsOrUpdater === "function"
-          ? newItemsOrUpdater(currentItems)
-          : newItemsOrUpdater;
-
-      // Save to history and local storage if changed
-      if (currentItems !== nextItems) {
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-        saveTimeoutRef.current = setTimeout(() => {
-          setHistory((prev) => [...prev, currentItems].slice(-30));
-          import("@/lib/idb").then(({ setItem }) => {
-            setItem("ig-curator-items", nextItems).catch((error) => {
-              console.error("Storage quota exceeded in IDB!", error);
-            });
-          });
-        }, 800);
-      }
-      return nextItems;
-    });
+    setItems(newItemsOrUpdater);
   }
 
   function handleUndo() {
