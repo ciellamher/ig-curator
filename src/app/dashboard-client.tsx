@@ -357,13 +357,27 @@ export function DashboardClient() {
 
     if (items === lastSavedItemsRef.current) return;
 
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
       
-      setItem("ig-curator-items", items).catch((error) => {
-        console.error("Storage quota exceeded in IDB!", error);
-      });
+      try {
+        await setItem("ig-curator-items", items);
+      } catch (error: any) {
+        console.error("IDB save failed:", error);
+        // Last resort: try stripping base64 history, keep only current url per slot
+        try {
+          const slim = items.map(item => ({
+            ...item,
+            urls: item.urls.slice(0, 1), // keep only the active image
+          }));
+          await setItem("ig-curator-items", slim);
+          console.warn("Saved slim version (stripped image history) due to quota.");
+        } catch (e2) {
+          console.error("Even slim save failed - quota critically exceeded.", e2);
+          alert("⚠️ Storage full! Your browser cannot save more photos. Please remove some images from your grid.");
+        }
+      }
     }, 250);
 
     return () => clearTimeout(timeoutId);
