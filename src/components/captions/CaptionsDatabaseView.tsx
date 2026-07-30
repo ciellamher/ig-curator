@@ -11,21 +11,17 @@ export type CaptionItem = {
 };
 
 const PREDEFINED_CATEGORIES = [
-  "Birthday",
-  "Family",
-  "Food",
-  "Friends",
-  "Holidays",
-  "Me",
-  "Others",
-  "Pet",
-  "Relationship",
-  "Summer",
-  "Things",
-  "Throwback",
-  "University",
-  "View",
-];
+  "Morning & Coffee",
+  "Work & Grind",
+  "Home & Cozy",
+  "Self-Care",
+  "Family & Home",
+  "Friends & Crew",
+  "Love & Dating",
+  "Travel & Views",
+  "Food & Cravings",
+  "Milestones & Growth",
+].sort();
 
 function CategorySelector({
   value,
@@ -71,7 +67,11 @@ function CategorySelector({
   );
 }
 
-export function CaptionsDatabaseView() {
+export function CaptionsDatabaseView({
+  searchQuery = "",
+}: {
+  searchQuery?: string;
+}) {
   const [captions, setCaptions] = useState<CaptionItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -108,6 +108,14 @@ export function CaptionsDatabaseView() {
     });
   }, []);
 
+  const filteredCaptions = captions
+    .filter(
+      (c) =>
+        c.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.category.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+    .sort((a, b) => a.text.localeCompare(b.text));
+
   const saveCaptions = (newCaptions: CaptionItem[]) => {
     setCaptions(newCaptions);
     import("@/lib/idb").then(({ setItem }) => {
@@ -140,13 +148,13 @@ export function CaptionsDatabaseView() {
 
   return (
     <div className="w-full h-full bg-white flex flex-col px-4 sm:px-8 py-8 overflow-y-auto">
-      <div className="flex items-center justify-between mb-8 max-w-4xl">
+      <div className="flex items-center justify-between mb-4 max-w-4xl">
         <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
           Captions
         </h1>
         <button
           onClick={handleAdd}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+          className="bg-[#1B63FE] hover:bg-[#1B63FE]/90 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
         >
           <Plus size={18} strokeWidth={2.5} />
           <span>New</span>
@@ -154,7 +162,7 @@ export function CaptionsDatabaseView() {
       </div>
 
       <div className="flex flex-col gap-1 w-full max-w-4xl pb-24">
-        {captions.map((caption) => (
+        {filteredCaptions.map((caption) => (
           <div
             key={caption.id}
             className="group flex items-start gap-4 py-3 px-2 hover:bg-soft-50 rounded-xl transition-colors"

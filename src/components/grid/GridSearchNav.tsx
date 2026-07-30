@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Search, X } from "lucide-react";
 
@@ -7,6 +7,8 @@ interface GridSearchNavProps {
   setSearchQuery: (query: string) => void;
   matchCount: number;
   onClearSearch: () => void;
+  placeholder?: string;
+  hideMatchCount?: boolean;
 }
 
 export function GridSearchNav({
@@ -14,6 +16,8 @@ export function GridSearchNav({
   setSearchQuery,
   matchCount,
   onClearSearch,
+  placeholder = "Search...",
+  hideMatchCount = false,
 }: GridSearchNavProps) {
   return (
     <div className="flex items-center gap-2 bg-white border border-soft-200 rounded-full px-3 py-1.5 shadow-xs transition-all focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-800/10">
@@ -22,15 +26,17 @@ export function GridSearchNav({
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search placeholders (e.g. selfie)..."
+        placeholder={placeholder}
         className="w-36 sm:w-52 bg-transparent text-xs font-semibold text-foreground outline-none placeholder:text-foreground/40"
       />
 
       {searchQuery.trim() !== "" && (
         <div className="flex items-center gap-1.5 pl-1.5 border-l border-soft-200 shrink-0 select-none">
-          <span className="text-[10px] font-extrabold text-slate-700 px-2 py-0.5 rounded-full bg-slate-100 whitespace-nowrap">
-            {matchCount === 1 ? "1 match" : `${matchCount} matches`}
-          </span>
+          {!hideMatchCount && (
+            <span className="text-[10px] font-extrabold text-slate-700 px-2 py-0.5 rounded-full bg-slate-100 whitespace-nowrap">
+              {matchCount === 1 ? "1 match" : `${matchCount} matches`}
+            </span>
+          )}
 
           <button
             onClick={onClearSearch}

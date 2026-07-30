@@ -510,6 +510,12 @@ export function DashboardClient() {
                 setSearchQuery={setSearchQuery}
                 matchCount={searchMatches.length}
                 onClearSearch={handleClearSearch}
+                placeholder={
+                  activeTab === "CAPTIONS"
+                    ? "Search captions..."
+                    : "Search placeholders (e.g. selfie)..."
+                }
+                hideMatchCount={activeTab === "CAPTIONS"}
               />
             </div>
 
@@ -881,7 +887,9 @@ export function DashboardClient() {
               />
             )}
 
-            {activeTab === "CAPTIONS" && <CaptionsDatabaseView />}
+            {activeTab === "CAPTIONS" && (
+              <CaptionsDatabaseView searchQuery={searchQuery} />
+            )}
           </div>
         </div>
       </div>
