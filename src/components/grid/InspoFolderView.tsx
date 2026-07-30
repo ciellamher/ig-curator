@@ -146,7 +146,10 @@ export function InspoFolderView({
                   canvas.height = height;
                   const ctx = canvas.getContext("2d");
                   ctx?.drawImage(img, 0, 0, width, height);
-                  resolve({ url: canvas.toDataURL("image/jpeg", 0.8), isVideo: false });
+                  resolve({
+                    url: canvas.toDataURL("image/jpeg", 0.8),
+                    isVideo: false,
+                  });
                 };
                 img.onerror = reject;
                 img.src = result;
@@ -279,60 +282,6 @@ export function InspoFolderView({
         </button>
       </div>
 
-      {/* Highlights (Collections of Stories) Section */}
-      <div className="w-full overflow-x-auto no-scrollbar py-4 px-4 border-b border-soft-100 flex gap-4 sm:gap-6 items-start">
-        {/* Add Highlight Button */}
-        <div
-          className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0"
-          onClick={handleAddHighlight}
-        >
-          <div className="w-[68px] h-[68px] rounded-full border border-soft-300 flex items-center justify-center bg-white shadow-xs">
-            <Plus size={28} strokeWidth={1.5} className="text-slate-900" />
-          </div>
-          <span className="text-xs text-slate-900 font-medium mt-1">New</span>
-        </div>
-
-        {highlightFolders.map((item) => (
-          <div
-            key={item.id}
-            className="flex flex-col items-center gap-1 cursor-pointer flex-shrink-0 group"
-            onClick={() => setActiveHighlightId(item.id)}
-          >
-            <div className="w-[72px] h-[72px] rounded-full p-[2px] border border-soft-300 hover:border-slate-400 transition-colors relative">
-              <div className="w-full h-full rounded-full border-2 border-white overflow-hidden bg-soft-100 relative">
-                {item.urls && item.urls.length > 0 ? (
-                  <img
-                    src={item.urls[item.currentUrlIndex || 0]}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full"
-                    style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
-                  />
-                )}
-              </div>
-
-              {/* Delete Highlight (Subtle button on hover) */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm(`Delete highlight "${item.text}"?`)) {
-                    handleDeleteItem(item.id);
-                  }
-                }}
-                className="absolute -top-1 -right-1 w-6 h-6 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border border-soft-200"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-            <span className="text-[11px] text-slate-900 font-medium truncate w-[72px] text-center">
-              {item.text || "Highlight"}
-            </span>
-          </div>
-        ))}
-      </div>
-
       {/* Tabs */}
       <div className="flex border-b border-soft-100">
         <div
@@ -365,32 +314,35 @@ export function InspoFolderView({
           <p className="text-xs">Tap + at top right to add photos</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-[2px] pb-24 bg-white">
+        <div className="columns-2 sm:columns-3 gap-2 px-2 pb-24 bg-white mt-2">
           {postItems.map((item) => (
             <div
               key={item.id}
-              className="aspect-[3/4] relative cursor-pointer group bg-soft-100 overflow-hidden"
+              className="relative cursor-pointer group bg-soft-100 overflow-hidden break-inside-avoid mb-2 rounded-xl shadow-sm"
               onClick={() => setPreviewItem(item)}
             >
               {item.urls && item.urls.length > 0 ? (
-                item.urls[item.currentUrlIndex || 0].startsWith("data:video") ? (
+                item.urls[item.currentUrlIndex || 0].startsWith(
+                  "data:video",
+                ) ? (
                   <video
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
                     muted
                     loop
                     autoPlay
                     playsInline
+                    controls
                   />
                 ) : (
                   <img
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
                   />
                 )
               ) : (
                 <div
-                  className="w-full h-full"
+                  className="w-full aspect-square"
                   style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
                 />
               )}
@@ -465,13 +417,15 @@ export function InspoFolderView({
             </div>
 
             {/* Photo Preview */}
-            <div className="relative flex w-full items-center justify-center overflow-hidden bg-black aspect-square bg-soft-100 group">
+            <div className="relative flex w-full items-center justify-center overflow-hidden bg-black group">
               {previewItem.urls && previewItem.urls.length > 0 ? (
                 <>
-                  {previewItem.urls[previewItem.currentUrlIndex || 0].startsWith("data:video") ? (
+                  {previewItem.urls[
+                    previewItem.currentUrlIndex || 0
+                  ].startsWith("data:video") ? (
                     <video
                       src={previewItem.urls[previewItem.currentUrlIndex || 0]}
-                      className="w-full h-full object-cover"
+                      className="w-full h-auto max-h-[70vh] object-contain"
                       controls
                       autoPlay
                       playsInline
@@ -481,7 +435,7 @@ export function InspoFolderView({
                     <img
                       src={previewItem.urls[previewItem.currentUrlIndex || 0]}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="w-full h-auto max-h-[70vh] object-contain"
                     />
                   )}
 
