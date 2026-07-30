@@ -8,22 +8,11 @@ interface InspoFolderListViewProps {
   folders: SlotItem[];
   allItems: SlotItem[];
   onFolderClick: (folderId: string) => void;
-  onAddFolder: (title: string, hexColor?: string) => void;
+  onAddFolder: (title: string, hexColor?: string, coverUrl?: string) => void;
   onDeleteFolder: (folderId: string) => void;
   updateItem?: (id: string, updates: Partial<SlotItem>) => void;
 }
-
-const FOLDER_COLORS = [
-  "#E5D3C8",
-  "#F3E8EE",
-  "#E2ECE9",
-  "#EAE4E9",
-  "#FDFBFA",
-  "#D8E2DC",
-  "#FFE5D9",
-  "#F4ACB7",
-];
-
+import { useRef } from "react";
 export function InspoFolderListView({
   folders,
   allItems,
@@ -35,7 +24,29 @@ export function InspoFolderListView({
   const [isCreating, setIsCreating] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
-  const [selectedColor, setSelectedColor] = useState(FOLDER_COLORS[0]);
+  const [newCoverUrl, setNewCoverUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setNewCoverUrl(event.target.result as string);
+        }
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Upload failed", err);
+      setIsUploading(false);
+    }
+  };
 
   const handleCreateOrEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,20 +55,21 @@ export function InspoFolderListView({
     if (editingFolderId && updateItem) {
       updateItem(editingFolderId, {
         text: newTitle.trim(),
-        hexColor: selectedColor,
+        urls: newCoverUrl ? [newCoverUrl] : [],
       });
       setEditingFolderId(null);
     } else {
-      onAddFolder(newTitle.trim(), selectedColor);
+      onAddFolder(newTitle.trim(), undefined, newCoverUrl || undefined);
       setIsCreating(false);
     }
     setNewTitle("");
+    setNewCoverUrl(null);
   };
 
   const openEditModal = (folder: SlotItem) => {
     setEditingFolderId(folder.id);
     setNewTitle(folder.text || "");
-    setSelectedColor(folder.hexColor || FOLDER_COLORS[0]);
+    setNewCoverUrl(folder.urls?.[0] || null);
   };
 
   return (
@@ -75,7 +87,7 @@ export function InspoFolderListView({
         <button
           onClick={() => {
             setNewTitle("");
-            setSelectedColor(FOLDER_COLORS[0]);
+            setNewCoverUrl(null);
             setIsCreating(true);
             setEditingFolderId(null);
           }}
@@ -125,23 +137,39 @@ export function InspoFolderListView({
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-foreground/60">
-                Theme Color
+                Cover Photo
               </label>
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
-                {FOLDER_COLORS.map((color) => (
+              
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleUpload}
+                className="hidden"
+                accept="image/*"
+              />
+
+              {newCoverUrl ? (
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden group">
+                  <img src={newCoverUrl} className="w-full h-full object-cover" />
                   <button
-                    key={color}
                     type="button"
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all cursor-pointer shrink-0 ${
-                      selectedColor === color
-                        ? "border-slate-900 scale-110 shadow-xs"
-                        : "border-transparent opacity-80 hover:opacity-100"
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Edit2 size={16} className="text-white" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-20 h-20 rounded-xl border-2 border-dashed border-soft-200 flex flex-col items-center justify-center gap-1 hover:border-slate-400 hover:bg-soft-50 transition-colors text-slate-500 cursor-pointer"
+                >
+                  <Plus size={20} />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Upload</span>
+                </button>
+              )}
             </div>
 
             <div className="flex justify-end gap-2 mt-1">
@@ -168,11 +196,14 @@ export function InspoFolderListView({
 
         {/* Folders Grid */}
         <div className="grid grid-cols-2 gap-3.5 sm:gap-5">
-          {folders.map((folder) => {
+          {folders
+            .slice()
+            .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
+            .map((folder) => {
             const folderItems = allItems.filter(
               (i) => i.folderId === folder.id,
             );
-            const firstImage = folderItems.find(
+            const firstImage = folder.urls?.[0] || folderItems.find(
               (i) => i.urls && i.urls.length > 0,
             )?.urls[0];
 

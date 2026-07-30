@@ -129,20 +129,22 @@ export function PlaceholderPoolView({
           {selectedIds.length > 0 && (
             <button
               onClick={handleTransfer}
-              className="flex items-center gap-1 px-3 py-1 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-full text-xs font-bold transition-all cursor-pointer active:scale-95"
-              title="Transfer to main dashboard"
+              className="flex items-center justify-center w-8 h-8 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-full transition-all cursor-pointer active:scale-95 relative shrink-0"
+              title={`Transfer ${selectedIds.length} items`}
             >
-              <ArrowUpToLine size={13} strokeWidth={2.5} />
-              <span>Transfer ({selectedIds.length})</span>
+              <ArrowUpToLine size={15} strokeWidth={2.5} />
+              <span className="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                {selectedIds.length}
+              </span>
             </button>
           )}
 
           <button
             onClick={handleAddPlaceholder}
-            className="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white hover:bg-black rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95"
+            className="flex items-center justify-center w-8 h-8 bg-slate-900 text-white hover:bg-black rounded-full transition-all cursor-pointer active:scale-95 shrink-0"
+            title="Add Draft Box"
           >
-            <Plus size={13} strokeWidth={2.5} />
-            <span>Add Box</span>
+            <Plus size={16} strokeWidth={2.5} />
           </button>
         </div>
       </div>

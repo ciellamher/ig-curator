@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { SlotItem } from "@/types";
 import {
   ChevronLeft,
@@ -11,6 +11,13 @@ import {
   Download,
   PlaySquare,
   UserSquare2,
+  ChevronRight,
+  MoreHorizontal,
+  Heart,
+  MessageCircle,
+  Repeat,
+  Send,
+  Bookmark,
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 
@@ -45,6 +52,23 @@ export function InspoFolderView({
   const [isUploading, setIsUploading] = useState(false);
   const [previewItem, setPreviewItem] = useState<SlotItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [profileUsername, setProfileUsername] = useState("your_username");
+  const [profileAvatar, setProfileAvatar] = useState(
+    "https://i.pravatar.cc/150?img=44",
+  );
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("ig-curator-profile");
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        if (p.username) setProfileUsername(p.username);
+        if (p.avatarUrl) setProfileAvatar(p.avatarUrl);
+      } catch (e) {}
+    }
+  }, []);
 
   // Treat all old InspoStories and new InspoHighlights as Highlight Folders
   const highlightFolders = itemsInFolder.filter(
@@ -85,8 +109,7 @@ export function InspoFolderView({
     fileInputRef.current?.click();
   };
 
-  const handleUploadPosts = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+  const processFiles = async (files: File[]) => {
     if (files.length === 0) return;
 
     setIsUploading(true);
@@ -147,8 +170,30 @@ export function InspoFolderView({
       console.error("Upload failed", error);
     } finally {
       setIsUploading(false);
-      if (e.target) e.target.value = "";
     }
+  };
+
+  const handleUploadPosts = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    await processFiles(files);
+    if (e.target) e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files || []);
+    await processFiles(files);
   };
 
   const handleAddHighlight = () => {
@@ -172,7 +217,29 @@ export function InspoFolderView({
   };
 
   return (
-    <div className="w-full flex flex-col bg-white min-h-[calc(100vh-80px)]">
+    <div
+      className="w-full flex flex-col bg-white min-h-[calc(100vh-80px)] relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center rounded-lg border-2 border-dashed border-slate-900 pointer-events-none">
+          <div className="bg-white px-8 py-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-soft-100 rounded-full flex items-center justify-center">
+              <Plus size={36} className="text-slate-900" strokeWidth={2} />
+            </div>
+            <span className="font-extrabold text-lg text-slate-900">
+              Drop photos here
+            </span>
+            <span className="text-sm font-medium text-slate-500">
+              to add them to this folder
+            </span>
+          </div>
+        </div>
+      )}
+
       <input
         type="file"
         ref={fileInputRef}
@@ -348,33 +415,93 @@ export function InspoFolderView({
         </div>
       )}
 
-      {/* Full Preview Modal (For Posts Only now) */}
+      {/* Full Preview Modal (Instagram Style) */}
       {previewItem && (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center">
+        <div
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setPreviewItem(null)}
+        >
           <div
-            className={`rounded-3xl w-full max-w-sm overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 mx-4 shadow-2xl bg-white`}
+            className={`bg-white rounded-[20px] w-full max-w-[400px] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 shadow-2xl relative`}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="p-4 flex items-center justify-between bg-white border-b border-soft-100">
-              <span className="text-sm font-bold text-slate-900">
-                Post Preview
-              </span>
+            {/* Instagram Header */}
+            <div className="flex items-center justify-between p-3 border-b border-soft-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-soft-200">
+                  <img
+                    src={profileAvatar || "https://i.pravatar.cc/150?img=44"}
+                    className="w-full h-full object-cover"
+                    alt="avatar"
+                  />
+                </div>
+                <span className="text-[13px] font-bold text-slate-900 tracking-tight">
+                  {profileUsername}
+                </span>
+              </div>
               <button
+                className="text-slate-900 p-1"
                 onClick={() => setPreviewItem(null)}
-                className="p-1 rounded-full cursor-pointer transition-colors text-slate-500 hover:text-slate-900 hover:bg-soft-100"
               >
-                <X size={20} />
+                <MoreHorizontal size={20} />
               </button>
             </div>
 
             {/* Photo Preview */}
-            <div className="relative flex w-full items-center justify-center overflow-hidden bg-black aspect-[3/4] bg-soft-100">
+            <div className="relative flex w-full items-center justify-center overflow-hidden bg-black aspect-square bg-soft-100 group">
               {previewItem.urls && previewItem.urls.length > 0 ? (
-                <img
-                  src={previewItem.urls[previewItem.currentUrlIndex || 0]}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <img
+                    src={previewItem.urls[previewItem.currentUrlIndex || 0]}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Next/Prev Navigation overlay */}
+                  {previewItem.urls.length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newIndex =
+                            ((previewItem.currentUrlIndex || 0) -
+                              1 +
+                              previewItem.urls!.length) %
+                            previewItem.urls!.length;
+                          setPreviewItem({
+                            ...previewItem,
+                            currentUrlIndex: newIndex,
+                          });
+                          updateItem(previewItem.id, {
+                            currentUrlIndex: newIndex,
+                          });
+                        }}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white text-slate-800 rounded-full flex items-center justify-center shadow-sm backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                      >
+                        <ChevronLeft size={18} strokeWidth={2.5} />
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newIndex =
+                            ((previewItem.currentUrlIndex || 0) + 1) %
+                            previewItem.urls!.length;
+                          setPreviewItem({
+                            ...previewItem,
+                            currentUrlIndex: newIndex,
+                          });
+                          updateItem(previewItem.id, {
+                            currentUrlIndex: newIndex,
+                          });
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/80 hover:bg-white text-slate-800 rounded-full flex items-center justify-center shadow-sm backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                      >
+                        <ChevronRight size={18} strokeWidth={2.5} />
+                      </button>
+                    </>
+                  )}
+                </>
               ) : (
                 <div
                   className="w-full h-full"
@@ -383,22 +510,68 @@ export function InspoFolderView({
               )}
             </div>
 
-            {/* Actions & Caption */}
-            <div className="p-4 flex flex-col gap-3 bg-white">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-foreground/60 uppercase tracking-wider">
-                  Caption / Notes
-                </label>
-                <textarea
-                  value={previewItem.text || ""}
-                  onChange={(e) => {
-                    const newText = e.target.value;
-                    setPreviewItem({ ...previewItem, text: newText });
-                    updateItem(previewItem.id, { text: newText });
-                  }}
-                  placeholder="Jot down ideas, captions, or notes for this photo..."
-                  className="w-full h-24 p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs leading-relaxed resize-none"
-                />
+            {/* Instagram Action Bar & Caption */}
+            <div className="p-3.5 flex flex-col bg-white">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-4">
+                  <Heart
+                    size={24}
+                    className="text-slate-900 cursor-pointer hover:opacity-70 transition-opacity"
+                    strokeWidth={2}
+                  />
+                  <MessageCircle
+                    size={24}
+                    className="text-slate-900 cursor-pointer hover:opacity-70 transition-opacity"
+                    strokeWidth={2}
+                  />
+                  <Repeat
+                    size={24}
+                    className="text-slate-900 cursor-pointer hover:opacity-70 transition-opacity"
+                    strokeWidth={2}
+                  />
+                  <Send
+                    size={24}
+                    className="text-slate-900 cursor-pointer hover:opacity-70 transition-opacity"
+                    strokeWidth={2}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (previewItem.urls && previewItem.urls.length > 0) {
+                        const link = document.createElement("a");
+                        link.href =
+                          previewItem.urls[previewItem.currentUrlIndex || 0];
+                        link.download = `inspo-${previewItem.id}.jpg`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }}
+                    className="cursor-pointer hover:opacity-70 transition-opacity"
+                    title="Download photo"
+                  >
+                    <Download
+                      size={24}
+                      className="text-slate-900"
+                      strokeWidth={2}
+                    />
+                  </button>
+                  <Bookmark
+                    size={24}
+                    className="text-slate-900 cursor-pointer hover:opacity-70 transition-opacity"
+                    strokeWidth={2}
+                  />
+                </div>
+              </div>
+
+              <div className="text-[13px] font-bold text-slate-900 mb-1.5">
+                117 likes
+              </div>
+
+              <div className="text-[11px] uppercase text-slate-500 font-medium tracking-wide">
+                September 7, 2020
               </div>
             </div>
           </div>

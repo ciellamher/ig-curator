@@ -48,7 +48,7 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"CREATE" | "CALENDAR">("CREATE");
+  const [activeTab, setActiveTab] = useState<"CREATE">("CREATE");
   const [gridFilter, setGridFilter] = useState<
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
@@ -382,11 +382,11 @@ export function DashboardClient() {
     });
   };
 
-  const handleCreateInspoFolder = (title: string, hexColor?: string) => {
+  const handleCreateInspoFolder = (title: string, hexColor?: string, coverUrl?: string) => {
     const newFolder: SlotItem = {
       id: `folder-inspo-${Math.floor(Math.random() * 1000000000)}`,
       type: "placeholder",
-      urls: [],
+      urls: coverUrl ? [coverUrl] : [],
       currentUrlIndex: 0,
       hexColor: hexColor || "#E5D3C8",
       text: title,
@@ -831,7 +831,7 @@ export function DashboardClient() {
               />
             )}
 
-            {activeTab === "CALENDAR" && <CalendarView items={items} />}
+            {/* Removed CalendarView */}
           </div>
         </div>
       </div>
@@ -868,14 +868,11 @@ export function DashboardClient() {
         </button>
 
         <button
-          onClick={() => setActiveTab("CALENDAR")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CALENDAR" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+          onClick={() => setActiveTab("CREATE")}
+          className={`flex flex-col items-center gap-1 transition-all cursor-pointer text-slate-900 font-bold`}
         >
-          <Calendar
-            size={20}
-            strokeWidth={activeTab === "CALENDAR" ? 2.5 : 2}
-          />
-          <span className="text-[10px] font-semibold">Calendar</span>
+          <FolderHeart size={20} strokeWidth={2.5} />
+          <span className="text-[10px] font-semibold">Saved</span>
         </button>
       </div>
     </div>
