@@ -210,7 +210,7 @@ export function DashboardClient() {
     const timer = setTimeout(async () => {
       try {
         const payloadString = JSON.stringify(items);
-        if (payloadString.length > 4.5 * 1024 * 1024) {
+        if (payloadString.length > 800 * 1024) {
           setSyncStatus("Saved Locally");
           setTimeout(
             () =>
@@ -320,7 +320,7 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     try {
       const payloadString = JSON.stringify(items);
-      if (payloadString.length > 4.5 * 1024 * 1024) {
+      if (payloadString.length > 800 * 1024) {
         setSyncStatus("Saved Locally");
         setTimeout(
           () =>
@@ -886,8 +886,8 @@ export function DashboardClient() {
         </div>
       </div>
 
-      {/* Native Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-soft-200 py-2 px-6 flex items-center justify-around z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+      {/* Bottom Navigation Bar */}
+      <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-soft-200 py-2 px-6 flex items-center justify-around z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:max-w-4xl md:mx-auto md:border-x md:rounded-t-2xl">
         <button
           onClick={() => setActiveTab("CREATE")}
           className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
