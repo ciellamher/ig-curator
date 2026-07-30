@@ -176,59 +176,70 @@ export function DashboardClient() {
   const hasLocalItemsRef = useRef(false);
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      removeItem("ig-curator-items").catch(() => {});
-      setItems(initialItems);
-      setIsLoaded(true);
-      return;
-    }
+    let isMounted = true;
 
-    getItem<SlotItem[]>("ig-curator-items").then((saved) => {
-      const emergencyBackup = localStorage.getItem("ig-curator-items");
-      if (emergencyBackup) {
-        try {
-          const parsed = JSON.parse(emergencyBackup);
-          setItems(parsed);
-          setItem("ig-curator-items", parsed).catch(() => {});
-          localStorage.removeItem("ig-curator-items");
-          if (parsed.length > 0) hasLocalItemsRef.current = true;
-          return;
-        } catch (e) {}
-      }
-
-      if (saved && saved.length > 0) {
-        setItems(saved);
-        hasLocalItemsRef.current = true;
-      }
-    });
-
-    async function loadCloud() {
-      if (status === "authenticated") {
-        try {
-          const { fetchGridFromCloud } = await import("@/app/actions/grid");
-          const res = await fetchGridFromCloud();
-          if (res.success && res.data) {
-            if (!hasLocalItemsRef.current) {
-              setItems(res.data.items);
-            }
-            if (res.data.profile) {
-              localStorage.setItem(
-                "ig-curator-profile",
-                JSON.stringify(res.data.profile),
-              );
-              window.dispatchEvent(new Event("storage"));
-            }
-          }
-        } catch (e) {
-          console.error("Failed to load cloud grid", e);
+    async function init() {
+      if (status === "unauthenticated") {
+        removeItem("ig-curator-items").catch(() => {});
+        if (isMounted) {
+          setItems(initialItems);
+          setIsLoaded(true);
         }
+        return;
       }
-      setIsLoaded(true);
+
+      if (status === "loading") return;
+
+      // 1. Always await local storage first to prevent race conditions
+      let localItemsLoaded = false;
+      try {
+        const saved = await getItem<SlotItem[]>("ig-curator-items");
+        const emergencyBackup = localStorage.getItem("ig-curator-items");
+        
+        if (emergencyBackup) {
+          try {
+            const parsed = JSON.parse(emergencyBackup);
+            if (isMounted) setItems(parsed);
+            await setItem("ig-curator-items", parsed).catch(() => {});
+            localStorage.removeItem("ig-curator-items");
+            if (parsed.length > 0) localItemsLoaded = true;
+          } catch (e) {}
+        } else if (saved && saved.length > 0) {
+          if (isMounted) setItems(saved);
+          localItemsLoaded = true;
+        }
+      } catch (error) {
+        console.error("Failed to load local grid", error);
+      }
+
+      // 2. Only check cloud if local hasn't definitively overridden it, or to sync profile
+      try {
+        const { fetchGridFromCloud } = await import("@/app/actions/grid");
+        const res = await fetchGridFromCloud();
+        if (res.success && res.data) {
+          if (!localItemsLoaded && isMounted) {
+            setItems(res.data.items);
+          }
+          if (res.data.profile) {
+            localStorage.setItem(
+              "ig-curator-profile",
+              JSON.stringify(res.data.profile)
+            );
+            window.dispatchEvent(new Event("storage"));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load cloud grid", e);
+      }
+
+      if (isMounted) setIsLoaded(true);
     }
 
-    if (status !== "loading") {
-      loadCloud();
-    }
+    init();
+
+    return () => {
+      isMounted = false;
+    };
   }, [status]);
 
   useEffect(() => {
