@@ -201,26 +201,10 @@ export function InspoFolderListView({
               onClick={() => onFolderClick(folder.id)}
               className="group relative bg-white border border-soft-200/90 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col"
             >
-              {/* Thumbnail Cover Box */}
               <div
-                className="w-full aspect-[4/3] relative flex items-center justify-center overflow-hidden"
+                className="w-full aspect-[4/3] relative overflow-hidden"
                 style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
               >
-                {firstImage ? (
-                  <img
-                    src={firstImage}
-                    alt={folder.text}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-1 text-slate-800/60">
-                    <FolderHeart size={28} strokeWidth={1.8} />
-                    <span className="text-[10px] font-extrabold tracking-wider uppercase opacity-60">
-                      Inspo
-                    </span>
-                  </div>
-                )}
-
                 {/* Edit & Delete Buttons (Always visible but subtle) */}
                 <div className="absolute top-2 right-2 flex gap-1.5 z-20">
                   <button
@@ -257,12 +241,13 @@ export function InspoFolderListView({
                 <h3 className="text-xs font-bold text-slate-900 truncate group-hover:text-slate-800">
                   {folder.text || "Untitled Folder"}
                 </h3>
-                <div className="flex flex-col gap-1 mt-2 text-[10px] font-medium text-foreground/50">
-                  <span className="flex items-center gap-1.5">
-                    <Grid3X3 size={11} /> {postCount} Posts
+                <div className="flex flex-col gap-1 mt-2 text-[10px] font-medium text-foreground/50 overflow-hidden">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
+                    <Grid3X3 size={11} className="shrink-0" /> {postCount} Posts
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <Circle size={11} /> {storyCount} Stories
+                  <span className="flex items-center gap-1.5 whitespace-nowrap truncate">
+                    <Circle size={11} className="shrink-0" /> {storyCount}{" "}
+                    Stories
                   </span>
                 </div>
               </div>

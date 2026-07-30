@@ -290,13 +290,13 @@ export function InspoFolderView({
           {postItems.map((item) => (
             <div
               key={item.id}
-              className="aspect-[3/4] relative cursor-pointer group bg-soft-100"
+              className="aspect-[3/4] relative cursor-pointer group bg-soft-100 overflow-hidden"
               onClick={() => setPreviewItem(item)}
             >
               {item.urls && item.urls.length > 0 ? (
                 <img
                   src={item.urls[item.currentUrlIndex || 0]}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
                 <div
@@ -304,6 +304,39 @@ export function InspoFolderView({
                   style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
                 />
               )}
+
+              {/* Overlay Buttons */}
+              <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-20">
+                {item.urls && item.urls.length > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const link = document.createElement("a");
+                      link.href = item.urls[item.currentUrlIndex || 0];
+                      link.download = `inspo-${item.id}.jpg`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                    className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
+                    title="Download photo"
+                  >
+                    <Download size={13} />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Delete this photo?")) {
+                      handleDeleteItem(item.id);
+                    }
+                  }}
+                  className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
+                  title="Delete photo"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -360,36 +393,6 @@ export function InspoFolderView({
                   placeholder="Jot down ideas, captions, or notes for this photo..."
                   className="w-full h-24 p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs leading-relaxed resize-none"
                 />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    if (previewItem.urls && previewItem.urls.length > 0) {
-                      const link = document.createElement("a");
-                      link.href =
-                        previewItem.urls[previewItem.currentUrlIndex || 0];
-                      link.download = `inspo-${previewItem.id}.jpg`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-soft-100 hover:bg-soft-200 text-slate-900 rounded-xl font-bold text-xs transition-colors cursor-pointer"
-                >
-                  <Download size={16} />
-                  Download
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm("Delete this photo?")) {
-                      handleDeleteItem(previewItem.id);
-                    }
-                  }}
-                  className="px-4 flex items-center justify-center gap-2 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold text-xs transition-colors cursor-pointer"
-                >
-                  <Trash2 size={16} />
-                </button>
               </div>
             </div>
           </div>
