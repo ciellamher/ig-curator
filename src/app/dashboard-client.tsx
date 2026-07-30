@@ -136,18 +136,28 @@ export function DashboardClient() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      localStorage.removeItem("ig-curator-items");
+      import("@/lib/idb").then(({ removeItem }) => removeItem("ig-curator-items"));
       setItems(initialItems);
       setIsLoaded(true);
       return;
     }
 
-    const saved = localStorage.getItem("ig-curator-items");
-    if (saved) {
-      try {
-        setItems(JSON.parse(saved));
-      } catch (e) {}
-    }
+    import("@/lib/idb").then(({ getItem, setItem }) => {
+      getItem<SlotItem[]>("ig-curator-items").then((saved) => {
+        if (saved) {
+          setItems(saved);
+        } else {
+          const oldSaved = localStorage.getItem("ig-curator-items");
+          if (oldSaved) {
+            try {
+              const parsed = JSON.parse(oldSaved);
+              setItems(parsed);
+              setItem("ig-curator-items", parsed);
+            } catch (e) {}
+          }
+        }
+      });
+    });
 
     async function loadCloud() {
       if (status === "authenticated") {
@@ -253,14 +263,11 @@ export function DashboardClient() {
       // Save to history and local storage if changed
       if (JSON.stringify(currentItems) !== JSON.stringify(nextItems)) {
         setHistory((prev) => [...prev, currentItems].slice(-30));
-        try {
-          localStorage.setItem("ig-curator-items", JSON.stringify(nextItems));
-        } catch (error) {
-          console.error("Storage quota exceeded!", error);
-          alert(
-            "Warning: Local storage is full! Your latest changes might not be saved after a refresh. Please delete some old photos to free up space.",
-          );
-        }
+        import("@/lib/idb").then(({ setItem }) => {
+          setItem("ig-curator-items", nextItems).catch((error) => {
+            console.error("Storage quota exceeded in IDB!", error);
+          });
+        });
       }
       return nextItems;
     });
@@ -271,11 +278,9 @@ export function DashboardClient() {
       if (prev.length === 0) return prev;
       const previousState = prev[prev.length - 1];
       setItems(previousState);
-      try {
-        localStorage.setItem("ig-curator-items", JSON.stringify(previousState));
-      } catch (e) {
-        // ignore
-      }
+      import("@/lib/idb").then(({ setItem }) => {
+        setItem("ig-curator-items", previousState).catch(() => {});
+      });
       return prev.slice(0, -1);
     });
   }
