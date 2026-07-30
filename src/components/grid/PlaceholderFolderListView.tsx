@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { SlotItem } from "@/types";
-import { FolderPlus, Folder, ChevronRight, Trash2, Layers, Plus } from "lucide-react";
+import { Folder, ChevronRight, Trash2, Layers, Plus } from "lucide-react";
 
 interface PlaceholderFolderListViewProps {
   folders: SlotItem[];
@@ -26,80 +26,74 @@ export function PlaceholderFolderListView({
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    const name = newFolderName.trim() || "New Placeholder Folder";
+    const name = newFolderName.trim() || "New Folder";
     onCreateFolder(name);
     setNewFolderName("");
     setIsCreating(false);
   };
 
   return (
-    <div className="w-full flex flex-col bg-white h-full overflow-y-auto pb-12">
-      {/* Header Bar inside list view */}
-      <div className="flex items-center justify-between p-4 sm:px-6 border-b border-soft-100 bg-soft-50/50">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-foreground flex items-center gap-2">
-            <Folder className="text-pastel-600" size={20} />
-            <span>Placeholder Folders</span>
-          </h2>
-          <p className="text-xs text-foreground/60 mt-0.5">
-            Store and organize design concepts before moving them to your main grid.
-          </p>
-        </div>
+    <div className="w-full flex flex-col bg-white h-full overflow-y-auto select-none">
+      {/* Minimal Top Action Bar */}
+      <div className="px-4 py-2.5 border-b border-soft-100 flex items-center justify-between bg-white sticky top-0 z-20">
+        <span className="text-xs font-bold text-foreground/50 tracking-wider uppercase">
+          Folders ({folders.length})
+        </span>
 
         {!isCreating && (
           <button
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 text-white hover:bg-black rounded-full text-xs font-semibold shadow-xs transition-all cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-3 py-1 bg-slate-900 hover:bg-black text-white rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95"
           >
-            <Plus size={14} strokeWidth={2.5} />
+            <Plus size={13} strokeWidth={2.5} />
             <span>New Folder</span>
           </button>
         )}
       </div>
 
-      {/* Inline Create Folder Form */}
+      {/* Inline Create Input */}
       {isCreating && (
-        <form onSubmit={handleCreate} className="p-4 bg-pastel-50 border-b border-pastel-200 flex items-center gap-2 animate-in slide-in-from-top-2">
-          <Folder className="text-pastel-600 shrink-0" size={20} />
+        <form onSubmit={handleCreate} className="p-3 bg-soft-50 border-b border-soft-200 flex items-center gap-2 animate-in fade-in duration-150">
+          <Folder size={16} className="text-foreground/50 shrink-0" />
           <input
             type="text"
             value={newFolderName}
             onChange={(e) => setNewFolderName(e.target.value)}
-            placeholder="Folder name (e.g., Summer Launch, Aesthetic Grid)..."
+            placeholder="Folder name..."
             autoFocus
-            className="flex-1 px-3 py-1.5 bg-white border border-soft-200 rounded-xl text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-slate-800"
+            className="flex-1 px-2.5 py-1 bg-white border border-soft-200 rounded-lg text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-slate-800"
           />
           <button
             type="submit"
-            className="px-4 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
+            className="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
           >
-            Create
+            Add
           </button>
           <button
             type="button"
             onClick={() => setIsCreating(false)}
-            className="px-3 py-1.5 text-foreground/60 hover:text-foreground text-xs font-medium cursor-pointer"
+            className="px-2 py-1 text-foreground/40 hover:text-foreground text-xs font-medium cursor-pointer"
           >
             Cancel
           </button>
         </form>
       )}
 
-      {/* Folders List */}
+      {/* Ultra Minimal Folder List */}
       {folders.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto min-h-[300px]">
-          <div className="w-16 h-16 bg-pastel-100 text-pastel-600 rounded-2xl flex items-center justify-center mb-3 shadow-inner">
-            <FolderPlus size={32} />
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto min-h-[260px]">
+          <div className="w-12 h-12 rounded-2xl bg-soft-100 text-foreground/40 flex items-center justify-center mb-3">
+            <Folder size={22} strokeWidth={1.8} />
           </div>
-          <h3 className="text-base font-bold text-foreground">No placeholder folders yet</h3>
-          <p className="text-xs text-foreground/60 max-w-xs mt-1 mb-4">
-            Create folders to store your draft slots, colors, and layout ideas off the main dashboard.
+          <p className="text-xs font-bold text-foreground/80">No folders yet</p>
+          <p className="text-[11px] text-foreground/40 mt-0.5 mb-4 max-w-[200px]">
+            Store draft boxes off the main grid.
           </p>
           <button
             onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
           >
-            <Plus size={14} /> Create Your First Folder
+            <Plus size={13} /> Create Folder
           </button>
         </div>
       ) : (
@@ -112,16 +106,16 @@ export function PlaceholderFolderListView({
               <div
                 key={folder.id}
                 onClick={() => onFolderClick(folder.id)}
-                className="w-full flex items-center justify-between p-4 sm:px-6 cursor-pointer hover:bg-soft-50 transition-colors group"
+                className="w-full flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-soft-50 transition-colors group"
               >
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  {/* Folder Preview Box */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-soft-200 bg-soft-100 p-1.5 flex flex-wrap gap-1 shrink-0 shadow-xs relative overflow-hidden group-hover:border-slate-300 transition-colors">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Folder Thumbnail / Stack */}
+                  <div className="w-12 h-12 rounded-xl border border-soft-200 bg-soft-100 p-1 flex flex-wrap gap-0.5 shrink-0 relative overflow-hidden items-center justify-center">
                     {previewItems.length > 0 ? (
                       previewItems.map((item, idx) => (
                         <div
                           key={idx}
-                          className="w-[calc(50%-2px)] h-[calc(50%-2px)] rounded-md overflow-hidden border border-white/60 shadow-2xs"
+                          className="w-[calc(50%-2px)] h-[calc(50%-2px)] rounded-sm overflow-hidden"
                           style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
                         >
                           {item.type === "image" && item.urls[item.currentUrlIndex] && (
@@ -134,44 +128,40 @@ export function PlaceholderFolderListView({
                         </div>
                       ))
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-foreground/30">
-                        <Layers size={20} />
-                      </div>
+                      <Layers size={16} className="text-foreground/30" />
                     )}
                   </div>
 
-                  {/* Folder Title & Metadata */}
-                  <div className="flex flex-col min-w-0 flex-1">
+                  {/* Clean Minimal Folder Name & Item Count */}
+                  <div className="flex flex-col min-w-0 flex-1 justify-center">
                     <input
                       value={folder.text || folder.caption || ""}
                       onChange={(e) => updateItem(folder.id, { text: e.target.value })}
                       onClick={(e) => e.stopPropagation()}
                       placeholder="Folder Name"
-                      className="font-bold text-foreground text-base sm:text-lg tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-slate-300 rounded px-1 -ml-1 w-full truncate"
+                      className="font-bold text-foreground text-sm tracking-tight bg-transparent border-none outline-none focus:ring-1 focus:ring-slate-300 rounded px-0.5 -ml-0.5 w-full truncate"
                     />
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-pastel-100 text-pastel-700">
-                        {innerItems.length} {innerItems.length === 1 ? "placeholder box" : "placeholder boxes"}
-                      </span>
-                    </div>
+                    <span className="text-[11px] font-medium text-foreground/50 mt-0.5">
+                      {innerItems.length} {innerItems.length === 1 ? "item" : "items"}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right Actions */}
+                {/* Minimal Right Actions */}
                 <div className="flex items-center gap-2 shrink-0 ml-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm("Are you sure you want to delete this folder and its placeholder boxes?")) {
+                      if (confirm("Delete this folder?")) {
                         onDeleteFolder(folder.id);
                       }
                     }}
-                    className="p-2 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-80 group-hover:opacity-100"
+                    className="p-1.5 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                     title="Delete Folder"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
-                  <ChevronRight size={20} className="text-foreground/30 group-hover:text-foreground/70 transition-colors" />
+                  <ChevronRight size={16} className="text-foreground/30 group-hover:text-foreground/70 transition-colors" />
                 </div>
               </div>
             );
