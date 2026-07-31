@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SlotItem } from "@/types";
 import { Plus, FolderHeart, Trash2, X, Edit2, ChevronLeft } from "lucide-react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -27,7 +28,10 @@ export function InspoFolderListView({
   const [newTitle, setNewTitle] = useState("");
   const [newCoverUrl, setNewCoverUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const deleteFolderName = deleteFolderId ? folders.find(f => f.id === deleteFolderId)?.text || "this folder" : "";
 
   // Helper to recursively find up to 4 images inside a folder (including sub-folders)
   const getFolderImages = (
@@ -103,6 +107,15 @@ export function InspoFolderListView({
 
   return (
     <div className="w-full flex flex-col pb-24">
+      <ConfirmModal
+        isOpen={!!deleteFolderId}
+        title="Delete folder"
+        message={`Delete "${deleteFolderName}" and all its photos?`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (deleteFolderId) onDeleteFolder(deleteFolderId); setDeleteFolderId(null); }}
+        onCancel={() => setDeleteFolderId(null)}
+      />
       {/* iOS Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-soft-100 px-4 py-3 flex items-center justify-between">
         <button className="p-1 -ml-1 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer opacity-0 pointer-events-none">
@@ -341,13 +354,7 @@ export function InspoFolderListView({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (
-                            confirm(
-                              `Delete inspo folder "${folder.text}" and all its photos?`,
-                            )
-                          ) {
-                            onDeleteFolder(folder.id);
-                          }
+                          setDeleteFolderId(folder.id);
                         }}
                         className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-red-600 rounded-lg shadow-sm"
                         title="Delete folder"

@@ -17,7 +17,6 @@ import { CaptionsDatabaseView } from "@/components/captions/CaptionsDatabaseView
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
 import {
-  PenTool,
   Calendar,
   Image as ImageIcon,
   Hash,
@@ -1186,38 +1185,6 @@ export function DashboardClient() {
         >
           <Grid3X3 size={20} strokeWidth={activeTab === "CREATE" ? 2.5 : 2} />
           <span className="text-[10px] font-semibold">Planner</span>
-        </button>
-
-        <button
-          onClick={() => {
-            const newRows = [
-              {
-                id: `slot-${Math.floor(Math.random() * 1000000000)}`,
-                type: "placeholder" as const,
-                urls: [],
-                currentUrlIndex: 0,
-                hexColor: "#E5D3C8",
-                text: "",
-                contentType: "Post" as const,
-              },
-            ];
-            updateItems((prev) => [...newRows, ...prev]);
-          }}
-          className="p-3 bg-slate-900 text-white rounded-full shadow-lg -mt-5 hover:bg-black active:scale-95 transition-all cursor-pointer"
-          title="Add New Slot"
-        >
-          <PenTool size={18} strokeWidth={2.5} />
-        </button>
-
-        <button
-          onClick={() => setActiveTab("CREATE")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
-        >
-          <FolderHeart
-            size={20}
-            strokeWidth={activeTab === "CREATE" ? 2.5 : 2}
-          />
-          <span className="text-[10px] font-semibold">Saved</span>
         </button>
 
         <button

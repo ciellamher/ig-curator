@@ -22,6 +22,7 @@ import {
   Edit2,
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface InspoFolderViewProps {
   folder: SlotItem;
@@ -66,6 +67,7 @@ export function InspoFolderView({
   const [movingItemId, setMovingItemId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; message: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-profile");
@@ -488,13 +490,10 @@ export function InspoFolderView({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (
-                          confirm(
-                            `Delete folder "${item.text}" and its contents?`,
-                          )
-                        ) {
-                          handleDeleteItem(item.id);
-                        }
+                        setDeleteConfirm({
+                          ids: [item.id],
+                          message: `Delete folder "${item.text}" and its contents?`,
+                        });
                       }}
                       className="w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center"
                       title="Delete folder"
@@ -617,9 +616,7 @@ export function InspoFolderView({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm("Delete this media?")) {
-                      handleDeleteItem(item.id);
-                    }
+                    setDeleteConfirm({ ids: [item.id], message: "Delete this media?" });
                   }}
                   className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
                   title="Delete media"
@@ -815,14 +812,31 @@ export function InspoFolderView({
           <div className="w-[1px] h-4 bg-white/20" />
           <button onClick={() => setMovingItemId("bulk")} className="text-[13px] font-bold hover:text-slate-300 transition-colors">Move</button>
           <button onClick={() => {
-             if (confirm(`Delete ${selectedItems.size} items?`)) {
-               selectedItems.forEach(id => handleDeleteItem(id));
-               setSelectedItems(new Set());
-               setIsSelectionMode(false);
-             }
+             setDeleteConfirm({
+               ids: Array.from(selectedItems),
+               message: `Delete ${selectedItems.size} items?`,
+             });
           }} className="text-[13px] font-bold text-red-400 hover:text-red-300 transition-colors">Delete</button>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!deleteConfirm}
+        title="Confirm delete"
+        message={deleteConfirm?.message || ""}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteConfirm) {
+            deleteConfirm.ids.forEach(id => handleDeleteItem(id));
+            setSelectedItems(new Set());
+            setIsSelectionMode(false);
+          }
+          setDeleteConfirm(null);
+        }}
+        onCancel={() => setDeleteConfirm(null)}
+      />
 
       {/* Move Photo Modal */}
       {movingItemId && (

@@ -1,5 +1,7 @@
 import { SlotItem } from "@/types";
 import { ChevronRight, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface StoryListViewProps {
   folders: SlotItem[];
@@ -10,6 +12,8 @@ interface StoryListViewProps {
 }
 
 export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder }: StoryListViewProps) {
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
   if (folders.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center pt-20">
@@ -21,6 +25,15 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
 
   return (
     <div className="w-full flex flex-col bg-white h-full overflow-y-auto">
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        title="Delete folder"
+        message="Are you sure you want to delete this folder and all its stories?"
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
       {folders.map(folder => {
         const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
         const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex]).slice(0, 3);
@@ -73,9 +86,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm("Are you sure you want to delete this folder and all its stories?")) {
-                      onDeleteFolder(folder.id);
-                    }
+                    if (onDeleteFolder) setDeleteTarget(folder.id);
                   }}
                   className="p-2 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                   title="Delete Folder"
