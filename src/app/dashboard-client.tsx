@@ -202,10 +202,57 @@ export function DashboardClient() {
   useEffect(() => {
     let isMounted = true;
 
-    // Migration disabled until BLOB_READ_WRITE_TOKEN is confirmed working
-    // base64 images still display fine locally
-    async function migrateBase64ToBlob(loadedItems: SlotItem[]): Promise<SlotItem[]> {
-      return loadedItems;
+    // One-time auto-compression: shrinks all old large base64 images to free IDB space
+    async function compressIfNeeded(loadedItems: SlotItem[]): Promise<SlotItem[]> {
+      if (typeof window === "undefined") return loadedItems;
+      const COMPRESSED_KEY = "ig-curator-compressed-v2";
+      if (localStorage.getItem(COMPRESSED_KEY)) return loadedItems;
+
+      let changed = false;
+      const compressed = await Promise.all(
+        loadedItems.map(async (item) => {
+          const newUrls = await Promise.all(
+            item.urls.map(async (url) => {
+              if (!url.startsWith("data:")) return url;
+              // Only compress if the base64 string is large (> 20KB)
+              if (url.length < 20000) return url;
+              try {
+                return await new Promise<string>((resolve) => {
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const MAX = 400;
+                    let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+                    else { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext("2d")?.drawImage(img, 0, 0, w, h);
+                    changed = true;
+                    resolve(canvas.toDataURL("image/jpeg", 0.5));
+                  };
+                  img.onerror = () => resolve(url); // keep original on error
+                  img.src = url;
+                });
+              } catch {
+                return url;
+              }
+            })
+          );
+          return { ...item, urls: newUrls };
+        })
+      );
+
+      if (changed) {
+        try {
+          await setItem("ig-curator-items", compressed);
+          console.log("✅ Auto-compressed images to free storage space");
+        } catch (e) {
+          console.error("Compression save failed:", e);
+        }
+      }
+      localStorage.setItem(COMPRESSED_KEY, "true");
+      return compressed;
     }
 
     async function init() {
@@ -214,7 +261,8 @@ export function DashboardClient() {
         try {
           const saved = await getItem<SlotItem[]>("ig-curator-items");
           if (saved && saved.length > 0 && isMounted) {
-            setItems(saved);
+            const compressed = await compressIfNeeded(saved);
+            setItems(compressed);
           }
         } catch (e) {}
         if (isMounted) setIsLoaded(true);
@@ -252,7 +300,8 @@ export function DashboardClient() {
               if (parsed.length > 0) localItemsLoaded = true;
             } catch (e) {}
           } else if (saved && saved.length > 0) {
-            if (isMounted) setItems(saved);
+            const compressed = await compressIfNeeded(saved);
+            if (isMounted) setItems(compressed);
             localItemsLoaded = true;
           }
         } catch (error) {
@@ -266,8 +315,7 @@ export function DashboardClient() {
         const res = await fetchGridFromCloud();
         if (res.success && res.data) {
           if (!localItemsLoaded && isMounted) {
-            const migrated = await migrateBase64ToBlob(res.data.items);
-            setItems(migrated);
+            setItems(res.data.items);
           }
           if (res.data.profile) {
             localStorage.setItem(
