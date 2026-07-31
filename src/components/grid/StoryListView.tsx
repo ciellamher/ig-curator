@@ -86,7 +86,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (onDeleteFolder) setDeleteTarget(folder.id);
+                    setDeleteTarget(folder.id);
                   }}
                   className="p-2 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                   title="Delete Folder"
