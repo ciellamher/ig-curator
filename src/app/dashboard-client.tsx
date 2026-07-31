@@ -676,8 +676,21 @@ export function DashboardClient() {
               {isFileSystemSupported() && (
                 <button
                   onClick={async () => {
+                    const connectAndLoad = async (handle: FileSystemDirectoryHandle) => {
+                      fsHandleRef.current = handle;
+                      setHasFolderConnected(true);
+                      // Load latest data FROM the folder (this is the source of truth)
+                      const folderData = await loadFromFolder(handle);
+                      if (folderData && (folderData as any[]).length > 0) {
+                        setItems(folderData as SlotItem[]);
+                      } else {
+                        // First time or empty folder — save current data TO folder
+                        await saveToFolder(handle, items);
+                      }
+                    };
+
                     if (hasFolderConnected) {
-                      // Already connected this session - manual save
+                      // Already connected — manual save
                       try {
                         await saveToFolder(fsHandleRef.current!, items);
                       } catch (e) {
@@ -685,23 +698,19 @@ export function DashboardClient() {
                       }
                       return;
                     }
-                    // Try reconnecting stored handle first
+                    // Try reconnecting stored handle (needs this click as user gesture)
                     const stored = await getStoredHandle();
                     if (stored) {
                       const ok = await verifyPermission(stored);
                       if (ok) {
-                        fsHandleRef.current = stored;
-                        setHasFolderConnected(true);
-                        await saveToFolder(stored, items);
+                        await connectAndLoad(stored);
                         return;
                       }
                     }
                     // Pick new folder
                     const handle = await pickFolder();
                     if (handle) {
-                      fsHandleRef.current = handle;
-                      setHasFolderConnected(true);
-                      await saveToFolder(handle, items);
+                      await connectAndLoad(handle);
                     }
                   }}
                   className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
