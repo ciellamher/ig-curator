@@ -13,7 +13,6 @@ import { StoryFolderView } from "@/components/grid/StoryFolderView";
 import { PlaceholderPoolView } from "@/components/grid/PlaceholderPoolView";
 import { InspoFolderListView } from "@/components/grid/InspoFolderListView";
 import { InspoFolderView } from "@/components/grid/InspoFolderView";
-import { CaptionsDatabaseView } from "@/components/captions/CaptionsDatabaseView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
 import {
@@ -37,7 +36,6 @@ import {
   MoreHorizontal,
   ChevronLeft,
   PlusCircle,
-  Type,
   Check,
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
@@ -67,7 +65,6 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"CREATE" | "CAPTIONS">("CREATE");
   const [gridFilter, setGridFilter] = useState<
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
@@ -779,12 +776,11 @@ export function DashboardClient() {
                 setSearchQuery={setSearchQuery}
                 matchCount={searchMatches.length}
                 onClearSearch={handleClearSearch}
-                placeholder={
-                  activeTab === "CAPTIONS"
-                    ? "Search captions..."
-                    : "Search placeholders (e.g. selfie)..."
+                placeholder="Search placeholders (e.g. selfie)..."
+                hideDeviceToggle={
+                  activeStoryFolderId !== null ||
+                  activeInspoFolderId !== null
                 }
-                hideMatchCount={activeTab === "CAPTIONS"}
               />
             </div>
 
@@ -1169,32 +1165,10 @@ export function DashboardClient() {
                 onClose={() => setPreviewSlotId(null)}
               />
             )}
-
-            {activeTab === "CAPTIONS" && (
-              <CaptionsDatabaseView searchQuery={searchQuery} />
-            )}
           </div>
         </div>
       </div>
 
-      {/* Bottom Navigation Bar */}
-      <div className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-xl border-t border-soft-200 py-2 px-6 flex items-center justify-around z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] md:max-w-4xl md:mx-auto md:border-x md:rounded-t-2xl">
-        <button
-          onClick={() => setActiveTab("CREATE")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CREATE" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
-        >
-          <Grid3X3 size={20} strokeWidth={activeTab === "CREATE" ? 2.5 : 2} />
-          <span className="text-[10px] font-semibold">Planner</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("CAPTIONS")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer ${activeTab === "CAPTIONS" ? "text-slate-900 font-bold" : "text-foreground/40 hover:text-foreground"}`}
-        >
-          <Type size={20} strokeWidth={activeTab === "CAPTIONS" ? 2.5 : 2} />
-          <span className="text-[10px] font-semibold">Captions</span>
-        </button>
-      </div>
     </div>
   );
 }
