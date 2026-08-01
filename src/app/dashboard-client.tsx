@@ -765,7 +765,7 @@ export function DashboardClient() {
                 className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
                   syncStatus === "Saving..."
                     ? "bg-amber-50 text-amber-600 border-amber-200 cursor-default"
-                    : syncStatus === "Saved"
+                    : (syncStatus === "Saved" || syncStatus === "Saved Locally")
                       ? "bg-green-50 text-green-600 border-green-200 cursor-default"
                       : syncStatus === "Error"
                         ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
@@ -774,7 +774,7 @@ export function DashboardClient() {
               >
                 {syncStatus === "Saving..." ? (
                   <RefreshCw size={13} className="animate-spin" />
-                ) : syncStatus === "Saved" ? (
+                ) : (syncStatus === "Saved" || syncStatus === "Saved Locally") ? (
                   <Check size={13} />
                 ) : (
                   <RefreshCw size={13} />
@@ -784,9 +784,11 @@ export function DashboardClient() {
                     ? "Syncing..."
                     : syncStatus === "Saved"
                       ? "Saved to cloud"
-                      : syncStatus === "Error"
-                        ? "Sync Error"
-                        : "Up to date"}
+                      : syncStatus === "Saved Locally"
+                        ? "Saved locally"
+                        : syncStatus === "Error"
+                          ? "Sync Error"
+                          : "Up to date"}
                 </span>
               </button>
 
