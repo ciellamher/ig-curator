@@ -141,9 +141,27 @@ export function InspoFolderView({
     setIsUploading(true);
     try {
       const filePromises = files.map(
-        (file) =>
-          new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
-            const isVideo = file.type.startsWith("video/");
+        async (file) => {
+          const isVideo = file.type.startsWith("video/");
+          
+          // First attempt: Upload via API
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+            const data = await res.json();
+            if (data.success && data.url) {
+              return { url: data.url, isVideo };
+            }
+          } catch (uploadError) {
+            console.error("Cloud upload failed, falling back to base64", uploadError);
+          }
+
+          // Fallback: Base64
+          return new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const result = e.target?.result as string;
@@ -183,7 +201,8 @@ export function InspoFolderView({
             };
             reader.onerror = reject;
             reader.readAsDataURL(file);
-          }),
+          });
+        }
       );
 
       const processedFiles = await Promise.all(filePromises);
