@@ -150,7 +150,12 @@ export function InspoFolderView({
         try {
           const prefix = isVideo ? "video" : "image";
           const uniqueId = `media-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          await saveMediaBlob(uniqueId, file);
+          
+          // Convert File to pure Blob to prevent fragile OS file reference loss on refresh
+          const arrayBuffer = await file.arrayBuffer();
+          const pureBlob = new Blob([arrayBuffer], { type: file.type });
+          
+          await saveMediaBlob(uniqueId, pureBlob);
           
           processedFiles.push({
             url: `local-media://${uniqueId}`,
