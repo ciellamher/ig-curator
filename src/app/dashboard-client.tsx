@@ -366,6 +366,13 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     const timer = setTimeout(async () => {
       try {
+        // Always save to IDB first
+        try {
+          await setItem("ig-curator-items", items);
+        } catch (idbErr) {
+          console.error("Failed to save to local IDB", idbErr);
+        }
+
         let payloadString = "";
         try {
           payloadString = JSON.stringify(items);
