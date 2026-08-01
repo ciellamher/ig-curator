@@ -73,7 +73,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
             const img = new Image();
             img.onload = () => {
               const canvas = document.createElement("canvas");
-              const MAX_SIZE = 720;
+              const MAX_SIZE = 500;
               let width = img.width;
               let height = img.height;
               if (width > height) {
@@ -85,7 +85,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
               canvas.height = height;
               const ctx = canvas.getContext("2d");
               ctx?.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL("image/jpeg", 0.72));
+              resolve(canvas.toDataURL("image/jpeg", 0.6));
             };
             img.onerror = reject;
             img.src = ev.target?.result as string;

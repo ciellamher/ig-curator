@@ -70,14 +70,31 @@ export function EditorPanel({
     setIsUploading(true);
     try {
       const base64Promises = files.map(
-        (file) =>
-          new Promise<string>((resolve, reject) => {
+        async (file) => {
+          // First try to upload to cloud Blob storage
+          try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const res = await fetch("/api/upload", {
+              method: "POST",
+              body: formData,
+            });
+            const data = await res.json();
+            if (data.success && data.url) {
+              return data.url;
+            }
+          } catch (uploadError) {
+            console.error("Cloud upload failed, falling back to base64", uploadError);
+          }
+
+          // Fallback to local Base64 canvas resize
+          return new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const img = new Image();
               img.onload = () => {
                 const canvas = document.createElement("canvas");
-                const MAX_SIZE = 800;
+                const MAX_SIZE = 500;
                 let width = img.width;
                 let height = img.height;
 
@@ -96,14 +113,15 @@ export function EditorPanel({
                 canvas.height = height;
                 const ctx = canvas.getContext("2d");
                 ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL("image/jpeg", 0.75));
+                resolve(canvas.toDataURL("image/jpeg", 0.6));
               };
               img.onerror = reject;
               img.src = e.target?.result as string;
             };
             reader.onerror = reject;
             reader.readAsDataURL(file);
-          }),
+          });
+        }
       );
 
       const newBase64Strings = await Promise.all(base64Promises);

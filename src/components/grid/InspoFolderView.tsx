@@ -171,7 +171,7 @@ export function InspoFolderView({
                 const img = new Image();
                 img.onload = () => {
                   const canvas = document.createElement("canvas");
-                  const MAX_SIZE = 1000;
+                  const MAX_SIZE = 500;
                   let width = img.width;
                   let height = img.height;
 
@@ -191,7 +191,7 @@ export function InspoFolderView({
                   const ctx = canvas.getContext("2d");
                   ctx?.drawImage(img, 0, 0, width, height);
                   resolve({
-                    url: canvas.toDataURL("image/jpeg", 0.8),
+                    url: canvas.toDataURL("image/jpeg", 0.6),
                     isVideo: false,
                   });
                 };
