@@ -783,24 +783,7 @@ export function DashboardClient() {
                 </span>
               </button>
 
-              <button
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: "Clear Grid",
-                    message: "Are you sure you want to delete all items in your grid? This cannot be undone.",
-                    confirmLabel: "Clear All",
-                  });
-                  if (ok) {
-                    updateItems(() => initialItems);
-                    setActiveSlotId(null);
-                  }
-                }}
-                className="text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-2"
-                title="Clear Grid"
-              >
-                <X size={13} />
-                <span className="hidden sm:inline">Clear Grid</span>
-              </button>
+
 
               {/* Connect Mac Folder for unlimited storage */}
               {isFileSystemSupported() && (
