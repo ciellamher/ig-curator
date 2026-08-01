@@ -481,6 +481,7 @@ export function DashboardClient() {
       contentType: "InspoFolder",
     };
     updateItems((curr) => [newFolder, ...curr]);
+    setActiveInspoFolderId(newFolder.id);
   };
 
   const handleDeleteInspoFolder = async (folderId: string) => {
