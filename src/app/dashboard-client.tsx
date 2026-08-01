@@ -1014,7 +1014,7 @@ export function DashboardClient() {
                         </p>
                       </div>
                     ) : gridFilter === "Inspo" ? (
-                      activeInspoFolderId ? (
+                      activeInspoFolderId && items.find((i) => i.id === activeInspoFolderId) ? (
                         <InspoFolderView
                           folder={items.find(
                             (i) => i.id === activeInspoFolderId,
@@ -1071,7 +1071,7 @@ export function DashboardClient() {
                         searchResults={searchMatches}
                       />
                     ) : gridFilter === "Story" ? (
-                      activeStoryFolderId ? (
+                      activeStoryFolderId && items.find((i) => i.id === activeStoryFolderId) ? (
                         <StoryFolderView
                           folder={items.find(
                             (i) => i.id === activeStoryFolderId,
