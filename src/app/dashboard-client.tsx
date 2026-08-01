@@ -39,6 +39,7 @@ import {
   Check,
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
+import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   isFileSystemSupported,
   getStoredHandle,
@@ -69,6 +70,7 @@ export function DashboardClient() {
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
   const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone");
+  const { confirm, modalProps } = useConfirmModal();
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(
     null,
   );
@@ -670,11 +672,22 @@ export function DashboardClient() {
     updateItems((curr) => [newFolder, ...curr]);
   };
 
-  const handleDeleteInspoFolder = (folderId: string) => {
+  const handleDeleteInspoFolder = async (folderId: string) => {
+    const ok = await confirm({
+      title: "Delete Folder",
+      message: "Are you sure you want to delete this folder and all its contents? This cannot be undone.",
+      confirmLabel: "Delete Folder",
+    });
+    if (!ok) return;
+
     updateItems((curr) =>
       curr.filter((i) => i.id !== folderId && i.folderId !== folderId),
     );
     if (activeInspoFolderId === folderId) setActiveInspoFolderId(null);
+    // If activeSlot was in this folder, clear it
+    if (items.find((i) => i.id === activeSlotId)?.folderId === folderId) {
+      setActiveSlotId(null);
+    }
   };
 
   const handleCopyInspoToGrid = (
@@ -768,6 +781,25 @@ export function DashboardClient() {
                         ? "Sync Error"
                         : "Up to date"}
                 </span>
+              </button>
+
+              <button
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Clear Grid",
+                    message: "Are you sure you want to delete all items in your grid? This cannot be undone.",
+                    confirmLabel: "Clear All",
+                  });
+                  if (ok) {
+                    updateItems(() => initialItems);
+                    setActiveSlotId(null);
+                  }
+                }}
+                className="text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-2"
+                title="Clear Grid"
+              >
+                <X size={13} />
+                <span className="hidden sm:inline">Clear Grid</span>
               </button>
 
               {/* Connect Mac Folder for unlimited storage */}
@@ -1078,14 +1110,24 @@ export function DashboardClient() {
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
                           updateItem={updateItem}
-                          onDeleteFolder={(id) =>
+                          onDeleteFolder={async (id) => {
+                            const ok = await confirm({
+                              title: "Delete Folder",
+                              message: "Are you sure you want to delete this story folder and all its stories? This cannot be undone.",
+                              confirmLabel: "Delete Folder",
+                            });
+                            if (!ok) return;
+
                             updateItems((prev) =>
                               prev.filter(
                                 (item) =>
                                   item.id !== id && item.folderId !== id,
                               ),
-                            )
-                          }
+                            );
+                            if (items.find((i) => i.id === activeSlotId)?.folderId === id) {
+                              setActiveSlotId(null);
+                            }
+                          }}
                         />
                       )
                     ) : (
@@ -1113,12 +1155,19 @@ export function DashboardClient() {
                         isSearchActive={searchQuery.trim() !== ""}
                         searchResults={searchMatches}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
-                        onDeleteItem={(id) => {
-                          updateItems((prev) =>
-                            prev.filter((item) => item.id !== id),
-                          );
-                          if (activeSlotId === id) setActiveSlotId(null);
-                          if (previewSlotId === id) setPreviewSlotId(null);
+                        onDeleteItem={async (id) => {
+                          const ok = await confirm({
+                            title: "Delete Post",
+                            message: "Are you sure you want to delete this post? This cannot be undone.",
+                            confirmLabel: "Delete",
+                          });
+                          if (ok) {
+                            updateItems((prev) =>
+                              prev.filter((item) => item.id !== id),
+                            );
+                            if (activeSlotId === id) setActiveSlotId(null);
+                            if (previewSlotId === id) setPreviewSlotId(null);
+                          }
                         }}
                       />
                     )}
@@ -1126,7 +1175,7 @@ export function DashboardClient() {
                 </div>
               </div>
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
-            {activeSlotId && (
+            {activeSlotId && activeSlot && (
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
                 <div
@@ -1180,11 +1229,16 @@ export function DashboardClient() {
                       activeSlot={activeSlot}
                       updateSlot={updateItem}
                       onClose={() => setActiveSlotId(null)}
-                      onDeleteSlot={(id) => {
-                        updateItems((prev) =>
-                          prev.filter((item) => item.id !== id),
-                        );
-                        setActiveSlotId(null);
+                      onDeleteSlot={async (id) => {
+                        const ok = await confirm({
+                          title: "Delete Post",
+                          message: "Are you sure you want to delete this post? This cannot be undone.",
+                          confirmLabel: "Delete",
+                        });
+                        if (ok) {
+                          updateItems((prev) => prev.filter((i) => i.id !== id));
+                          setActiveSlotId(null);
+                        }
                       }}
                     />
                   </div>
@@ -1202,7 +1256,7 @@ export function DashboardClient() {
           </div>
         </div>
       </div>
-
+      <ConfirmModal {...modalProps} />
     </div>
   );
 }
