@@ -165,47 +165,52 @@ export function InspoFolderView({
 
         // Fallback: Base64
         if (!processedData) {
-          processedData = await new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const result = e.target?.result as string;
-              if (isVideo) {
-                resolve({ url: result, isVideo: true });
-              } else {
-                const img = new Image();
-                img.onload = () => {
-                  const canvas = document.createElement("canvas");
-                  const MAX_SIZE = 500;
-                  let width = img.width;
-                  let height = img.height;
+          try {
+            processedData = await new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const result = e.target?.result as string;
+                if (isVideo) {
+                  resolve({ url: result, isVideo: true });
+                } else {
+                  const img = new Image();
+                  img.onload = () => {
+                    const canvas = document.createElement("canvas");
+                    const MAX_SIZE = 500;
+                    let width = img.width;
+                    let height = img.height;
 
-                  if (width > height) {
-                    if (width > MAX_SIZE) {
-                      height = Math.round((height * MAX_SIZE) / width);
-                      width = MAX_SIZE;
+                    if (width > height) {
+                      if (width > MAX_SIZE) {
+                        height = Math.round((height * MAX_SIZE) / width);
+                        width = MAX_SIZE;
+                      }
+                    } else {
+                      if (height > MAX_SIZE) {
+                        width = Math.round((width * MAX_SIZE) / height);
+                        height = MAX_SIZE;
+                      }
                     }
-                  } else {
-                    if (height > MAX_SIZE) {
-                      width = Math.round((width * MAX_SIZE) / height);
-                      height = MAX_SIZE;
-                    }
-                  }
-                  canvas.width = width;
-                  canvas.height = height;
-                  const ctx = canvas.getContext("2d");
-                  ctx?.drawImage(img, 0, 0, width, height);
-                  resolve({
-                    url: canvas.toDataURL("image/jpeg", 0.6),
-                    isVideo: false,
-                  });
-                };
-                img.onerror = reject;
-                img.src = result;
-              }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    resolve({
+                      url: canvas.toDataURL("image/jpeg", 0.6),
+                      isVideo: false,
+                    });
+                  };
+                  img.onerror = () => reject(new Error("Image unsupported"));
+                  img.src = result;
+                }
+              };
+              reader.onerror = () => reject(new Error("File read error"));
+              reader.readAsDataURL(file);
+            });
+          } catch (e) {
+            console.error("Skipping unsupported or corrupted file:", e);
+            continue; // Skip this file and proceed with the rest
+          }
         }
         
         if (processedData) {

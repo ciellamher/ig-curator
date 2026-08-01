@@ -92,39 +92,44 @@ export function EditorPanel({
 
         // Fallback to local Base64 canvas resize
         if (!uploadedUrl) {
-          uploadedUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-              const img = new Image();
-              img.onload = () => {
-                const canvas = document.createElement("canvas");
-                const MAX_SIZE = 500;
-                let width = img.width;
-                let height = img.height;
+          try {
+            uploadedUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                  const canvas = document.createElement("canvas");
+                  const MAX_SIZE = 500;
+                  let width = img.width;
+                  let height = img.height;
 
-                if (width > height) {
-                  if (width > MAX_SIZE) {
-                    height = Math.round((height * MAX_SIZE) / width);
-                    width = MAX_SIZE;
+                  if (width > height) {
+                    if (width > MAX_SIZE) {
+                      height = Math.round((height * MAX_SIZE) / width);
+                      width = MAX_SIZE;
+                    }
+                  } else {
+                    if (height > MAX_SIZE) {
+                      width = Math.round((width * MAX_SIZE) / height);
+                      height = MAX_SIZE;
+                    }
                   }
-                } else {
-                  if (height > MAX_SIZE) {
-                    width = Math.round((width * MAX_SIZE) / height);
-                    height = MAX_SIZE;
-                  }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                ctx?.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL("image/jpeg", 0.6));
+                  canvas.width = width;
+                  canvas.height = height;
+                  const ctx = canvas.getContext("2d");
+                  ctx?.drawImage(img, 0, 0, width, height);
+                  resolve(canvas.toDataURL("image/jpeg", 0.6));
+                };
+                img.onerror = () => reject(new Error("Image unsupported"));
+                img.src = e.target?.result as string;
               };
-              img.onerror = reject;
-              img.src = e.target?.result as string;
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+              reader.onerror = () => reject(new Error("File read error"));
+              reader.readAsDataURL(file);
+            });
+          } catch (e) {
+            console.error("Skipping unsupported or corrupted file:", e);
+            continue; // Skip this file and proceed with the rest
+          }
         }
         
         if (uploadedUrl) {
