@@ -185,11 +185,35 @@ export function DashboardClient() {
   const [hasFolderConnected, setHasFolderConnected] = useState(false);
   const [hasStoredFolder, setHasStoredFolder] = useState(false);
 
-  // Check if we have a stored folder handle (but don't request permission yet - needs user click)
+  const connectAndLoad = async (handle: FileSystemDirectoryHandle) => {
+    fsHandleRef.current = handle;
+    setHasFolderConnected(true);
+    const folderData = await loadFromFolder(handle);
+    if (folderData && (folderData as any[]).length > 0) {
+      setItems(folderData as SlotItem[]);
+    } else {
+      await saveToFolder(handle, items);
+    }
+  };
+
+  const [showReconnectOverlay, setShowReconnectOverlay] = useState(false);
+
+  // Check if we have a stored folder handle
   useEffect(() => {
     if (!isFileSystemSupported()) return;
-    getStoredHandle().then((handle) => {
-      if (handle) setHasStoredFolder(true);
+    getStoredHandle().then(async (handle) => {
+      if (handle) {
+        setHasStoredFolder(true);
+        // Try silently reconnecting if permission was persisted (e.g. installed PWA)
+        const opts = { mode: "readwrite" };
+        if ((await (handle as any).queryPermission(opts)) === "granted") {
+          fsHandleRef.current = handle;
+          setHasFolderConnected(true);
+        } else {
+          // Requires user gesture to prompt
+          setShowReconnectOverlay(true);
+        }
+      }
     });
   }, []);
 
@@ -676,6 +700,38 @@ export function DashboardClient() {
 
   return (
     <div className="w-full flex flex-col min-h-screen bg-soft-50">
+      {showReconnectOverlay && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={async () => {
+            const stored = await getStoredHandle();
+            if (stored) {
+              const ok = await verifyPermission(stored);
+              if (ok) {
+                await connectAndLoad(stored);
+                setShowReconnectOverlay(false);
+              } else {
+                setShowReconnectOverlay(false);
+              }
+            } else {
+              setShowReconnectOverlay(false);
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FolderHeart size={32} className="text-blue-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Reconnect to Mac</h2>
+            <p className="text-slate-600 mb-6 text-sm">
+              Click anywhere to automatically restore connection to your local save folder and load your latest changes.
+            </p>
+            <div className="text-xs text-slate-400">
+              Browser security requires a click to restore folder access.
+            </div>
+          </div>
+        </div>
+      )}
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Main Planner Workspace */}
@@ -718,19 +774,6 @@ export function DashboardClient() {
               {isFileSystemSupported() && (
                 <button
                   onClick={async () => {
-                    const connectAndLoad = async (handle: FileSystemDirectoryHandle) => {
-                      fsHandleRef.current = handle;
-                      setHasFolderConnected(true);
-                      // Load latest data FROM the folder (this is the source of truth)
-                      const folderData = await loadFromFolder(handle);
-                      if (folderData && (folderData as any[]).length > 0) {
-                        setItems(folderData as SlotItem[]);
-                      } else {
-                        // First time or empty folder — save current data TO folder
-                        await saveToFolder(handle, items);
-                      }
-                    };
-
                     if (hasFolderConnected) {
                       // Already connected — manual save
                       try {
