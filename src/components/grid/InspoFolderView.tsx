@@ -538,9 +538,7 @@ export function InspoFolderView({
                 </div>
               )}
               {item.urls && item.urls.length > 0 ? (
-                item.urls[item.currentUrlIndex || 0].startsWith(
-                  "local-media://",
-                ) ? (
+                item.urls[item.currentUrlIndex || 0].startsWith("data:video") || item.urls[item.currentUrlIndex || 0].includes("-video-") ? (
                   <LocalMediaVideo
                     src={item.urls[item.currentUrlIndex || 0]}
                     className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
