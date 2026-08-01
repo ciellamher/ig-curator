@@ -86,7 +86,6 @@ export function DashboardClient() {
       const savedUI = localStorage.getItem("ig-curator-ui-state");
       if (savedUI) {
         const state = JSON.parse(savedUI);
-        if (state.activeTab) setActiveTab(state.activeTab);
         if (state.gridFilter) setGridFilter(state.gridFilter);
         if (state.deviceView) setDeviceView(state.deviceView);
         if (state.activeStoryFolderId !== undefined) setActiveStoryFolderId(state.activeStoryFolderId);
@@ -99,14 +98,13 @@ export function DashboardClient() {
   useEffect(() => {
     try {
       localStorage.setItem("ig-curator-ui-state", JSON.stringify({
-        activeTab,
         gridFilter,
         deviceView,
         activeStoryFolderId,
         activeInspoFolderId,
       }));
     } catch (e) {}
-  }, [activeTab, gridFilter, deviceView, activeStoryFolderId, activeInspoFolderId]);
+  }, [gridFilter, deviceView, activeStoryFolderId, activeInspoFolderId]);
 
   // Search & Match Navigation State
   const [searchQuery, setSearchQuery] = useState("");
@@ -777,10 +775,6 @@ export function DashboardClient() {
                 matchCount={searchMatches.length}
                 onClearSearch={handleClearSearch}
                 placeholder="Search placeholders (e.g. selfie)..."
-                hideDeviceToggle={
-                  activeStoryFolderId !== null ||
-                  activeInspoFolderId !== null
-                }
               />
             </div>
 
@@ -804,8 +798,7 @@ export function DashboardClient() {
 
           {/* Grid Workspace */}
           <div className="flex-1 overflow-y-auto p-2 sm:p-6 md:p-8 relative flex justify-center">
-            {activeTab === "CREATE" && (
-              /* Dynamic View Container (Phone or Desktop) */
+              {/* Dynamic View Container (Phone or Desktop) */}
               <div
                 className={`
                 ${
@@ -1089,10 +1082,8 @@ export function DashboardClient() {
                   </div>
                 </div>
               </div>
-            )}
-
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
-            {activeTab === "CREATE" && activeSlotId && (
+            {activeSlotId && (
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
                 <div
@@ -1159,7 +1150,7 @@ export function DashboardClient() {
             )}
 
             {/* Instagram Feed / Reel Preview Modal */}
-            {activeTab === "CREATE" && previewSlotId && (
+            {previewSlotId && (
               <InstagramPreviewModal
                 item={items.find((i) => i.id === previewSlotId)!}
                 onClose={() => setPreviewSlotId(null)}
