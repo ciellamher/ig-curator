@@ -7,6 +7,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || "fallback_secret_ig_curator_12345",
   adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
