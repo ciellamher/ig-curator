@@ -404,7 +404,7 @@ export function InspoFolderView({
                           key={idx}
                           className="w-full h-full overflow-hidden bg-soft-100"
                         >
-                          {url.startsWith("local-media://") ? (
+                          {url.startsWith("data:video") || url.includes("-video-") ? (
                             <LocalMediaVideo
                               src={url}
                               className="w-full h-full object-cover"
@@ -424,7 +424,7 @@ export function InspoFolderView({
                       ))}
                     </div>
                   ) : folderImages.length > 0 ? (
-                    folderImages[0].startsWith("local-media://") ? (
+                    folderImages[0].startsWith("data:video") || folderImages[0].includes("-video-") ? (
                       <LocalMediaVideo
                         src={folderImages[0]}
                         className="absolute inset-0 w-full h-full object-cover"
@@ -643,9 +643,7 @@ export function InspoFolderView({
             <div className="relative flex w-full items-center justify-center overflow-hidden bg-black group">
               {previewItem.urls && previewItem.urls.length > 0 ? (
                 <>
-                  {previewItem.urls[
-                    previewItem.currentUrlIndex || 0
-                  ].startsWith("local-media://") ? (
+                  {previewItem.urls[previewItem.currentUrlIndex || 0].startsWith("data:video") || previewItem.urls[previewItem.currentUrlIndex || 0].includes("-video-") ? (
                     <LocalMediaVideo
                       src={previewItem.urls[previewItem.currentUrlIndex || 0]}
                       className="w-full h-auto max-h-[70vh] object-contain"
