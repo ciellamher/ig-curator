@@ -69,26 +69,30 @@ export function EditorPanel({
 
     setIsUploading(true);
     try {
-      const base64Promises = files.map(
-        async (file) => {
-          // First try to upload to cloud Blob storage
-          try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const res = await fetch("/api/upload", {
-              method: "POST",
-              body: formData,
-            });
-            const data = await res.json();
-            if (data.success && data.url) {
-              return data.url;
-            }
-          } catch (uploadError) {
-            console.error("Cloud upload failed, falling back to base64", uploadError);
+      const newBase64Strings: string[] = [];
+      
+      for (const file of files) {
+        let uploadedUrl: string | null = null;
+        
+        // First try to upload to cloud Blob storage
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (data.success && data.url) {
+            uploadedUrl = data.url;
           }
+        } catch (uploadError) {
+          console.error("Cloud upload failed, falling back to base64", uploadError);
+        }
 
-          // Fallback to local Base64 canvas resize
-          return new Promise<string>((resolve, reject) => {
+        // Fallback to local Base64 canvas resize
+        if (!uploadedUrl) {
+          uploadedUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const img = new Image();
@@ -122,9 +126,12 @@ export function EditorPanel({
             reader.readAsDataURL(file);
           });
         }
-      );
+        
+        if (uploadedUrl) {
+          newBase64Strings.push(uploadedUrl);
+        }
+      }
 
-      const newBase64Strings = await Promise.all(base64Promises);
       const newUrls = [...(activeSlot.urls || []), ...newBase64Strings];
 
       updateSlot(activeSlot.id, {

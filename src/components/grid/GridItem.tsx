@@ -49,7 +49,11 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
 
     setIsUploading(true);
     try {
-      const base64Promises = files.map(async (file) => {
+      const newBase64Strings: string[] = [];
+      
+      for (const file of files) {
+        let uploadedUrl: string | null = null;
+        
         // First try to upload to cloud Blob storage
         try {
           const formData = new FormData();
@@ -60,42 +64,47 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
           });
           const data = await res.json();
           if (data.success && data.url) {
-            return data.url;
+            uploadedUrl = data.url;
           }
         } catch (uploadError) {
           console.error("Cloud upload failed, falling back to base64", uploadError);
         }
 
         // Fallback to local Base64 canvas resize
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const img = new Image();
-            img.onload = () => {
-              const canvas = document.createElement("canvas");
-              const MAX_SIZE = 500;
-              let width = img.width;
-              let height = img.height;
-              if (width > height) {
-                if (width > MAX_SIZE) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
-              } else {
-                if (height > MAX_SIZE) { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
-              }
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext("2d");
-              ctx?.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL("image/jpeg", 0.6));
+        if (!uploadedUrl) {
+          uploadedUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              const img = new Image();
+              img.onload = () => {
+                const canvas = document.createElement("canvas");
+                const MAX_SIZE = 500;
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                  if (width > MAX_SIZE) { height = Math.round((height * MAX_SIZE) / width); width = MAX_SIZE; }
+                } else {
+                  if (height > MAX_SIZE) { width = Math.round((width * MAX_SIZE) / height); height = MAX_SIZE; }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL("image/jpeg", 0.6));
+              };
+              img.onerror = reject;
+              img.src = ev.target?.result as string;
             };
-            img.onerror = reject;
-            img.src = ev.target?.result as string;
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      });
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+        
+        if (uploadedUrl) {
+          newBase64Strings.push(uploadedUrl);
+        }
+      }
 
-      const newBase64Strings = await Promise.all(base64Promises);
       const newUrls = [...item.urls, ...newBase64Strings];
       updateItem(item.id, {
         type: "image",

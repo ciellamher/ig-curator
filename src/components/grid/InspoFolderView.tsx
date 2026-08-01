@@ -140,28 +140,32 @@ export function InspoFolderView({
 
     setIsUploading(true);
     try {
-      const filePromises = files.map(
-        async (file) => {
-          const isVideo = file.type.startsWith("video/");
-          
-          // First attempt: Upload via API
-          try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const res = await fetch("/api/upload", {
-              method: "POST",
-              body: formData,
-            });
-            const data = await res.json();
-            if (data.success && data.url) {
-              return { url: data.url, isVideo };
-            }
-          } catch (uploadError) {
-            console.error("Cloud upload failed, falling back to base64", uploadError);
-          }
+      const processedFiles: { url: string; isVideo: boolean }[] = [];
+      
+      for (const file of files) {
+        const isVideo = file.type.startsWith("video/");
+        
+        let processedData: { url: string; isVideo: boolean } | null = null;
 
-          // Fallback: Base64
-          return new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
+        // First attempt: Upload via API
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (data.success && data.url) {
+            processedData = { url: data.url, isVideo };
+          }
+        } catch (uploadError) {
+          console.error("Cloud upload failed, falling back to base64", uploadError);
+        }
+
+        // Fallback: Base64
+        if (!processedData) {
+          processedData = await new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
               const result = e.target?.result as string;
@@ -203,9 +207,11 @@ export function InspoFolderView({
             reader.readAsDataURL(file);
           });
         }
-      );
-
-      const processedFiles = await Promise.all(filePromises);
+        
+        if (processedData) {
+          processedFiles.push(processedData);
+        }
+      }
 
       // Create new InspoPost items
       const newItems: SlotItem[] = processedFiles.map((pf, index) => ({
