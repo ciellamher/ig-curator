@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SlotItem } from "@/types";
-import { Plus, FolderHeart, Trash2, X, Edit2, ChevronLeft } from "lucide-react";
+import { Plus, Trash2, X, Edit2, ChevronLeft } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -13,7 +14,7 @@ interface InspoFolderListViewProps {
   onDeleteFolder: (folderId: string) => void;
   updateItem?: (id: string, updates: Partial<SlotItem>) => void;
 }
-import { useRef } from "react";
+
 export function InspoFolderListView({
   folders,
   allItems,
@@ -192,7 +193,7 @@ export function InspoFolderListView({
 
               {newCoverUrl ? (
                 <div className="relative w-20 h-20 rounded-xl overflow-hidden group">
-                  <img
+                  <LocalMediaImage
                     src={newCoverUrl}
                     className="w-full h-full object-cover"
                   />
@@ -301,17 +302,16 @@ export function InspoFolderListView({
                             key={idx}
                             className="w-full h-full overflow-hidden bg-soft-100"
                           >
-                            {url.startsWith("data:video") ? (
-                              <video
+                            {url.includes("video") ? (
+                              <LocalMediaVideo
                                 src={url}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 muted
                                 loop
-                                autoPlay
                                 playsInline
                               />
                             ) : (
-                              <img
+                              <LocalMediaImage
                                 src={url}
                                 alt=""
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -321,20 +321,19 @@ export function InspoFolderListView({
                         ))}
                       </div>
                     ) : folderImages.length > 0 ? (
-                      folderImages[0].startsWith("data:video") ? (
-                        <video
+                      folderImages[0].includes("video") ? (
+                        <LocalMediaVideo
                           src={folderImages[0]}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           muted
                           loop
-                          autoPlay
                           playsInline
                         />
                       ) : (
-                        <img
+                        <LocalMediaImage
                           src={folderImages[0]}
-                          alt={folder.text}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          alt={folder.text || ""}
+                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       )
                     ) : null}

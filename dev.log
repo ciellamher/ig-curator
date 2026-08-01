@@ -27,3 +27,12 @@
 - Experiments (use with caution):
   · serverActions
 
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.2.10 (Turbopack)
+- Local:         http://localhost:3003
+- Network:       http://192.168.68.122:3003
+- Environments: .env
+✓ Ready in 251ms
+- Experiments (use with caution):
+  · serverActions
+

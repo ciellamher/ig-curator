@@ -70,70 +70,18 @@ export function EditorPanel({
     setIsUploading(true);
     try {
       const newBase64Strings: string[] = [];
+      const { saveMediaBlob } = await import('@/lib/idb');
       
       for (const file of files) {
-        let uploadedUrl: string | null = null;
-        
-        // First try to upload to cloud Blob storage
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
-          });
-          const data = await res.json();
-          if (data.success && data.url) {
-            uploadedUrl = data.url;
-          }
-        } catch (uploadError) {
-          console.error("Cloud upload failed, falling back to base64", uploadError);
-        }
-
-        // Fallback to local Base64 canvas resize
-        if (!uploadedUrl) {
-          try {
-            uploadedUrl = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                  const canvas = document.createElement("canvas");
-                  const MAX_SIZE = 500;
-                  let width = img.width;
-                  let height = img.height;
-
-                  if (width > height) {
-                    if (width > MAX_SIZE) {
-                      height = Math.round((height * MAX_SIZE) / width);
-                      width = MAX_SIZE;
-                    }
-                  } else {
-                    if (height > MAX_SIZE) {
-                      width = Math.round((width * MAX_SIZE) / height);
-                      height = MAX_SIZE;
-                    }
-                  }
-                  canvas.width = width;
-                  canvas.height = height;
-                  const ctx = canvas.getContext("2d");
-                  ctx?.drawImage(img, 0, 0, width, height);
-                  resolve(canvas.toDataURL("image/jpeg", 0.6));
-                };
-                img.onerror = () => reject(new Error("Image unsupported"));
-                img.src = e.target?.result as string;
-              };
-              reader.onerror = () => reject(new Error("File read error"));
-              reader.readAsDataURL(file);
-            });
-          } catch (e) {
-            console.error("Skipping unsupported or corrupted file:", e);
-            continue; // Skip this file and proceed with the rest
-          }
-        }
-        
-        if (uploadedUrl) {
-          newBase64Strings.push(uploadedUrl);
+          const isVideo = file.type.startsWith("video/");
+          const prefix = isVideo ? "video" : "image";
+          const uniqueId = `media-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await saveMediaBlob(uniqueId, file);
+          newBase64Strings.push(`local-media://${uniqueId}`);
+        } catch (e) {
+          console.error("Failed to save media to IDB:", e);
+          continue;
         }
       }
 
@@ -452,19 +400,7 @@ export function EditorPanel({
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5 flex-1">
-              <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">
-                Caption & Hashtags
-              </label>
-              <textarea
-                value={activeSlot.caption || ""}
-                onChange={(e) =>
-                  updateSlot(activeSlot.id, { caption: e.target.value })
-                }
-                placeholder="Write a caption..."
-                className="p-3 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-sm min-h-[120px] resize-none transition-all"
-              />
-            </div>
+
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">

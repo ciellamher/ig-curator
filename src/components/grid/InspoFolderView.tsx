@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 
 interface InspoFolderViewProps {
   folder: SlotItem;
@@ -141,80 +142,23 @@ export function InspoFolderView({
     setIsUploading(true);
     try {
       const processedFiles: { url: string; isVideo: boolean }[] = [];
+      const { saveMediaBlob } = await import('@/lib/idb');
       
       for (const file of files) {
         const isVideo = file.type.startsWith("video/");
         
-        let processedData: { url: string; isVideo: boolean } | null = null;
-
-        // First attempt: Upload via API
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-          const res = await fetch("/api/upload", {
-            method: "POST",
-            body: formData,
+          const prefix = isVideo ? "video" : "image";
+          const uniqueId = `media-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await saveMediaBlob(uniqueId, file);
+          
+          processedFiles.push({
+            url: `local-media://${uniqueId}`,
+            isVideo
           });
-          const data = await res.json();
-          if (data.success && data.url) {
-            processedData = { url: data.url, isVideo };
-          }
-        } catch (uploadError) {
-          console.error("Cloud upload failed, falling back to base64", uploadError);
-        }
-
-        // Fallback: Base64
-        if (!processedData) {
-          try {
-            processedData = await new Promise<{ url: string; isVideo: boolean }>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const result = e.target?.result as string;
-                if (isVideo) {
-                  resolve({ url: result, isVideo: true });
-                } else {
-                  const img = new Image();
-                  img.onload = () => {
-                    const canvas = document.createElement("canvas");
-                    const MAX_SIZE = 500;
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                      if (width > MAX_SIZE) {
-                        height = Math.round((height * MAX_SIZE) / width);
-                        width = MAX_SIZE;
-                      }
-                    } else {
-                      if (height > MAX_SIZE) {
-                        width = Math.round((width * MAX_SIZE) / height);
-                        height = MAX_SIZE;
-                      }
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext("2d");
-                    ctx?.drawImage(img, 0, 0, width, height);
-                    resolve({
-                      url: canvas.toDataURL("image/jpeg", 0.6),
-                      isVideo: false,
-                    });
-                  };
-                  img.onerror = () => reject(new Error("Image unsupported"));
-                  img.src = result;
-                }
-              };
-              reader.onerror = () => reject(new Error("File read error"));
-              reader.readAsDataURL(file);
-            });
-          } catch (e) {
-            console.error("Skipping unsupported or corrupted file:", e);
-            continue; // Skip this file and proceed with the rest
-          }
-        }
-        
-        if (processedData) {
-          processedFiles.push(processedData);
+        } catch (e) {
+          console.error("Failed to save media to IDB:", e);
+          continue;
         }
       }
 
@@ -455,8 +399,8 @@ export function InspoFolderView({
                           key={idx}
                           className="w-full h-full overflow-hidden bg-soft-100"
                         >
-                          {url.startsWith("data:video") ? (
-                            <video
+                          {url.startsWith("local-media://") ? (
+                            <LocalMediaVideo
                               src={url}
                               className="w-full h-full object-cover"
                               muted
@@ -465,7 +409,7 @@ export function InspoFolderView({
                               playsInline
                             />
                           ) : (
-                            <img
+                            <LocalMediaImage
                               src={url}
                               alt=""
                               className="w-full h-full object-cover"
@@ -475,8 +419,8 @@ export function InspoFolderView({
                       ))}
                     </div>
                   ) : folderImages.length > 0 ? (
-                    folderImages[0].startsWith("data:video") ? (
-                      <video
+                    folderImages[0].startsWith("local-media://") ? (
+                      <LocalMediaVideo
                         src={folderImages[0]}
                         className="absolute inset-0 w-full h-full object-cover"
                         muted
@@ -485,7 +429,7 @@ export function InspoFolderView({
                         playsInline
                       />
                     ) : (
-                      <img
+                      <LocalMediaImage
                         src={folderImages[0]}
                         alt={item.text}
                         className="absolute inset-0 w-full h-full object-cover"
@@ -590,19 +534,18 @@ export function InspoFolderView({
               )}
               {item.urls && item.urls.length > 0 ? (
                 item.urls[item.currentUrlIndex || 0].startsWith(
-                  "data:video",
+                  "local-media://",
                 ) ? (
-                  <video
+                  <LocalMediaVideo
                     src={item.urls[item.currentUrlIndex || 0]}
                     className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
                     muted
                     loop
                     autoPlay
                     playsInline
-                    controls
                   />
                 ) : (
-                  <img
+                  <LocalMediaImage
                     src={item.urls[item.currentUrlIndex || 0]}
                     className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
                   />
@@ -622,7 +565,7 @@ export function InspoFolderView({
                       e.stopPropagation();
                       const link = document.createElement("a");
                       link.href = item.urls[item.currentUrlIndex || 0];
-                      link.download = `inspo-${item.id}.${item.urls[item.currentUrlIndex || 0].startsWith("data:video") ? "mp4" : "jpg"}`;
+                      link.download = `inspo-${item.id}.${item.urls[item.currentUrlIndex || 0].includes("video") ? "mp4" : "jpg"}`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
@@ -697,8 +640,8 @@ export function InspoFolderView({
                 <>
                   {previewItem.urls[
                     previewItem.currentUrlIndex || 0
-                  ].startsWith("data:video") ? (
-                    <video
+                  ].startsWith("local-media://") ? (
+                    <LocalMediaVideo
                       src={previewItem.urls[previewItem.currentUrlIndex || 0]}
                       className="w-full h-auto max-h-[70vh] object-contain"
                       controls
@@ -707,7 +650,7 @@ export function InspoFolderView({
                       loop
                     />
                   ) : (
-                    <img
+                    <LocalMediaImage
                       src={previewItem.urls[previewItem.currentUrlIndex || 0]}
                       alt=""
                       className="w-full h-auto max-h-[70vh] object-contain"

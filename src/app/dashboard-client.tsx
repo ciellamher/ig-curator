@@ -40,15 +40,6 @@ import {
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
-import {
-  isFileSystemSupported,
-  getStoredHandle,
-  pickFolder,
-  verifyPermission,
-  saveToFolder,
-  loadFromFolder,
-  storeHandle,
-} from "@/lib/fileSystem";
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -182,42 +173,11 @@ export function DashboardClient() {
     "Idle" | "Saving..." | "Saved" | "Saved Locally" | "Error"
   >("Idle");
 
-  const hasLocalItemsRef = useRef(false);
-  const fsHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
-  const [hasFolderConnected, setHasFolderConnected] = useState(false);
-  const [hasStoredFolder, setHasStoredFolder] = useState(false);
-
-  const connectAndLoad = async (handle: FileSystemDirectoryHandle) => {
-    fsHandleRef.current = handle;
-    setHasFolderConnected(true);
-    const folderData = await loadFromFolder(handle);
-    if (folderData && (folderData as any[]).length > 0) {
-      setItems(folderData as SlotItem[]);
-    } else {
-      await saveToFolder(handle, items);
-    }
-  };
+  // Removed obsolete Local Folder API state variables
 
   const [showReconnectOverlay, setShowReconnectOverlay] = useState(false);
 
-  // Check if we have a stored folder handle
-  useEffect(() => {
-    if (!isFileSystemSupported()) return;
-    getStoredHandle().then(async (handle) => {
-      if (handle) {
-        setHasStoredFolder(true);
-        // Try silently reconnecting if permission was persisted (e.g. installed PWA)
-        const opts = { mode: "readwrite" };
-        if ((await (handle as any).queryPermission(opts)) === "granted") {
-          fsHandleRef.current = handle;
-          setHasFolderConnected(true);
-        } else {
-          // Requires user gesture to prompt
-          setShowReconnectOverlay(true);
-        }
-      }
-    });
-  }, []);
+  // Removed obsolete reconnect overlay check
 
   useEffect(() => {
     let isMounted = true;
@@ -276,79 +236,25 @@ export function DashboardClient() {
     }
 
     async function init() {
-      if (status === "unauthenticated") {
-        // NEVER delete local data - just show it as-is
-        try {
-          const saved = await getItem<SlotItem[]>("ig-curator-items");
-          if (saved && saved.length > 0 && isMounted) {
-            const compressed = await compressIfNeeded(saved);
-            setItems(compressed);
-          }
-        } catch (e) {}
-        if (isMounted) setIsLoaded(true);
-        return;
-      }
-
-      if (status === "loading") return;
-
-      // 1. Try loading from local folder first (unlimited storage)
-      let localItemsLoaded = false;
-      if (fsHandleRef.current) {
-        try {
-          const folderItems = await loadFromFolder(fsHandleRef.current);
-          if (folderItems && (folderItems as any[]).length > 0 && isMounted) {
-            setItems(folderItems as SlotItem[]);
-            localItemsLoaded = true;
-          }
-        } catch (err) {
-          console.error("Folder load failed, falling back to IDB:", err);
-        }
-      }
-
-      // 2. Fall back to IDB
-      if (!localItemsLoaded) {
-        try {
-          const saved = await getItem<SlotItem[]>("ig-curator-items");
-          const emergencyBackup = localStorage.getItem("ig-curator-items");
-          
-          if (emergencyBackup) {
-            try {
-              const parsed = JSON.parse(emergencyBackup);
-              localStorage.removeItem("ig-curator-items");
-              if (isMounted) setItems(parsed);
-              await setItem("ig-curator-items", parsed).catch(() => {});
-              if (parsed.length > 0) localItemsLoaded = true;
-            } catch (e) {}
-          } else if (saved && saved.length > 0) {
-            const compressed = await compressIfNeeded(saved);
-            if (isMounted) setItems(compressed);
-            localItemsLoaded = true;
-          }
-        } catch (error) {
-          console.error("Failed to load local grid", error);
-        }
-      }
-
-      // 2. Only check cloud if local hasn't definitively overridden it, or to sync profile
       try {
-        const { fetchGridFromCloud } = await import("@/app/actions/grid");
-        const res = await fetchGridFromCloud();
-        if (res.success && res.data) {
-          if (!localItemsLoaded && isMounted) {
-            setItems(res.data.items);
-          }
-          if (res.data.profile) {
-            localStorage.setItem(
-              "ig-curator-profile",
-              JSON.stringify(res.data.profile)
-            );
-            window.dispatchEvent(new Event("storage"));
-          }
+        const saved = await getItem<SlotItem[]>("ig-curator-items");
+        const emergencyBackup = localStorage.getItem("ig-curator-items");
+        
+        if (emergencyBackup) {
+          try {
+            const parsed = JSON.parse(emergencyBackup);
+            localStorage.removeItem("ig-curator-items");
+            if (isMounted) setItems(parsed);
+            await setItem("ig-curator-items", parsed).catch(() => {});
+          } catch (e) {}
+        } else if (saved && saved.length > 0) {
+          const compressed = await compressIfNeeded(saved);
+          if (isMounted) setItems(compressed);
         }
-      } catch (e) {
-        console.error("Failed to load cloud grid", e);
+      } catch (error) {
+        console.error("Failed to load local grid", error);
       }
-
+      
       if (isMounted) setIsLoaded(true);
     }
 
@@ -360,67 +266,7 @@ export function DashboardClient() {
   }, [status]);
 
 
-  useEffect(() => {
-    if (!isLoaded || status !== "authenticated") return;
-
-    setSyncStatus("Saving...");
-    const timer = setTimeout(async () => {
-      try {
-        // Always save to IDB first
-        try {
-          await setItem("ig-curator-items", items);
-        } catch (idbErr) {
-          console.error("Failed to save to local IDB", idbErr);
-        }
-
-        let payloadString = "";
-        try {
-          payloadString = JSON.stringify(items);
-        } catch (stringifyError) {
-          console.warn("Payload too massive to stringify, skipping cloud sync.");
-          setSyncStatus("Saved Locally");
-          setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
-          return;
-        }
-
-        if (payloadString.length > 4 * 1024 * 1024) {
-          setSyncStatus("Saved Locally");
-          setTimeout(
-            () =>
-              setSyncStatus((prev) =>
-                prev === "Saved Locally" ? "Idle" : prev,
-              ),
-            2000,
-          );
-          return;
-        }
-        const profileStr = localStorage.getItem("ig-curator-profile");
-        const profile = profileStr ? JSON.parse(profileStr) : undefined;
-        
-        const response = await fetch("/api/grid/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items, profile }),
-        });
-        
-        const res = await response.json();
-        if (res.success) {
-          setSyncStatus("Saved");
-          setTimeout(() => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)), 2000);
-        } else {
-          console.error("Auto-sync failed:", res.error);
-          setSyncStatus("Error");
-          setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
-        }
-      } catch (e: any) {
-        console.error("Auto-sync exception:", e);
-        setSyncStatus("Error");
-        setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [items, isLoaded, status]);
+  // Removed cloud sync effect
 
   useEffect(() => {
     async function loadLiveGrid() {
@@ -473,19 +319,12 @@ export function DashboardClient() {
       setHistory((prev) => [...prev, lastSavedItemsRef.current].slice(-30));
       lastSavedItemsRef.current = items;
 
-      // Primary: save to Mac folder if connected (unlimited space!)
-      if (fsHandleRef.current) {
-        try {
-          await saveToFolder(fsHandleRef.current, items);
-          return; // success - no need for IDB
-        } catch (err) {
-          console.error("Folder save failed, falling back to IDB:", err);
-        }
-      }
-
-      // Fallback: IDB (has browser quota limits)
+      setSyncStatus("Saving...");
+      // Save directly to IDB natively
       try {
         await setItem("ig-curator-items", items);
+        setSyncStatus("Saved Locally");
+        setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
       } catch (error: any) {
         console.error("IDB save failed, trying to free space:", error);
         try {
@@ -536,48 +375,13 @@ export function DashboardClient() {
   }
 
   async function handleManualSync() {
-    if (status !== "authenticated") return;
     setSyncStatus("Saving...");
     try {
-      let payloadString = "";
-      try {
-        payloadString = JSON.stringify(items);
-      } catch (stringifyError) {
-        console.warn("Payload too massive to stringify, skipping cloud sync.");
-        setSyncStatus("Saved Locally");
-        setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
-        return;
-      }
-
-      if (payloadString.length > 4 * 1024 * 1024) {
-        setSyncStatus("Saved Locally");
-        setTimeout(
-          () =>
-            setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)),
-          2000,
-        );
-        return;
-      }
-      const profileStr = localStorage.getItem("ig-curator-profile");
-      const profile = profileStr ? JSON.parse(profileStr) : undefined;
-      
-      const response = await fetch("/api/grid/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, profile }),
-      });
-      
-      const res = await response.json();
-      if (res.success) {
-        setSyncStatus("Saved");
-        setTimeout(() => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)), 2000);
-      } else {
-        console.error("Manual sync failed:", res.error);
-        setSyncStatus("Error");
-        setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
-      }
+      await setItem("ig-curator-items", items);
+      setSyncStatus("Saved Locally");
+      setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
     } catch (e: any) {
-      console.error("Manual sync exception:", e);
+      console.error("Manual save exception:", e);
       setSyncStatus("Error");
       setTimeout(() => setSyncStatus((prev) => (prev === "Error" ? "Idle" : prev)), 2000);
     }
@@ -793,48 +597,6 @@ export function DashboardClient() {
               </button>
 
 
-
-              {/* Connect Mac Folder for unlimited storage */}
-              {isFileSystemSupported() && (
-                <button
-                  onClick={async () => {
-                    if (hasFolderConnected) {
-                      // Already connected — manual save
-                      try {
-                        await saveToFolder(fsHandleRef.current!, items);
-                      } catch (e) {
-                        console.error(e);
-                      }
-                      return;
-                    }
-                    // Try reconnecting stored handle (needs this click as user gesture)
-                    const stored = await getStoredHandle();
-                    if (stored) {
-                      const ok = await verifyPermission(stored);
-                      if (ok) {
-                        await connectAndLoad(stored);
-                        return;
-                      }
-                    }
-                    // Pick new folder
-                    const handle = await pickFolder();
-                    if (handle) {
-                      await connectAndLoad(handle);
-                    }
-                  }}
-                  className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
-                    hasFolderConnected
-                      ? "bg-green-50 text-green-600 border-green-200"
-                      : hasStoredFolder
-                        ? "bg-amber-50 text-amber-600 border-amber-200"
-                        : "bg-white border-soft-200 text-foreground/70 hover:text-foreground"
-                  } cursor-pointer`}
-                >
-                  <FolderHeart size={13} />
-                  <span>{hasFolderConnected ? "Saved ✓" : hasStoredFolder ? "Reconnect Folder" : "Save to Mac"}</span>
-                </button>
-              )}
-
               {/* Grid Search Navigation Bar */}
               <GridSearchNav
                 searchQuery={searchQuery}
@@ -955,56 +717,36 @@ export function DashboardClient() {
                   />
 
                   {/* Grid Tabs */}
-                  <div className="flex items-center justify-around border-t border-b border-soft-100 py-2.5 sticky top-0 bg-white/95 backdrop-blur-md z-40">
+                  <div className="flex items-center justify-around border-t border-b border-soft-100 py-2.5 sticky top-0 bg-white/95 backdrop-blur-md z-40 px-2 gap-1">
                     <button
                       onClick={() => setGridFilter("All")}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "All" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Main Grid"
+                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "All" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
                     >
-                      <Grid3X3
-                        size={22}
-                        strokeWidth={gridFilter === "All" ? 2.5 : 2}
-                      />
+                      Posts
                     </button>
                     <button
                       onClick={() => setGridFilter("Reel")}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Reel" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Reels"
+                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Reel" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
                     >
-                      <Clapperboard
-                        size={22}
-                        strokeWidth={gridFilter === "Reel" ? 2.5 : 2}
-                      />
+                      Reels
                     </button>
                     <button
                       onClick={() => setGridFilter("Story")}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Story" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Stories"
+                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Story" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
                     >
-                      <Circle
-                        size={22}
-                        strokeWidth={gridFilter === "Story" ? 2.5 : 2}
-                      />
+                      Stories
                     </button>
                     <button
                       onClick={() => setGridFilter("Placeholders")}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Placeholders" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Draft Placeholders"
+                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Placeholders" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
                     >
-                      <SquarePlus
-                        size={22}
-                        strokeWidth={gridFilter === "Placeholders" ? 2.5 : 2}
-                      />
+                      Drafts
                     </button>
                     <button
                       onClick={() => setGridFilter("Inspo")}
-                      className={`flex-1 flex justify-center py-1 transition-all ${gridFilter === "Inspo" ? "text-foreground" : "text-foreground/30 hover:text-foreground/70"}`}
-                      title="Inspo Collections"
+                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Inspo" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
                     >
-                      <FolderHeart
-                        size={22}
-                        strokeWidth={gridFilter === "Inspo" ? 2.5 : 2}
-                      />
+                      Inspo
                     </button>
                   </div>
 
