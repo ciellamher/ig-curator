@@ -410,12 +410,14 @@ export function DashboardClient() {
       const el = document.getElementById(`grid-slot-${activeSlotId}`);
       if (el) {
         const rect = el.getBoundingClientRect();
-        const container = el.closest(".relative");
+        const container = el.closest(".flex-1.flex.overflow-hidden.relative") || document.body;
         if (container) {
           const containerRect = container.getBoundingClientRect();
+          const targetY = rect.top - containerRect.top;
+          const baselineTop = window.innerWidth >= 768 ? 80 : 0;
           const topOffset = Math.max(
-            -10,
-            Math.min(450, rect.top - containerRect.top - 15),
+            -20,
+            Math.min(600, targetY - baselineTop - 20) // -20 to align roughly with the top of the modal
           );
           setModalPos({ x: 0, y: topOffset });
         }
