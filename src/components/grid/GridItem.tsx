@@ -25,6 +25,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAdjusting, setIsAdjusting] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [tempSettings, setTempSettings] = useState({ scale: 1, x: 0, y: 0 });
   const startDragRef = useRef<{ x: number, y: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -200,9 +201,11 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
           onPointerCancel={handlePointerUp}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          onContextMenu={handleContextMenu}
+          onContextMenu={(e) => e.preventDefault()}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          {item.urls[item.currentUrlIndex].startsWith("data:video") || item.urls[item.currentUrlIndex].includes("video") ? (
+          {item.urls[item.currentUrlIndex]?.startsWith("data:video") || item.urls[item.currentUrlIndex]?.includes("video") ? (
             <LocalMediaVideo
               src={item.urls[item.currentUrlIndex]}
               className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${

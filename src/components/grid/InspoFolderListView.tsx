@@ -302,7 +302,7 @@ export function InspoFolderListView({
                             key={idx}
                             className="w-full h-full overflow-hidden bg-soft-100"
                           >
-                            {url.includes("video") ? (
+                            {url?.startsWith("data:video") || url?.includes("-video-") ? (
                               <LocalMediaVideo
                                 src={url}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -321,7 +321,7 @@ export function InspoFolderListView({
                         ))}
                       </div>
                     ) : folderImages.length > 0 ? (
-                      folderImages[0].includes("video") ? (
+                      folderImages[0]?.startsWith("data:video") || folderImages[0]?.includes("-video-") ? (
                         <LocalMediaVideo
                           src={folderImages[0]}
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
