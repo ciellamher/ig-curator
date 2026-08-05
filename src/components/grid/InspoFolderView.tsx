@@ -564,14 +564,29 @@ export function InspoFolderView({
               <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-20">
                 {item.urls && item.urls.length > 0 && (
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      const rawUrl = item.urls[item.currentUrlIndex || 0];
+                      let downloadUrl = rawUrl;
+                      
+                      if (rawUrl.startsWith("local-media://")) {
+                        const { getMediaBlob } = await import('@/lib/idb');
+                        const blob = await getMediaBlob(rawUrl.replace("local-media://", ""));
+                        if (blob) {
+                          downloadUrl = URL.createObjectURL(blob);
+                        }
+                      }
+                      
                       const link = document.createElement("a");
-                      link.href = item.urls[item.currentUrlIndex || 0];
-                      link.download = `inspo-${item.id}.${item.urls[item.currentUrlIndex || 0].includes("video") ? "mp4" : "jpg"}`;
+                      link.href = downloadUrl;
+                      link.download = `inspo-${item.id}.${rawUrl.includes("video") ? "mp4" : "jpg"}`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
+                      
+                      if (downloadUrl !== rawUrl) {
+                        setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                      }
                     }}
                     className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
                     title="Download media"
@@ -738,16 +753,30 @@ export function InspoFolderView({
                 </div>
                 <div className="flex items-center gap-4">
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
                       if (previewItem.urls && previewItem.urls.length > 0) {
+                        const rawUrl = previewItem.urls[previewItem.currentUrlIndex || 0];
+                        let downloadUrl = rawUrl;
+                        
+                        if (rawUrl.startsWith("local-media://")) {
+                          const { getMediaBlob } = await import('@/lib/idb');
+                          const blob = await getMediaBlob(rawUrl.replace("local-media://", ""));
+                          if (blob) {
+                            downloadUrl = URL.createObjectURL(blob);
+                          }
+                        }
+                        
                         const link = document.createElement("a");
-                        link.href =
-                          previewItem.urls[previewItem.currentUrlIndex || 0];
-                        link.download = `inspo-${previewItem.id}.jpg`;
+                        link.href = downloadUrl;
+                        link.download = `inspo-${previewItem.id}.${rawUrl.includes("video") ? "mp4" : "jpg"}`;
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
+                        
+                        if (downloadUrl !== rawUrl) {
+                          setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+                        }
                       }
                     }}
                     className="cursor-pointer hover:opacity-70 transition-opacity"
