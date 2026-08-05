@@ -134,8 +134,8 @@ export function EditorPanel({
   };
 
   const isDraftPlaceholder =
-    activeSlot.folderId === "draft-pool" ||
-    activeSlot.id.startsWith("slot-draft");
+    activeSlot.folderId === "draft-pool" &&
+    (!activeSlot.urls || activeSlot.urls.length === 0);
 
   return (
     <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-hidden text-foreground select-none">
@@ -151,17 +151,22 @@ export function EditorPanel({
       {/* Quick Action Toolbar */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          {/* Add / Upload & Move to Drafts Buttons - Hidden for draft placeholders */}
-          {!isDraftPlaceholder ? (
-            <div className="flex-1 flex gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-                className="flex-1 flex items-center justify-center p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
-                title={isUploading ? "Uploading..." : "Add / Upload Photo"}
-              >
-                <Upload size={18} strokeWidth={2.2} />
-              </button>
+          {/* Add / Upload & Move to Drafts Buttons */}
+          <div className="flex-1 flex gap-2 items-center">
+            {isDraftPlaceholder && (
+              <span className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase tracking-wider px-1 mr-1">
+                Draft Box
+              </span>
+            )}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex-1 flex items-center justify-center p-2.5 bg-slate-900 text-white hover:bg-black rounded-xl shadow-xs active:scale-95 transition-all cursor-pointer"
+              title={isUploading ? "Uploading..." : "Add / Upload Photo"}
+            >
+              <Upload size={18} strokeWidth={2.2} />
+            </button>
+            {activeSlot.folderId !== "draft-pool" && (
               <button
                 onClick={() => {
                   updateSlot(activeSlot.id, { folderId: "draft-pool" });
@@ -171,12 +176,8 @@ export function EditorPanel({
               >
                 <ArrowDownToLine size={18} strokeWidth={2.2} />
               </button>
-            </div>
-          ) : (
-            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider px-1">
-              Edit Draft Box
-            </span>
-          )}
+            )}
+          </div>
 
           {/* Single Photo / Slot Trash Button */}
           <button
