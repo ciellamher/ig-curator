@@ -69,12 +69,17 @@ export function ItemDrawer({
     }
   }, [gridSlotId])
 
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onCloseRef.current()
     window.addEventListener("keydown", onKey)
-    if (overlay) panelRef.current?.focus()
     return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
+  }, [])
+  // Focus the page when it opens (not on every update, which would pull focus out of the field being typed in)
+  useEffect(() => {
+    if (overlay) panelRef.current?.focus()
+  }, [item.id, overlay])
 
   const loc = item.location ?? { name: "" }
   const setLoc = (patch: Partial<Location>) => {

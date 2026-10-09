@@ -1,7 +1,7 @@
 import React, { ImgHTMLAttributes, VideoHTMLAttributes } from 'react';
 import { useLocalMedia } from '@/hooks/useLocalMedia';
 
-interface LocalMediaImageProps extends ImgHTMLAttributes<HTMLImageElement> {
+interface LocalMediaImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
   src: string | undefined | null;
 }
 
@@ -15,7 +15,7 @@ export function LocalMediaImage({ src, alt = "", ...props }: LocalMediaImageProp
   return <img src={resolvedSrc} alt={alt} {...props} />;
 }
 
-interface LocalMediaVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
+interface LocalMediaVideoProps extends Omit<VideoHTMLAttributes<HTMLVideoElement>, 'src'> {
   src: string | undefined | null;
 }
 

@@ -35,12 +35,16 @@ export function EditorPanel({
   const [localText, setLocalText] = useState(activeSlot?.text || "");
   const [localHex, setLocalHex] = useState(activeSlot?.hexColor || "");
 
+  // Follow changes made elsewhere (e.g. renaming the page in the planner), except while the field is being typed in
+  const textRef = useRef<HTMLInputElement>(null);
+  const slotText = activeSlot?.text || "";
+  const slotHex = activeSlot?.hexColor || "";
   useEffect(() => {
-    if (activeSlot) {
-      setLocalText(activeSlot.text || "");
-      setLocalHex(activeSlot.hexColor || "");
-    }
-  }, [activeSlot?.id]);
+    if (document.activeElement !== textRef.current) setLocalText(slotText);
+  }, [activeSlot?.id, slotText]);
+  useEffect(() => {
+    setLocalHex(slotHex);
+  }, [activeSlot?.id, slotHex]);
 
   if (!activeSlot) return null;
 
@@ -324,9 +328,10 @@ export function EditorPanel({
               </label>
               <input
                 type="text"
+                ref={textRef}
                 value={localText}
                 onChange={(e) => setLocalText(e.target.value)}
-                onBlur={() => updateSlot(activeSlot.id, { text: localText })}
+                onBlur={() => localText !== activeSlot.text && updateSlot(activeSlot.id, { text: localText })}
                 placeholder="e.g. Selfie, Detail (Perfume), Full Body..."
                 className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs font-semibold transition-all"
               />

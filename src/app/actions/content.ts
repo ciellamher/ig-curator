@@ -43,7 +43,7 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
   }
 }
 
-const FEED_TYPES = ["Post", "Reel", "StoryFolder"]
+const FEED_TYPES = ["Post", "Carousel", "Reel", "StoryFolder"]
 
 /** For a while extra feed boxes were stored as JSON inside contentType ({"primary":…,"extra":…}); read both forms. */
 function feedPlacement(c: Pick<Content, "contentType" | "extraSlots">): { contentType: string | null; extraSlots: Record<string, string> | null } {
@@ -373,7 +373,7 @@ function cleanMediaUrls(urls: unknown): string[] {
  * "To Board"/"To Shoot" to "To Edit" once a photo is added; renaming a box renames its record; deleting a box deletes
  * its record. Boxes deleted elsewhere are never re-created.
  */
-export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[]; textForFeed: { slotId: string; title: string }[] }>> {
+export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[]; textForFeed: { slotId: string; title: string }[]; removeFromFeed: string[] }>> {
   return run(async () => {
     const userId = await requireUserId()
     scheduleCalendarSync(userId) // runs after this change is saved
@@ -385,10 +385,15 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
     // Boxes brought back in the feed (e.g. undo) are no longer deleted; boxes deleted in the feed lose their record.
     if (restoredSlotIds.length) await prisma.deletedFeedSlot.deleteMany({ where: { userId, slotId: { in: restoredSlotIds } } })
     let deleted = 0
+    // A deleted page's other boxes (e.g. its story folder) leave the feed too, instead of becoming new pages
+    let removeFromFeed: string[] = []
     if (deletedSlotIds.length) {
+      const doomed = await prisma.content.findMany({ where: { userId, slotId: { in: deletedSlotIds } }, select: { contentType: true, extraSlots: true } })
+      removeFromFeed = doomed.flatMap((d) => Object.values(feedPlacement(d).extraSlots ?? {}))
+      const tombstones = [...deletedSlotIds, ...removeFromFeed]
       const [res] = await prisma.$transaction([
         prisma.content.deleteMany({ where: { userId, slotId: { in: deletedSlotIds } } }),
-        prisma.deletedFeedSlot.createMany({ data: deletedSlotIds.map((slotId) => ({ userId, slotId })), skipDuplicates: true }),
+        prisma.deletedFeedSlot.createMany({ data: tombstones.map((slotId) => ({ userId, slotId })), skipDuplicates: true }),
       ])
       deleted = res.count
     }
@@ -437,7 +442,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
         isHiddenFromGrid: Boolean(s.isHiddenFromGrid),
       }]
     })
-    if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [], textForFeed: [] }
+    if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [], textForFeed: [], removeFromFeed }
 
     // Parents before children so sub-items can be linked in the same pass.
     clean.sort((a, b) => Number(Boolean(a.parentSlotId)) - Number(Boolean(b.parentSlotId)))
@@ -538,6 +543,6 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
 
     const addToFeed: FeedBox[] = []
 
-    return { created, updated, deleted, addToFeed, textForFeed }
+    return { created, updated, deleted, addToFeed, textForFeed, removeFromFeed }
   })
 }

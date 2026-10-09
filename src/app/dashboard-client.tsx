@@ -281,7 +281,6 @@ export function DashboardClient() {
 
   // Removed obsolete Local Folder API state variables
 
-  const [showReconnectOverlay, setShowReconnectOverlay] = useState(false);
 
   // Removed obsolete reconnect overlay check
 
@@ -749,6 +748,7 @@ export function DashboardClient() {
         deletedSlotIds.forEach((id) => pendingDeletesRef.current.delete(id));
         restoredSlotIds.forEach((id) => pendingRestoresRef.current.delete(id));
         if (res.data.addToFeed.length) addFeedBoxes(res.data.addToFeed);
+        if (res.data.removeFromFeed.length) removeSlotsRef.current(res.data.removeFromFeed);
         if (res.data.textForFeed.length) {
           const titles = new Map(res.data.textForFeed.map((t) => [t.slotId, t.title]));
           setItems((curr) => curr.map((i) => (titles.has(i.id) && !i.text?.trim() ? { ...i, text: titles.get(i.id)! } : i)));
@@ -1051,38 +1051,6 @@ export function DashboardClient() {
 
   return (
     <div className="w-full flex flex-col h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)]">
-      {showReconnectOverlay && (
-        <div 
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
-          onClick={async () => {
-            const stored = await getStoredHandle();
-            if (stored) {
-              const ok = await verifyPermission(stored);
-              if (ok) {
-                await connectAndLoad(stored);
-                setShowReconnectOverlay(false);
-              } else {
-                setShowReconnectOverlay(false);
-              }
-            } else {
-              setShowReconnectOverlay(false);
-            }
-          }}
-        >
-          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-gradient-to-tr from-pastel-100 to-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FolderHeart size={30} className="text-pastel-600" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 mb-2">Reconnect to Mac</h2>
-            <p className="text-slate-600 mb-6 text-sm">
-              Click anywhere to automatically restore connection to your local save folder and load your latest changes.
-            </p>
-            <div className="text-xs text-slate-400">
-              Browser security requires a click to restore folder access.
-            </div>
-          </div>
-        </div>
-      )}
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Main Planner Workspace */}

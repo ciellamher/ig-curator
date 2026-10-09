@@ -174,8 +174,10 @@ async function pullMovedEvents(userId: string, events: GoogleEvent[], existing: 
     const page = pages.get(contentId)
     const win = googleWindow(ev)
     if (!(field in FIELDS) || !page || !win) continue
+    // What Google was last sent. Events from before that was recorded: the planner's current dates, but only if
+    // they haven't changed since the last send (else Google just hasn't been updated yet — that's not a move).
     const wanted = desiredByKey.get(row.key)
-    const sent = row.start && row.end ? { start: row.start, end: row.end } : wanted ? sentWindow(wanted.body) : null
+    const sent = row.start && row.end ? { start: row.start, end: row.end } : wanted && hashOf(wanted.body) === row.hash ? sentWindow(wanted.body) : null
     if (!sent || (sent.start === win.start && sent.end === win.end)) continue
 
     const [startCol, endCol] = FIELDS[field]

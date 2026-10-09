@@ -36,31 +36,41 @@ export function usePlanner(enabled: boolean) {
 
   const newSlotId = () => `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
-  /** Gives a page one feed box per placement it's ticked for (Post → grid, Reels → reel, Story → story folder). */
-  const reconcileFeed = useCallback(async (page: ContentDTO) => {
-    const wants = feedKindsFor(page.categories)
-    const current = new Map<string, string>(Object.entries(page.extraSlots ?? {}))
-    if (page.slotId && page.contentType) current.set(page.contentType, page.slotId)
+  /**
+   * Gives a page one feed box per placement it's ticked for (Post → grid, Reels → reel, Story → story folder).
+   * `addOnly` (used when loading) only adds missing boxes and never removes one; boxes are removed only when
+   * a placement is unticked. A carousel counts as the page's Post box.
+   */
+  const reconcileFeed = useCallback(async (page: ContentDTO, addOnly = false) => {
+    const kind = (type: string) => (type === "Carousel" ? "Post" : type)
+    const current = new Map<string, { slotId: string; type: string }>()
+    for (const [type, slotId] of Object.entries(page.extraSlots ?? {})) current.set(kind(type), { slotId, type })
+    if (page.slotId && page.contentType) current.set(kind(page.contentType), { slotId: page.slotId, type: page.contentType })
 
-    const removed = [...current].filter(([type]) => !wants.includes(type)).map(([, slotId]) => slotId)
-    const slots = new Map<string, string>()
+    const wanted = feedKindsFor(page.categories)
+    const keep = addOnly ? [...new Set([...current.keys(), ...wanted])] : wanted
+    const removed = [...current].filter(([k]) => !keep.includes(k)).map(([, box]) => box.slotId)
+    const slots = new Map<string, { slotId: string; type: string }>()
     const added: { slotId: string; contentType: string }[] = []
-    for (const type of wants) {
-      const existing = current.get(type)
-      if (existing) slots.set(type, existing)
+    for (const k of keep) {
+      const existing = current.get(k)
+      if (existing) slots.set(k, existing)
       else {
-        const slotId = newSlotId()
-        slots.set(type, slotId)
-        added.push({ slotId, contentType: type })
+        const box = { slotId: newSlotId(), type: k }
+        slots.set(k, box)
+        added.push({ slotId: box.slotId, contentType: k })
       }
     }
-    if (!added.length && !removed.length && (wants[0] ?? null) === (page.slotId ? page.contentType : null)) return
+    if (!added.length && !removed.length) return
 
-    const [primary, ...extra] = wants
+    // The page's main box stays its main box
+    const mainKind = page.slotId && page.contentType && slots.has(kind(page.contentType)) ? kind(page.contentType) : keep[0]
+    const main = mainKind ? slots.get(mainKind) : undefined
+    const extra = [...slots].filter(([k]) => k !== mainKind).map(([, box]) => box)
     const res = await updateContent(page.id, {
-      slotId: primary ? slots.get(primary)! : null,
-      contentType: primary ?? null,
-      extraSlots: extra.length ? Object.fromEntries(extra.map((type) => [type, slots.get(type)!])) : null,
+      slotId: main?.slotId ?? null,
+      contentType: main?.type ?? null,
+      extraSlots: extra.length ? Object.fromEntries(extra.map((box) => [box.type, box.slotId])) : null,
     })
     if (!res.success) return setError(res.error)
     setItems((curr) => curr.map((i) => (i.id === page.id ? res.data : i)))
@@ -81,10 +91,9 @@ export function usePlanner(enabled: boolean) {
       // Only missing boxes are created: photos are never sent again to a box that's there (that looped before).
       setTimeout(() => {
         for (const item of content.data) {
-          const wants = feedKindsFor(item.categories)
-          const has = [...(item.slotId && item.contentType ? [item.contentType] : []), ...Object.keys(item.extraSlots ?? {})]
-          if ([...wants].sort().join(",") !== [...has].sort().join(",")) {
-            reconcileFeed(item)
+          const has = [...(item.slotId && item.contentType ? [item.contentType] : []), ...Object.keys(item.extraSlots ?? {})].map((t) => (t === "Carousel" ? "Post" : t))
+          if (feedKindsFor(item.categories).some((k) => !has.includes(k))) {
+            reconcileFeed(item, true)
             continue
           }
           const boxes = [
