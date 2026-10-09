@@ -242,7 +242,17 @@ export function OutfitsTable({
   onFocusItem?: (item: ContentDTO) => void
 }) {
   const { items, orders, orderActions } = planner
-  const rows = outfitsView(items.filter((i) => matchesSearch(i, query)), items)
+  
+  const orderedIds = new Set<string>()
+  for (const o of orders) {
+    for (const batchId of o.batchIds) {
+      orderedIds.add(batchId)
+    }
+  }
+
+  const allOutfits = outfitsView(items.filter((i) => matchesSearch(i, query)), items)
+  const rows = allOutfits.filter(i => !orderedIds.has(i.id) && !(i.parentId && orderedIds.has(i.parentId)))
+
   const selection = useSelection(rows.map((i) => i.id))
 
   const q = query.trim().toLowerCase()
