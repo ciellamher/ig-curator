@@ -88,8 +88,8 @@ const LEGACY_PLACEHOLDER_COLORS: Record<string, string> = {
 const LIBRARY_TABS = [
   ["drafts", "Drafts"],
   ["inspo", "Inspo"],
-  ["other", "Other content"],
   ["fits", "Fits"],
+  ["other", "Other content"],
   ["highlights", "Other highlights"],
 ] as const;
 type LibraryTab = (typeof LIBRARY_TABS)[number][0];
