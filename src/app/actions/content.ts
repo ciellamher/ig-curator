@@ -17,7 +17,6 @@ const MAX_URL_LENGTH = 2048
 const DEFAULT_TITLE = /^(Untitled( (Post|Reel|Carousel|Story|Inspo|InspoPost|InspoStory|InspoHighlight|Inspo Board|Story Folder))?|New Folder)$/
 
 function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
-  const rawExtra = c.extraSlots as Record<string, string> | null
   return {
     id: c.id,
     parentId: c.parentId,
@@ -25,7 +24,7 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
     status: c.status,
     categories: c.categories,
     edited: c.edited,
-    hiddenFromFeed: rawExtra?.hiddenFromFeed === "true",
+    hiddenFromFeed: c.hiddenFromFeed || legacyHidden(c.extraSlots),
     clothingStatus: c.clothingStatus,
     orderedAt: c.orderedAt?.toISOString() ?? null,
     deliveredAt: c.deliveredAt?.toISOString() ?? null,
@@ -63,14 +62,14 @@ function cleanExtraSlots(value: unknown): Record<string, string> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null
   const out: Record<string, string> = {}
   for (const [type, slotId] of Object.entries(value)) {
-    // Preserve feed slot ids (Post, Reel, StoryFolder) AND the hiddenFromFeed flag
-    if (type === "hiddenFromFeed" && slotId === "true") {
-      out[type] = slotId
-    } else if (FEED_TYPES.includes(type) && typeof slotId === "string" && /^slot-[\w-]{3,100}$/.test(slotId)) {
-      out[type] = slotId
-    }
+    if (FEED_TYPES.includes(type) && typeof slotId === "string" && /^slot-[\w-]{3,100}$/.test(slotId)) out[type] = slotId
   }
   return Object.keys(out).length ? out : null
+}
+
+/** For a while "Hide from feed" was kept inside extraSlots; it has its own column now. */
+function legacyHidden(extraSlots: unknown): boolean {
+  return !!extraSlots && typeof extraSlots === "object" && (extraSlots as Record<string, unknown>).hiddenFromFeed === "true"
 }
 
 /** Every extra feed box the user's pages have: box id → page. */
@@ -163,13 +162,8 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
   }
   if ("edited" in patch) data.edited = Boolean(patch.edited)
   if ("hiddenFromFeed" in patch) {
-    const extra = (existing?.extraSlots as Record<string, string> | null) ?? {}
-    if (patch.hiddenFromFeed) {
-      extra.hiddenFromFeed = "true"
-    } else {
-      delete extra.hiddenFromFeed
-    }
-    data.extraSlots = Object.keys(extra).length > 0 ? extra : null
+    data.hiddenFromFeed = Boolean(patch.hiddenFromFeed)
+    if (legacyHidden(existing?.extraSlots)) data.extraSlots = cleanExtraSlots(existing?.extraSlots) ?? Prisma.DbNull
   }
   if ("clothingStatus" in patch) {
     const clothing = patch.clothingStatus || null
@@ -209,9 +203,12 @@ export async function listContent(): Promise<Result<ContentDTO[]>> {
     const userId = await requireUserId()
     const rows = await prisma.content.findMany({ where: { userId }, include: { media: true }, orderBy: { createdAt: "desc" } })
     // Move extra feed boxes kept in the old JSON form into their own column
-    for (const r of rows.filter((r) => r.contentType?.startsWith('{"primary"'))) {
+    for (const r of rows.filter((r) => r.contentType?.startsWith('{"primary"') || legacyHidden(r.extraSlots))) {
       const { contentType, extraSlots } = feedPlacement(r)
-      await prisma.content.update({ where: { id: r.id }, data: { contentType, extraSlots: extraSlots ?? Prisma.DbNull } })
+      await prisma.content.update({
+        where: { id: r.id },
+        data: { contentType, extraSlots: extraSlots ?? Prisma.DbNull, hiddenFromFeed: r.hiddenFromFeed || legacyHidden(r.extraSlots) },
+      })
     }
     return rows.map(toDTO)
   })
@@ -512,20 +509,17 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       // The box's text and the planner title are always the same
       if (slot.title && current.title !== slot.title) data.title = slot.title
       else if (!slot.title && !DEFAULT_TITLE.test(current.title)) textForFeed.push({ slotId: slot.slotId, title: current.title })
-      const autoStatus = statusForFeedSlot(slot)
+      const fromPhotos = statusForFeedSlot(slot)
+      // Photos make it "To Schedule"; it's "To Edit" only once it has a date to post
+      const autoStatus = fromPhotos === "To Schedule" && current.postStart ? "To Edit" : fromPhotos
       if (AUTO_STATUSES.includes(current.status) && autoStatus !== current.status && autoStatus !== "To Board") data.status = autoStatus
       // Follow folder moves in the feed, but keep parents assigned by hand to planner-only records.
       const parentIsFromFeed = !current.parentId || feedRecordIds.has(current.parentId)
       if (parentIsFromFeed && current.parentId !== parentId && current.id !== parentId && !(parentId && parentsWithChildren.has(current.id))) {
         data.parentId = parentId
       }
-      const extra = (current.extraSlots as Record<string, string> | null) ?? {}
-      const currentlyHidden = extra.hiddenFromFeed === "true"
-      if (currentlyHidden !== Boolean(slot.isHiddenFromGrid)) {
-        if (slot.isHiddenFromGrid) extra.hiddenFromFeed = "true"
-        else delete extra.hiddenFromFeed
-        data.extraSlots = Object.keys(extra).length ? extra : Prisma.DbNull
-      }
+      // Hidden / shown in the feed (posts and reels; story folders always show)
+      if (slot.contentType !== "StoryFolder" && current.hiddenFromFeed !== Boolean(slot.isHiddenFromGrid)) data.hiddenFromFeed = Boolean(slot.isHiddenFromGrid)
 
       const currentUrls = [...current.media].sort((a, b) => a.position - b.position).map((m) => m.url)
       const mediaChanged = currentUrls.join("\n") !== slot.mediaUrls.join("\n")

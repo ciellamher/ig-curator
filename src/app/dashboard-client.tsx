@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Grid } from "@/components/grid/Grid";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { SlotItem } from "@/types";
+import { removeRepeatedPhotos } from "@/lib/feedRepair";
 import { getLiveGrid } from "@/app/actions/instagram";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { ProfileHeader } from "@/components/grid/ProfileHeader";
@@ -74,7 +75,7 @@ const LEGACY_PLACEHOLDER_COLORS: Record<string, string> = {
 };
 
 function toMonochrome(items: SlotItem[]): SlotItem[] {
-  return items.map((i) => {
+  return removeRepeatedPhotos(items).items.map((i) => {
     const grey = LEGACY_PLACEHOLDER_COLORS[i.hexColor?.toLowerCase() ?? ""];
     return grey ? { ...i, hexColor: grey } : i;
   });
@@ -361,7 +362,12 @@ export function DashboardClient() {
             await setItem("ig-curator-items", parsed).catch(() => {});
           } catch (e) {}
         } else if (saved && saved.length > 0) {
-          const compressed = await compressIfNeeded(saved);
+          const repaired = removeRepeatedPhotos(saved);
+          if (repaired.changed) {
+            await saveFeedBackup(saved, "before removing repeated photos");
+            await setItem("ig-curator-items", repaired.items).catch(() => {});
+          }
+          const compressed = await compressIfNeeded(repaired.items);
           if (isMounted) setItems(toMonochrome(compressed));
           // Daily safety snapshot of the layout
           const last = Number(localStorage.getItem("ig-curator-last-backup") || 0);
@@ -763,9 +769,13 @@ export function DashboardClient() {
     const onAdd = (e: Event) => addFeedBoxesRef.current((e as CustomEvent<FeedBox[]>).detail ?? []);
     // Photos added to a planner page: add them to its box (or story folder), creating it if needed
     const onAttach = (e: Event) => {
-      const { slotId, urls, title, contentType } = (e as CustomEvent<FeedAttach>).detail;
+      const { slotId, urls, title, contentType, ensure, hidden } = (e as CustomEvent<FeedAttach>).detail;
+      // Boxes removed in this feed but not yet synced are not brought back
+      if (ensure && pendingDeletesRef.current.has(slotId)) return;
       setItems((curr) => {
         const box = curr.find((i) => i.id === slotId);
+        // Making sure a page has its box: never add its photos again to a box that's already there
+        if (ensure && box) return curr;
         const text = /^Untitled/.test(title) ? "" : title;
         if (contentType === "StoryFolder") {
           const folder: SlotItem[] = box ? [] : [{ id: slotId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: title, contentType: "StoryFolder" }];
@@ -781,9 +791,12 @@ export function DashboardClient() {
           }));
           return [...folder, ...curr, ...stories];
         }
-        if (box) return urls.length ? curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...urls] } : i)) : curr;
+        if (box) {
+          const fresh = urls.filter((u) => !(box.urls ?? []).includes(u));
+          return fresh.length ? curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...fresh] } : i)) : curr;
+        }
         return [
-          { id: slotId, type: urls.length ? "image" : "placeholder", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post" },
+          { id: slotId, type: urls.length ? "image" : "placeholder", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post", ...(hidden ? { isHiddenFromGrid: true } : {}) },
           ...curr,
         ];
       });

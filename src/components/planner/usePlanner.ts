@@ -67,7 +67,7 @@ export function usePlanner(enabled: boolean) {
 
     if (removed.length) window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: removed }))
     for (const box of added) {
-      const detail: FeedAttach = { ...box, urls: res.data.media.map((m) => m.url), title: res.data.title }
+      const detail: FeedAttach = { ...box, urls: res.data.media.map((m) => m.url), title: res.data.title, hidden: res.data.hiddenFromFeed && box.contentType !== "StoryFolder" }
       window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
     }
   }, [])
@@ -77,28 +77,23 @@ export function usePlanner(enabled: boolean) {
     if (content.success) {
       setItems(content.data)
       
-      // Auto-fix any items that have feed categories (e.g. from Notion import or sample data) 
-      // but didn't get added to the grid yet, or items that the grid lost.
-      // We do this by simulating a grid attach for items that already have slotIds,
-      // and running reconcileFeed for items missing slotIds.
+      // Pages ticked Post / Reels / Story get their feed boxes, also in a browser whose feed doesn't have them yet.
+      // Only missing boxes are created: photos are never sent again to a box that's there (that looped before).
       setTimeout(() => {
         for (const item of content.data) {
           const wants = feedKindsFor(item.categories)
-          const has = [item.contentType, ...Object.keys(item.extraSlots ?? {})].filter(Boolean)
-          
-          if (wants.join(",") !== has.join(",")) {
-            // Missing slots entirely -> generate and save them
+          const has = [...(item.slotId && item.contentType ? [item.contentType] : []), ...Object.keys(item.extraSlots ?? {})]
+          if ([...wants].sort().join(",") !== [...has].sort().join(",")) {
             reconcileFeed(item)
-          } else if (has.length > 0) {
-            // Has slots -> ensure the grid knows about them
-            const placements = [
-              ...(item.slotId && item.contentType ? [{ slotId: item.slotId, contentType: item.contentType }] : []),
-              ...Object.entries(item.extraSlots ?? {}).map(([type, id]) => ({ slotId: String(id), contentType: type }))
-            ]
-            for (const box of placements) {
-              const detail: FeedAttach = { ...box, urls: item.media.map(m => m.url), title: item.title }
-              window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
-            }
+            continue
+          }
+          const boxes = [
+            ...(item.slotId && item.contentType ? [{ slotId: item.slotId, contentType: item.contentType }] : []),
+            ...Object.entries(item.extraSlots ?? {}).map(([contentType, slotId]) => ({ slotId, contentType })),
+          ]
+          for (const box of boxes) {
+            const detail: FeedAttach = { ...box, urls: item.media.map((m) => m.url), title: item.title, ensure: true, hidden: item.hiddenFromFeed && box.contentType !== "StoryFolder" }
+            window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
           }
         }
       }, 500)
@@ -140,7 +135,12 @@ export function usePlanner(enabled: boolean) {
         }
       }
       if ("hiddenFromFeed" in patch && previous?.hiddenFromFeed !== res.data.hiddenFromFeed) {
-        for (const slotId of [res.data.slotId, ...Object.values(res.data.extraSlots ?? {})]) {
+        // Only posts and reels can be hidden; a page's story folder always shows
+        const gridBoxes = [
+          ...(res.data.contentType !== "StoryFolder" ? [res.data.slotId] : []),
+          ...Object.entries(res.data.extraSlots ?? {}).filter(([type]) => type !== "StoryFolder").map(([, slotId]) => slotId),
+        ]
+        for (const slotId of gridBoxes) {
           if (slotId) window.dispatchEvent(new CustomEvent(PLANNER_HIDDEN_EVENT, { detail: { slotId, hidden: res.data.hiddenFromFeed } }))
         }
       }

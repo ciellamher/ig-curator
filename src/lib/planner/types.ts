@@ -133,7 +133,16 @@ export const FEED_SELECT_EVENT = "feed:select"
 
 /** Fired by the planner when photos are added to a page, so the feed shows them; detail: FeedAttach. */
 export const FEED_ATTACH_EVENT = "feed:attach"
-export type FeedAttach = { slotId: string; urls: string[]; title: string; contentType: string }
+export type FeedAttach = {
+  slotId: string
+  urls: string[]
+  title: string
+  contentType: string
+  /** Only create the box if it's missing (nothing is added to a box that exists). */
+  ensure?: boolean
+  /** Created hidden from the grid. */
+  hidden?: boolean
+}
 
 /** Fired by the planner when a page is opened, so the feed opens that box's editor; detail: slot id. */
 export const PLANNER_OPEN_EVENT = "planner:open"

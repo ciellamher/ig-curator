@@ -148,6 +148,7 @@ model Content {
   contentType String?
   // More feed boxes for the same page when it's in several places, e.g. { "StoryFolder": "slot-…" }
   extraSlots  Json?
+  hiddenFromFeed Boolean @default(false) // posts and reels only; a story folder always shows
   media       ContentMedia[]
 
   createdAt DateTime @default(now())

@@ -120,7 +120,7 @@ function toItem(c: Content): ContentDTO {
     clothingStatus: c.clothingStatus, orderedAt: c.orderedAt?.toISOString() ?? null, deliveredAt: c.deliveredAt?.toISOString() ?? null,
     orderId: c.orderId, shoot: { start: c.shootStart, end: c.shootEnd }, edit: { start: c.editStart, end: c.editEnd },
     post: { start: c.postStart, end: c.postEnd }, pinterestUrl: null, location: null, body: "", slotId: c.slotId,
-    contentType: c.contentType, extraSlots: null, media: [], createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
+    contentType: c.contentType, extraSlots: null, hiddenFromFeed: c.hiddenFromFeed, media: [], createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
   }
 }
 function toOrder(o: ClothingOrder): OrderDTO {

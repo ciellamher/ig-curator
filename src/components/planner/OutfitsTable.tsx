@@ -243,12 +243,9 @@ export function OutfitsTable({
 }) {
   const { items, orders, orderActions } = planner
   
-  const orderedIds = new Set<string>()
-  for (const o of orders) {
-    for (const batchId of o.batchIds) {
-      orderedIds.add(batchId)
-    }
-  }
+  // Posts already picked for an order
+  const orderIds = new Set(orders.map((o) => o.id))
+  const orderedIds = new Set(items.filter((i) => i.orderId && orderIds.has(i.orderId)).map((i) => i.id))
 
   const allOutfits = outfitsView(items.filter((i) => matchesSearch(i, query)), items)
   const rows = allOutfits.filter(i => !orderedIds.has(i.id) && !(i.parentId && orderedIds.has(i.parentId)))

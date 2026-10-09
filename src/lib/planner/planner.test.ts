@@ -5,7 +5,7 @@ import { categoryForFeedSlot, feedKindsFor, statusForFeedSlot, toggleCategory } 
 import { STATUS_NAMES } from "./options"
 import type { ContentDTO, OrderDTO } from "./types"
 import { editLeadDays, withScheduleRules } from "./rules"
-import { desiredCalendarEvents } from "./calendarEvents"
+import { desiredCalendarEvents, googleWindow, scheduleFromGoogle, sentWindow } from "./calendarEvents"
 import {
   availablePostsView,
   isAvailablePost,
@@ -28,6 +28,8 @@ function item(overrides: Partial<ContentDTO> = {}): ContentDTO {
     categories: [],
     edited: false,
     clothingStatus: null,
+    hiddenFromFeed: false,
+    extraSlots: null,
     orderedAt: null,
     deliveredAt: null,
     orderId: null,
@@ -350,5 +352,26 @@ describe("feed placement", () => {
     expect(toggleCategory(["Story", "Locket"], "Story")).toEqual(["Locket"])
     expect(feedKindsFor(["Post", "Story"])).toEqual(["StoryFolder", "Post"])
     expect(feedKindsFor(["Facebook"])).toEqual([])
+  })
+})
+
+describe("scheduleFromGoogle", () => {
+  it("keeps a date-only item date-only when dragged to another day", () => {
+    expect(scheduleFromGoogle({ start: "2026-10-12T09:00", end: "2026-10-12T10:00" }, { start: "2026-10-10", end: null })).toEqual({ start: "2026-10-12", end: null })
+  })
+  it("takes the new time when moved to another hour", () => {
+    expect(scheduleFromGoogle({ start: "2026-10-12T14:30", end: "2026-10-12T15:30" }, { start: "2026-10-10", end: null })).toEqual({ start: "2026-10-12T14:30", end: null })
+  })
+  it("keeps a longer event's end", () => {
+    expect(scheduleFromGoogle({ start: "2026-10-12T14:00", end: "2026-10-12T17:00" }, { start: "2026-10-10T14:00", end: null })).toEqual({ start: "2026-10-12T14:00", end: "2026-10-12T17:00" })
+  })
+  it("reads all-day events (Google's end is the next day)", () => {
+    expect(googleWindow({ start: { date: "2026-10-12" }, end: { date: "2026-10-13" } })).toEqual({ start: "2026-10-12", end: "2026-10-13" })
+    expect(scheduleFromGoogle({ start: "2026-10-12", end: "2026-10-13" }, { start: "2026-10-10", end: null })).toEqual({ start: "2026-10-12", end: null })
+    expect(scheduleFromGoogle({ start: "2026-10-12", end: "2026-10-15" }, { start: "2026-10-10", end: null })).toEqual({ start: "2026-10-12", end: "2026-10-14" })
+  })
+  it("matches what was sent, so unmoved events are left alone", () => {
+    const [ev] = desiredCalendarEvents([item({ shoot: { start: "2026-10-10", end: null } })], [], { shein: false, appUrl: "x" })
+    expect(sentWindow(ev.body)).toEqual({ start: "2026-10-10T09:00", end: "2026-10-10T10:00" })
   })
 })
