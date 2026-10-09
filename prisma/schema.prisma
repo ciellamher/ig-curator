@@ -48,6 +48,8 @@ model User {
   sessions      Session[]
   gridSlots     GridSlot[]
   userGrid      UserGrid?
+  contents      Content[]
+  quickLinks    QuickLink[]
 }
 
 model VerificationToken {
@@ -99,4 +101,68 @@ model Media {
   url         String?
   hexColor    String? @default("#fdfbfb") // soft pastel white default
   overlayText String?
+}
+
+// Content planner (recreation of the Notion content workflow)
+model Content {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One parent maximum; e.g. "BATCH A" -> "Notion Box", "Clark Date"
+  parentId String?
+  parent   Content?  @relation("ContentBatch", fields: [parentId], references: [id], onDelete: SetNull)
+  children Content[] @relation("ContentBatch")
+
+  title          String
+  status         String   @default("To Board")
+  categories     String[] @default([])
+  edited         Boolean  @default(false)
+  clothingStatus String?
+  orderedAt      DateTime? // set when clothing moves to "Ordered"; starts the 14-day return window
+
+  // Wall-clock values in Asia/Manila: "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" (no timezone shifts)
+  shootStart String?
+  shootEnd   String?
+  editStart  String?
+  editEnd    String?
+  postStart  String? // "Post Now": a planned posting date, never a publishing action
+  postEnd    String?
+
+  pinterestUrl String?
+  location     Json? // { name, address, latitude, longitude, placeId }
+  body         String  @default("")
+
+  // Link back to the feed slot that created this entry
+  slotId      String?
+  contentType String?
+  media       ContentMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, slotId])
+  @@index([userId, parentId])
+}
+
+model ContentMedia {
+  id        String  @id @default(cuid())
+  contentId String
+  content   Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  url       String // remote URL or local-media://<id> reference into the browser's media store
+  position  Int     @default(0)
+
+  @@index([contentId])
+}
+
+model QuickLink {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  url       String
+  text      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

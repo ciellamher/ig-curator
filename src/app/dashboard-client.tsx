@@ -40,6 +40,37 @@ import {
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
+import { syncFeedToContent } from "@/app/actions/content";
+import type { FeedSlotSync } from "@/lib/planner/types";
+
+const FEED_CONTENT_TYPES = new Set(["Post", "Reel", "Carousel", "Story"]);
+
+/** Projects feed slots (posts, reels, stories, drafts) into the shape the content database syncs from. */
+function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
+  const folderTypes = new Map(
+    items.filter((i) => i.contentType?.endsWith("Folder")).map((i) => [i.id, i.contentType]),
+  );
+  return items.flatMap((item) => {
+    const contentType = item.contentType ?? "Post";
+    if (!FEED_CONTENT_TYPES.has(contentType) || item.isLocked) return [];
+    // The starter grid's blank placeholders only count once they get a photo or text
+    if (STARTER_SLOT_IDS.has(item.id) && item.urls.length === 0 && !item.text?.trim()) return [];
+
+    let location: FeedSlotSync["location"];
+    if (item.folderId === "draft-pool") location = "drafts";
+    else if (contentType === "Story" || folderTypes.get(item.folderId ?? "") === "StoryFolder") location = "story";
+    else if (!item.folderId) location = "grid";
+    else return []; // inspo boards and other folders aren't planned content
+
+    return [{
+      slotId: item.id,
+      contentType: location === "story" ? "Story" : contentType,
+      location,
+      title: (item.text?.trim() || item.caption?.split("\n")[0]?.trim() || "").slice(0, 200),
+      mediaUrls: item.urls ?? [],
+    }];
+  });
+}
 
 const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   id: `slot-${index + 1}`,
@@ -51,6 +82,8 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   text: "",
   contentType: "Post",
 }));
+
+const STARTER_SLOT_IDS = new Set(initialItems.map((i) => i.id));
 
 export function DashboardClient() {
   const { data: session, status } = useSession();
@@ -342,6 +375,22 @@ export function DashboardClient() {
 
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded]);
+
+  // Mirror feed changes into the content planner database
+  const lastFeedSyncRef = useRef<string>("");
+  useEffect(() => {
+    if (!isLoaded || status !== "authenticated") return;
+    const payload = toFeedSync(items);
+    const key = JSON.stringify(payload);
+    if (key === lastFeedSyncRef.current) return;
+
+    const timeoutId = setTimeout(async () => {
+      const res = await syncFeedToContent(payload);
+      if (res.success) lastFeedSyncRef.current = key;
+      else console.error("Planner sync failed:", res.error);
+    }, 1500);
+    return () => clearTimeout(timeoutId);
+  }, [items, isLoaded, status]);
 
   // Synchronous fail-safe save when user forcefully refreshes/closes the tab before debounce completes
   useEffect(() => {

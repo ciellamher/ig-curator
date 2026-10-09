@@ -25,6 +25,8 @@ Call the application locally in your browser to plan your content:
 - `src/app/` — Core Next.js routing, local storage persistence, and server-side actions.
 - `src/components/grid/` — The primary visual interface, including the drag-and-drop planner, multi-photo cycling, and true-to-life Instagram preview modals.
 - `src/lib/` — Configuration for authentication and database connections.
+- `src/lib/planner/` — Planner options, date handling, view filters/sorts and the clothing timeline (with tests).
+- `src/components/planner/` — Planner dashboard UI.
 
 ### 04 — FEATURES
 
@@ -33,6 +35,36 @@ Call the application locally in your browser to plan your content:
 - **True-to-Life Previews**: View your planned content exactly as it will appear on Instagram.
 - **Stories & Reels**: Plan beyond the grid with dedicated views for stories and reels.
 
-### 05 — LICENSE
+### 05 — CONTENT PLANNER (`/planner`)
+
+A standalone recreation of the Notion content workflow. One `Content` table powers every view, so an edit shows up everywhere at once.
+
+- **Content Calendar** — Shoot · Week, Shoot · Month, Edit (parent-focused), Post. Drag a card to another day to reschedule just that date.
+- **Content tables** — To Shoot (all To-do statuses), To Edit (In progress, not edited), To Post (Ready to Post, Edited filter Any/Yes/No).
+- **Ready to Post · Available Posts** — unscheduled In progress / Ready to Post items, grouped under their parent.
+- **Outfits to Prep** — items with Buy Clothes / Ordered / Delivered, with SHEIN deadlines: order 7 days before the shoot; return reminder on day 11 of the 14-day window (the window starts the day an item is marked Ordered).
+- **Quick Links** and configurable navigation (`src/config/dashboardNav.ts`).
+- **Feed sync** — new posts, reels, stories and drafts in the feed create planner rows automatically; uploading a photo attaches it and moves the row from To Board/To Shoot to To Edit.
+
+Dates are stored as Asia/Manila wall-clock strings (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`), so date-only values never shift a day.
+
+**Database setup** — the schema lives in `prisma/schema.prisma` and is applied with `db push` (the repo has no migrations folder):
+
+```bash
+# .env needs POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING
+npx prisma db push
+```
+
+No local Postgres? `npx prisma dev` starts a temporary one; point both variables at the URL it prints.
+
+**Sample data** — on an empty planner, click **Load sample data** for fictional records (titles end in "(sample)").
+
+**Tests**
+
+```bash
+npm test
+```
+
+### 06 — LICENSE
 
 MIT
