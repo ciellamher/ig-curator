@@ -225,30 +225,45 @@ export async function deleteContent(id: string) {
   return deleteContents([id])
 }
 
-/**
- * Adds photos to a planner page and links it to a feed box (creating the link if the page didn't have one yet),
- * so the photo shows in the feed too.
- */
-export async function attachMediaToContent(id: string, urls: string[], slotId: string): Promise<Result<ContentDTO>> {
+/** Adds photos to a planner page. `link` connects it to a feed box (when its category puts it in the feed). */
+export async function attachMediaToContent(
+  id: string,
+  urls: string[],
+  link: { slotId: string; contentType: string } | null,
+): Promise<Result<ContentDTO>> {
   return run(async () => {
     const userId = await requireUserId()
     const row = await prisma.content.findFirst({ where: { id, userId }, include: { media: true } })
     if (!row) throw new Error("This item no longer exists")
     const clean = cleanMediaUrls(urls)
     if (!clean.length) throw new Error("No photos to add")
-    const link = row.slotId ?? (/^slot-[\w-]{3,100}$/.test(slotId) ? slotId : null)
-    if (!link) throw new Error("Invalid feed box")
+    const linkData = link && !row.slotId ? validLink(link) : null
     const start = row.media.length
     const updated = await prisma.content.update({
       where: { id },
-      data: {
-        slotId: link,
-        contentType: row.contentType ?? "Post",
-        media: { create: clean.map((url, i) => ({ url, position: start + i })) },
-      },
+      data: { ...(linkData ?? {}), media: { create: clean.map((url, i) => ({ url, position: start + i })) } },
       include: { media: true },
     })
-    await prisma.deletedFeedSlot.deleteMany({ where: { userId, slotId: link } })
+    if (linkData) await prisma.deletedFeedSlot.deleteMany({ where: { userId, slotId: linkData.slotId } })
+    return toDTO(updated)
+  })
+}
+
+function validLink(link: { slotId: string; contentType: string }) {
+  if (!/^slot-[\w-]{3,100}$/.test(link.slotId)) throw new Error("Invalid feed box")
+  const contentType = ["Post", "Reel", "StoryFolder"].includes(link.contentType) ? link.contentType : "Post"
+  return { slotId: link.slotId, contentType }
+}
+
+/** Connects a page to a feed box, or disconnects it (link = null) without deleting the page. */
+export async function setContentFeedLink(id: string, link: { slotId: string; contentType: string } | null): Promise<Result<ContentDTO>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    const row = await prisma.content.findFirst({ where: { id, userId } })
+    if (!row) throw new Error("This item no longer exists")
+    const data = link ? validLink(link) : { slotId: null, contentType: null }
+    const updated = await prisma.content.update({ where: { id }, data, include: { media: true } })
+    if (link) await prisma.deletedFeedSlot.deleteMany({ where: { userId, slotId: link.slotId } })
     return toDTO(updated)
   })
 }

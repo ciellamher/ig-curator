@@ -8,9 +8,9 @@ export default function Home() {
         <DashboardClient />
       </section>
       <section aria-label="Content planner" className="min-w-0 border-t border-zinc-200 lg:border-t-0">
-        {/* Drafts & Inspo (rendered by the feed so they share its data) */}
-        <div id="library-slot" className="w-full max-w-[1200px] px-3 sm:px-6 lg:px-8 pt-4 sm:pt-6 empty:hidden" />
         <PlannerClient />
+        {/* Drafts & Inspo (rendered by the feed so they share its data) */}
+        <div id="library-slot" className="w-full max-w-[1200px] px-3 sm:px-6 lg:px-8 pb-8 empty:hidden" />
       </section>
     </main>
   )

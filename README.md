@@ -30,7 +30,7 @@ Then open `http://localhost:3000`.
 
 **Feed ↔ planner**
 - Every box in the Posts tab, and every story folder, has its own planner page.
-- Planner pages can exist before they're in the feed; adding a photo to a page puts it in the feed (story pages as story folders).
+- Planner pages show in the feed only when their category says where: **Post** → the grid, **Reels** → a reel, **Story** → a story folder. Other pages stay in the planner. A page appears once it has a photo, and changing its category moves it.
 - Renaming or deleting on either side updates the other.
 - Clicking a box opens its planner page; opening a page opens its box's editor and highlights it.
 

@@ -26,3 +26,11 @@ export function defaultFeedTitle(slot: Pick<FeedSlotSync, "location" | "contentT
   if (slot.location === "inspo") return "Untitled Inspo"
   return `Untitled ${slot.contentType}`
 }
+
+/** Where a planner page shows in the feed, from its categories: Post → grid, Reels → reel, Story → story folder. */
+export function feedKindFor(categories: string[]): "Post" | "Reel" | "StoryFolder" | null {
+  if (categories.includes("Post")) return "Post"
+  if (categories.includes("Reels")) return "Reel"
+  if (categories.includes("Story")) return "StoryFolder"
+  return null
+}

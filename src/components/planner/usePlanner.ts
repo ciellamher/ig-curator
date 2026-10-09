@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { attachMediaToContent, createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { attachMediaToContent, createContent, deleteContents, listContent, loadSampleData, setContentFeedLink, updateContent } from "@/app/actions/content"
+import { feedKindFor } from "@/lib/planner/feed"
 import { saveMediaBlob } from "@/lib/idb"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
@@ -65,6 +66,7 @@ export function usePlanner(enabled: boolean) {
     const res = await updateContent(id, patch)
     if (res.success) {
       setItems((curr) => curr.map((i) => (i.id === id ? res.data : i)))
+      if ("categories" in patch) reconcileFeed(res.data)
       // Renaming a feed-linked record renames its box in the feed.
       if (res.data.slotId && "title" in patch && previous?.title !== res.data.title) {
         window.dispatchEvent(new CustomEvent(PLANNER_TITLE_EVENT, { detail: { slotId: res.data.slotId, title: res.data.title } }))
@@ -150,7 +152,38 @@ export function usePlanner(enabled: boolean) {
     else setError(res.error)
   }, [])
 
-  /** Saves photos in this browser, adds them to the page, and shows them in the feed (creating its box if needed). */
+  const newSlotId = () => `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const showInFeed = (page: ContentDTO, urls: string[]) => {
+    const detail: FeedAttach = { slotId: page.slotId!, urls, title: page.title, contentType: page.contentType ?? "Post" }
+    window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+  }
+
+  /**
+   * Keeps a page's place in the feed matching its category: Post → grid, Reels → reel, Story → story folder,
+   * none of those → not in the feed. A page only appears once it has a photo.
+   */
+  const reconcileFeed = useCallback(async (page: ContentDTO) => {
+    const want = feedKindFor(page.categories)
+    const have = page.slotId ? (page.contentType === "StoryFolder" ? "StoryFolder" : page.contentType === "Reel" ? "Reel" : "Post") : null
+    if (want === have) return
+    let current = page
+    if (have) {
+      // Disconnect first so removing the box doesn't delete the page
+      const res = await setContentFeedLink(page.id, null)
+      if (!res.success) return setError(res.error)
+      current = res.data
+      window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: [page.slotId!] }))
+    }
+    if (want && current.media.length) {
+      const res = await setContentFeedLink(page.id, { slotId: newSlotId(), contentType: want })
+      if (!res.success) return setError(res.error)
+      current = res.data
+      showInFeed(current, current.media.map((m) => m.url))
+    }
+    setItems((curr) => curr.map((i) => (i.id === page.id ? current : i)))
+  }, [])
+
+  /** Saves photos in this browser and adds them to the page; they show in the feed if its category puts it there. */
   const attachPhotos = useCallback(async (item: ContentDTO, files: File[]) => {
     if (!files.length) return
     const urls: string[] = []
@@ -160,15 +193,15 @@ export function usePlanner(enabled: boolean) {
       await saveMediaBlob(id, new Blob([await file.arrayBuffer()], { type: file.type }))
       urls.push(`local-media://${id}`)
     }
-    const slotId = item.slotId ?? `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-    const res = await attachMediaToContent(item.id, urls, slotId)
+    const want = feedKindFor(item.categories)
+    const link = !item.slotId && want ? { slotId: newSlotId(), contentType: want } : null
+    const res = await attachMediaToContent(item.id, urls, link)
     if (!res.success) {
       setError(res.error)
       return
     }
     setItems((curr) => curr.map((i) => (i.id === item.id ? res.data : i)))
-    const detail: FeedAttach = { slotId: res.data.slotId!, urls, title: res.data.title, contentType: res.data.contentType ?? "Post" }
-    window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+    if (res.data.slotId) showInFeed(res.data, link ? res.data.media.map((m) => m.url) : urls)
   }, [])
 
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])

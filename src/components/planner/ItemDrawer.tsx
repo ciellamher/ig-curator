@@ -10,6 +10,7 @@ import { formatDate } from "@/lib/planner/dates"
 import { STATUS_STYLES } from "@/lib/planner/options"
 import { batchOptionsFor } from "@/lib/planner/views"
 import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
+import { feedKindFor } from "@/lib/planner/feed"
 import { DATE_FIELDS, type ContentDTO, type Location } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
@@ -54,6 +55,7 @@ export function ItemDrawer({
   const alert = order ? orderAlert(order, items) : clothingAlert(item, byId)
   const postRef = useRef<HTMLDivElement>(null)
   const [uploading, setUploading] = useState(false)
+  const feedKind = feedKindFor(item.categories)
   const panelRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -123,7 +125,11 @@ export function ItemDrawer({
             >
               <Plus size={18} />
               <span className="text-xs font-semibold">{uploading ? "Adding…" : "Add photos"}</span>
-              {!item.media.length && <span className="text-[11px] text-zinc-400">They&apos;ll show in your feed too</span>}
+              {!item.media.length && (
+                <span className="text-[11px] text-zinc-400 px-3 text-center">
+                  {feedKind ? `Shows in your feed as a ${feedKind === "StoryFolder" ? "story" : feedKind === "Reel" ? "reel" : "post"}` : "Stays in the planner — pick Post, Reels or Story to show it in the feed"}
+                </span>
+              )}
               <input
                 type="file"
                 accept="image/*,video/*"
@@ -243,7 +249,11 @@ export function ItemDrawer({
           </div>
 
           <p className="text-xs text-zinc-400">
-            {item.slotId ? "In your feed. Photos and the title stay in sync with its box." : "Not in your feed yet — add a photo to put it there."}
+            {item.slotId
+              ? "In your feed. Photos and the title stay in sync with its box."
+              : feedKind
+                ? "Not in your feed yet — add a photo to put it there."
+                : "Planner only. Pick Post, Reels or Story (Category) to show it in the feed."}
           </p>
         </div>
       </aside>

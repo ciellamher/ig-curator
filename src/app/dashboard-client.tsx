@@ -766,7 +766,7 @@ export function DashboardClient() {
         const box = curr.find((i) => i.id === slotId);
         const text = /^Untitled/.test(title) ? "" : title;
         if (contentType === "StoryFolder") {
-          const folder: SlotItem[] = box ? [] : [{ id: slotId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: text || "New Folder", contentType: "StoryFolder" }];
+          const folder: SlotItem[] = box ? [] : [{ id: slotId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: title, contentType: "StoryFolder" }];
           const stories: SlotItem[] = urls.map((u, n) => ({
             id: `story-${Date.now()}-${n}`,
             type: u.includes("-video-") ? "video" : "image",

@@ -75,10 +75,20 @@ export function Dropdown({
       const t = e.target as Node
       if (!listRef.current?.contains(t) && !triggerRef.current?.contains(t)) setOpen(false)
     }
+    // While open, Escape closes just this list (wherever focus is), never the panel it sits in
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      e.stopImmediatePropagation()
+      e.preventDefault()
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+    window.addEventListener("keydown", onEscape, true)
     window.addEventListener("pointerdown", onDown)
     window.addEventListener("resize", place)
     window.addEventListener("scroll", place, true)
     return () => {
+      window.removeEventListener("keydown", onEscape, true)
       window.removeEventListener("pointerdown", onDown)
       window.removeEventListener("resize", place)
       window.removeEventListener("scroll", place, true)
@@ -105,7 +115,10 @@ export function Dropdown({
     else if (e.key === "Home") setActive(0)
     else if (e.key === "End") setActive(options.length - 1)
     else if (e.key === "Enter" || e.key === " ") options[active] && choose(options[active].value)
-    else if (e.key === "Escape") close()
+    else if (e.key === "Escape") {
+      e.stopPropagation() // close just the list, not the panel it's in
+      close()
+    }
     else if (e.key === "Tab") return close(false)
     else return
     e.preventDefault()
