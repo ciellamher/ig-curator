@@ -260,6 +260,7 @@ export function InspoFolderListView({
               return (
                 <div
                   key={folder.id}
+                  data-slot-id={folder.id}
                   onClick={() => onFolderClick(folder.id)}
                   draggable
                   onDragStart={(e) => {

@@ -15,6 +15,7 @@ import { InspoFolderListView } from "@/components/grid/InspoFolderListView";
 import { InspoFolderView } from "@/components/grid/InspoFolderView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
+import { PhotoVault, useOrphanPhotos } from "@/components/grid/PhotoVault";
 import {
   Calendar,
   Image as ImageIcon,
@@ -35,13 +36,15 @@ import {
   ChevronLeft,
   PlusCircle,
   Check,
+  Archive,
 } from "lucide-react";
-import { setItem, getItem, removeItem } from "@/lib/idb";
+import { setItem, getItem, removeItem, saveFeedBackup } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
 import {
   PLANNER_DELETED_EVENT,
+  PLANNER_FOCUS_EVENT,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
@@ -328,34 +331,31 @@ export function DashboardClient() {
     }
 
     async function init() {
+      // Wait for sign-in to resolve so the feed is loaded once, from the right source.
+      if (status === "loading") return;
       try {
         const saved = await getItem<SlotItem[]>("ig-curator-items");
         const emergencyBackup = localStorage.getItem("ig-curator-items");
+        const hasLocal = Boolean(emergencyBackup) || Boolean(saved && saved.length);
 
-        // Cloud copy: use it on a new device, or when it was changed on another device more recently than here.
-        if (userId) {
+        // The cloud copy is only used on a device that has no feed of its own. A feed already in this
+        // browser is never replaced automatically.
+        if (userId && !hasLocal) {
           const cloud = await fetchGridFromCloud();
           if (cloud.success && cloud.data && cloud.data.items.length) {
-            const meta = readCloudMeta(userId);
-            const hasLocal = Boolean(emergencyBackup) || Boolean(saved && saved.length);
-            const changedElsewhere = !meta.syncedAt || cloud.data.updatedAt > meta.syncedAt;
-            const localIsOlder = !meta.dirty || !meta.localChangedAt || cloud.data.updatedAt > meta.localChangedAt;
-            if (!hasLocal || (changedElsewhere && localIsOlder)) {
-              const adopted = toMonochrome(cloud.data.items);
-              if (isMounted) {
-                cloudPushedRef.current = adopted;
-                setItems(adopted);
-              }
-              await setItem("ig-curator-items", adopted).catch(() => {});
-              localStorage.removeItem("ig-curator-items");
-              if (cloud.data.profile) {
-                localStorage.setItem("ig-curator-profile", JSON.stringify(cloud.data.profile));
-                window.dispatchEvent(new Event("ig-curator:profile"));
-              }
-              writeCloudMeta(userId, { syncedAt: cloud.data.updatedAt, dirty: false, localChangedAt: null });
-              if (isMounted) setIsLoaded(true);
-              return;
+            const adopted = toMonochrome(cloud.data.items);
+            if (isMounted) {
+              cloudPushedRef.current = adopted;
+              setItems(adopted);
             }
+            await setItem("ig-curator-items", adopted).catch(() => {});
+            if (cloud.data.profile && !localStorage.getItem("ig-curator-profile")) {
+              localStorage.setItem("ig-curator-profile", JSON.stringify(cloud.data.profile));
+              window.dispatchEvent(new Event("ig-curator:profile"));
+            }
+            writeCloudMeta(userId, { syncedAt: cloud.data.updatedAt, dirty: false, localChangedAt: null });
+            if (isMounted) setIsLoaded(true);
+            return;
           }
         }
 
@@ -363,17 +363,24 @@ export function DashboardClient() {
           try {
             const parsed = JSON.parse(emergencyBackup);
             localStorage.removeItem("ig-curator-items");
+            if (saved?.length) await saveFeedBackup(saved, "before restoring unsaved changes");
             if (isMounted) setItems(toMonochrome(parsed));
             await setItem("ig-curator-items", parsed).catch(() => {});
           } catch (e) {}
         } else if (saved && saved.length > 0) {
           const compressed = await compressIfNeeded(saved);
           if (isMounted) setItems(toMonochrome(compressed));
+          // Daily safety snapshot of the layout
+          const last = Number(localStorage.getItem("ig-curator-last-backup") || 0);
+          if (Date.now() - last > 12 * 3600_000) {
+            await saveFeedBackup(saved, "daily");
+            localStorage.setItem("ig-curator-last-backup", String(Date.now()));
+          }
         }
       } catch (error) {
         console.error("Failed to load local grid", error);
       }
-      
+
       if (isMounted) setIsLoaded(true);
     }
 
@@ -414,6 +421,65 @@ export function DashboardClient() {
     }, 2500);
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded, userId]);
+
+  // ---- Photos & backups: recover photos not in any box, restore layout snapshots, download a ZIP ----
+  const orphanPhotos = useOrphanPhotos(items, isLoaded);
+  const [vaultOpen, setVaultOpen] = useState(false);
+
+  // ---- Planner → feed: highlight the box an opened planner item belongs to ----
+  const [highlightSlotId, setHighlightSlotId] = useState<string | null>(null);
+  useEffect(() => {
+    const onFocus = (e: Event) => {
+      const slotId = (e as CustomEvent<string>).detail;
+      const all = itemsRef.current;
+      const item = all.find((i) => i.id === slotId);
+      if (!item) return;
+      const folder = item.folderId ? all.find((i) => i.id === item.folderId) : undefined;
+      if (item.folderId === "draft-pool") setGridFilter("Placeholders");
+      else if (folder?.contentType === "StoryFolder") {
+        setGridFilter("Story");
+        setActiveStoryFolderId(folder.id);
+      } else if (folder?.contentType === "InspoFolder") {
+        setGridFilter("Inspo");
+        setActiveInspoFolderId(folder.id);
+      } else if (item.contentType === "StoryFolder" || item.contentType === "Story") {
+        setGridFilter("Story");
+        setActiveStoryFolderId(null);
+      } else if (item.contentType?.startsWith("Inspo")) {
+        setGridFilter("Inspo");
+        setActiveInspoFolderId(null);
+      } else setGridFilter("All");
+      setHighlightSlotId(null);
+      requestAnimationFrame(() => setHighlightSlotId(slotId));
+    };
+    window.addEventListener(PLANNER_FOCUS_EVENT, onFocus);
+    return () => window.removeEventListener(PLANNER_FOCUS_EVENT, onFocus);
+  }, []);
+  useEffect(() => {
+    if (!highlightSlotId) return;
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const find = () => {
+      const el = document.querySelector<HTMLElement>(`#grid-slot-${CSS.escape(highlightSlotId)}, [data-slot-id="${CSS.escape(highlightSlotId)}"]`);
+      if (!el) {
+        if (tries++ < 15) timer = setTimeout(find, 100);
+        return;
+      }
+      // Side by side: bring the box into view. On phones the feed is above the planner, so just highlight.
+      if (window.matchMedia("(min-width: 1024px)").matches) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.animate(
+        [
+          { outline: "3px solid #09090b", outlineOffset: "-3px" },
+          { outline: "3px solid rgba(9,9,11,0.15)", outlineOffset: "-3px" },
+          { outline: "3px solid #09090b", outlineOffset: "-3px" },
+          { outline: "3px solid transparent", outlineOffset: "-3px" },
+        ],
+        { duration: 2200, easing: "ease-in-out" },
+      );
+    };
+    find();
+    return () => clearTimeout(timer);
+  }, [highlightSlotId]);
 
   // Profile edits are backed up too
   const itemsRef = useRef(items);
@@ -497,17 +563,9 @@ export function DashboardClient() {
         setSyncStatus("Saved Locally");
         setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
       } catch (error: any) {
-        console.error("IDB save failed, trying to free space:", error);
-        try {
-          const slim = items.map(item => ({
-            ...item,
-            urls: item.urls.length > 0 ? [item.urls[item.currentUrlIndex ?? 0] ?? item.urls[0]] : [],
-          }));
-          await setItem("ig-curator-items", slim);
-          setItems(slim);
-        } catch (e2) {
-          console.error("Even slim save failed.", e2);
-        }
+        // Never drop photos to make room — report it so nothing is silently lost.
+        console.error("Saving the feed in this browser failed:", error);
+        setSyncStatus("Error");
       }
     }, 250);
 
@@ -863,6 +921,19 @@ export function DashboardClient() {
                 </span>
               </button>
 
+
+              {userId && (
+                <button
+                  onClick={() => setVaultOpen(true)}
+                  title={orphanPhotos.length ? `${orphanPhotos.length} photos aren't in any box — recover them` : "Photos & backups: download all photos, restore a backup"}
+                  className={`shrink-0 h-9 rounded-full border flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                    orphanPhotos.length ? "px-3 bg-zinc-950 text-white border-zinc-950" : "w-9 justify-center bg-white/80 border-soft-200 text-zinc-600 hover:text-zinc-950"
+                  }`}
+                >
+                  <Archive size={14} />
+                  {orphanPhotos.length > 0 && <span className="whitespace-nowrap">Recover {orphanPhotos.length}</span>}
+                </button>
+              )}
 
               {/* Grid Search Navigation Bar */}
               <div className="min-w-0 flex-1 sm:flex-none">
@@ -1235,6 +1306,23 @@ export function DashboardClient() {
           </div>
         </div>
       </div>
+      {vaultOpen && (
+        <PhotoVault
+          items={items}
+          orphans={orphanPhotos}
+          onClose={() => setVaultOpen(false)}
+          onRestorePhotos={(boxes) => {
+            updateItems((curr) => [...boxes, ...curr]);
+            const first = boxes.find((b) => b.type === "image");
+            if (first?.folderId === "draft-pool") setGridFilter("Placeholders");
+            else if (boxes[0]?.contentType === "InspoFolder") {
+              setGridFilter("Inspo");
+              setActiveInspoFolderId(boxes[0].id);
+            } else setGridFilter("All");
+          }}
+          onRestoreLayout={(snapshot) => updateItems(toMonochrome(snapshot))}
+        />
+      )}
       <ConfirmModal {...modalProps} />
     </div>
   );

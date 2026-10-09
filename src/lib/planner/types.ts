@@ -107,3 +107,6 @@ export const DATE_FIELDS: { field: DateField; label: string }[] = [
 
 /** Window event fired when the feed has written to the content database. */
 export const PLANNER_REFRESH_EVENT = "planner:refresh"
+
+/** Fired by the planner when an item is opened, to highlight its box in the feed; detail: slot id. */
+export const PLANNER_FOCUS_EVENT = "planner:focus"

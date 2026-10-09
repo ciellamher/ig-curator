@@ -345,6 +345,7 @@ export function InspoFolderView({
             return (
               <div
                 key={item.id}
+                data-slot-id={item.id}
                 className={`flex flex-col gap-2 cursor-pointer group rounded-2xl transition-all ${
                   dragTargetId === item.id
                     ? "ring-2 ring-slate-800 ring-offset-2 scale-105"
@@ -508,6 +509,7 @@ export function InspoFolderView({
           {postItems.map((item) => (
             <div
               key={item.id}
+              data-slot-id={item.id}
               className={`relative cursor-pointer group bg-soft-100 overflow-hidden break-inside-avoid mb-2 rounded-xl shadow-sm transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-slate-800 ring-offset-1 scale-[0.98]' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {

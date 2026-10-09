@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import type { ContentDTO, QuickLinkDTO } from "@/lib/planner/types"
+import { PLANNER_FOCUS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -33,7 +33,11 @@ export function PlannerClient() {
   const { confirm, modalProps } = useConfirmModal()
 
   const openItem = openId ? planner.byId.get(openId) ?? null : null
-  const open = (item: ContentDTO) => setOpenId(item.id)
+  const open = (item: ContentDTO) => {
+    setOpenId(item.id)
+    // Show which feed box this item is
+    if (item.slotId) window.dispatchEvent(new CustomEvent(PLANNER_FOCUS_EVENT, { detail: item.slotId }))
+  }
   const dangerCount = planner.alerts.filter((a) => a.alert.severity === "danger").length
 
   const deleteItem = async (item: ContentDTO) => {

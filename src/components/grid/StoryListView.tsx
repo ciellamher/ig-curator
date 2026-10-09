@@ -41,6 +41,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         return (
           <div 
             key={folder.id}
+            data-slot-id={folder.id}
             onClick={() => onFolderClick(folder.id)}
             className="w-full flex items-center justify-between p-4 border-b border-soft-100 cursor-pointer hover:bg-soft-50 transition-colors"
           >
