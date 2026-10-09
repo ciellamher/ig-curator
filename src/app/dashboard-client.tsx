@@ -54,6 +54,7 @@ import {
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
+  PLANNER_HIDDEN_EVENT,
   type FeedAttach,
   type FeedBox,
   type FeedSlotSync,
@@ -99,7 +100,7 @@ const GRID_TYPES = new Set(["Post", "Reel", "Carousel"]);
 
 /** Planner content: boxes in the Posts tab (the main grid), and story folders (one planner page per folder). */
 function isPlannerBox(item: SlotItem): boolean {
-  if (item.folderId || item.isLocked || item.isHiddenFromGrid) return false;
+  if (item.folderId || item.isLocked) return false;
   return item.contentType === "StoryFolder" || GRID_TYPES.has(item.contentType ?? "Post");
 }
 
@@ -121,6 +122,7 @@ function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
         : item.urls ?? [],
       parentSlotId: null,
       isFolder: isStoryFolder,
+      isHiddenFromGrid: item.isHiddenFromGrid,
     }];
   });
 }
@@ -203,7 +205,7 @@ export function DashboardClient() {
                 !i.folderId &&
                 !i.isHiddenFromGrid,
             )
-          : items.filter((i) => i.contentType === gridFilter && !i.folderId);
+          : items.filter((i) => i.contentType === gridFilter && !i.folderId && !i.isHiddenFromGrid);
 
     return currentViewItems
       .filter((item) => {
@@ -813,11 +815,17 @@ export function DashboardClient() {
       const { slotId, title } = (e as CustomEvent<{ slotId: string; title: string }>).detail;
       setItems((curr) => curr.map((i) => (i.id === slotId && i.text !== title ? { ...i, text: title } : i)));
     };
+    const onHidden = (e: Event) => {
+      const { slotId, hidden } = (e as CustomEvent<{ slotId: string; hidden: boolean }>).detail;
+      setItems((curr) => curr.map((i) => (i.id === slotId && i.isHiddenFromGrid !== hidden ? { ...i, isHiddenFromGrid: hidden } : i)));
+    };
     window.addEventListener(PLANNER_DELETED_EVENT, onDeleted);
     window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
+    window.addEventListener(PLANNER_HIDDEN_EVENT, onHidden);
     return () => {
       window.removeEventListener(PLANNER_DELETED_EVENT, onDeleted);
       window.removeEventListener(PLANNER_TITLE_EVENT, onTitle);
+      window.removeEventListener(PLANNER_HIDDEN_EVENT, onHidden);
     };
   }, []);
 
@@ -1314,7 +1322,7 @@ export function DashboardClient() {
                               )
                             : items.filter(
                                 (i) =>
-                                  i.contentType === gridFilter && !i.folderId,
+                                  i.contentType === gridFilter && !i.folderId && !i.isHiddenFromGrid,
                               )
                         }
                         setItems={updateItems}

@@ -13,6 +13,7 @@ import {
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
+  PLANNER_HIDDEN_EVENT,
   type ContentDTO,
   type ContentPatch,
   type FeedAttach,
@@ -136,6 +137,11 @@ export function usePlanner(enabled: boolean) {
       if ("title" in patch && previous?.title !== res.data.title) {
         for (const slotId of [res.data.slotId, ...Object.values(res.data.extraSlots ?? {})]) {
           if (slotId) window.dispatchEvent(new CustomEvent(PLANNER_TITLE_EVENT, { detail: { slotId, title: res.data.title } }))
+        }
+      }
+      if ("hiddenFromFeed" in patch && previous?.hiddenFromFeed !== res.data.hiddenFromFeed) {
+        for (const slotId of [res.data.slotId, ...Object.values(res.data.extraSlots ?? {})]) {
+          if (slotId) window.dispatchEvent(new CustomEvent(PLANNER_HIDDEN_EVENT, { detail: { slotId, hidden: res.data.hiddenFromFeed } }))
         }
       }
     } else {

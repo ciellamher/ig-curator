@@ -17,6 +17,7 @@ const MAX_URL_LENGTH = 2048
 const DEFAULT_TITLE = /^(Untitled( (Post|Reel|Carousel|Story|Inspo|InspoPost|InspoStory|InspoHighlight|Inspo Board|Story Folder))?|New Folder)$/
 
 function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
+  const rawExtra = c.extraSlots as Record<string, string> | null
   return {
     id: c.id,
     parentId: c.parentId,
@@ -24,6 +25,7 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
     status: c.status,
     categories: c.categories,
     edited: c.edited,
+    hiddenFromFeed: rawExtra?.hiddenFromFeed === "true",
     clothingStatus: c.clothingStatus,
     orderedAt: c.orderedAt?.toISOString() ?? null,
     deliveredAt: c.deliveredAt?.toISOString() ?? null,
@@ -61,7 +63,12 @@ function cleanExtraSlots(value: unknown): Record<string, string> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null
   const out: Record<string, string> = {}
   for (const [type, slotId] of Object.entries(value)) {
-    if (FEED_TYPES.includes(type) && typeof slotId === "string" && /^slot-[\w-]{3,100}$/.test(slotId)) out[type] = slotId
+    // Preserve feed slot ids (Post, Reel, StoryFolder) AND the hiddenFromFeed flag
+    if (type === "hiddenFromFeed" && slotId === "true") {
+      out[type] = slotId
+    } else if (FEED_TYPES.includes(type) && typeof slotId === "string" && /^slot-[\w-]{3,100}$/.test(slotId)) {
+      out[type] = slotId
+    }
   }
   return Object.keys(out).length ? out : null
 }
@@ -155,6 +162,15 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
     data.categories = cats
   }
   if ("edited" in patch) data.edited = Boolean(patch.edited)
+  if ("hiddenFromFeed" in patch) {
+    const extra = (existing?.extraSlots as Record<string, string> | null) ?? {}
+    if (patch.hiddenFromFeed) {
+      extra.hiddenFromFeed = "true"
+    } else {
+      delete extra.hiddenFromFeed
+    }
+    data.extraSlots = Object.keys(extra).length > 0 ? extra : null
+  }
   if ("clothingStatus" in patch) {
     const clothing = patch.clothingStatus || null
     if (clothing && !CLOTHING_NAMES.includes(clothing as any)) throw new Error("Invalid clothing status")
@@ -421,6 +437,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
         parentSlotId: cleanText(s.parentSlotId, 120),
         isFolder: Boolean(s.isFolder),
         titleChanged: Boolean(s.titleChanged),
+        isHiddenFromGrid: Boolean(s.isHiddenFromGrid),
       }]
     })
     if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [], textForFeed: [] }
@@ -501,6 +518,13 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       const parentIsFromFeed = !current.parentId || feedRecordIds.has(current.parentId)
       if (parentIsFromFeed && current.parentId !== parentId && current.id !== parentId && !(parentId && parentsWithChildren.has(current.id))) {
         data.parentId = parentId
+      }
+      const extra = (current.extraSlots as Record<string, string> | null) ?? {}
+      const currentlyHidden = extra.hiddenFromFeed === "true"
+      if (currentlyHidden !== Boolean(slot.isHiddenFromGrid)) {
+        if (slot.isHiddenFromGrid) extra.hiddenFromFeed = "true"
+        else delete extra.hiddenFromFeed
+        data.extraSlots = Object.keys(extra).length ? extra : Prisma.DbNull
       }
 
       const currentUrls = [...current.media].sort((a, b) => a.position - b.position).map((m) => m.url)

@@ -134,6 +134,22 @@ export function ItemDrawer({
                 <EditedCheckbox value={item.edited} onChange={(edited) => update(item.id, { edited })} />
               </div>
             </Row>
+            {(!item.categories.includes("Story") || item.categories.includes("Post") || item.categories.includes("Reels")) && (
+              <Row label="Feed">
+                <div className="pt-1.5 flex items-center gap-2 text-sm text-zinc-700">
+                  <input
+                    type="checkbox"
+                    checked={item.hiddenFromFeed}
+                    onChange={(e) => update(item.id, { hiddenFromFeed: e.target.checked })}
+                    className="w-4 h-4 accent-zinc-950"
+                    id="hide-from-feed"
+                  />
+                  <label htmlFor="hide-from-feed" className="cursor-pointer select-none">
+                    Hide from feed
+                  </label>
+                </div>
+              </Row>
+            )}
             {DATE_FIELDS.map(({ field, label }) => (
               <div key={field} ref={field === "post" ? postRef : undefined}>
                 <Row label={label}>

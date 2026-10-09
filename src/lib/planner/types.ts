@@ -18,6 +18,7 @@ export type ContentDTO = {
   categories: string[]
   edited: boolean
   clothingStatus: string | null
+  hiddenFromFeed: boolean
   /** ISO timestamps of when clothing was marked Ordered / Delivered (delivery starts the return window). */
   orderedAt: string | null
   deliveredAt: string | null
@@ -44,6 +45,7 @@ export type ContentPatch = Partial<
     | "status"
     | "categories"
     | "edited"
+    | "hiddenFromFeed"
     | "clothingStatus"
     | "shoot"
     | "edit"
@@ -80,6 +82,8 @@ export type FeedSlotSync = {
   parentSlotId: string | null
   /** Story folders and inspo boards become parent records. */
   isFolder: boolean
+  /** Whether the box should be hidden from the grid view. */
+  isHiddenFromGrid?: boolean
   /** The box's text changed in the feed since the last sync, so the planner title should follow. */
   titleChanged?: boolean
 }
@@ -100,6 +104,9 @@ export type FeedSyncRequest = {
 export const PLANNER_DELETED_EVENT = "planner:deleted"
 /** Fired by the planner when a feed-linked record is renamed; detail: { slotId, title }. */
 export const PLANNER_TITLE_EVENT = "planner:title"
+
+/** Fired by the planner when a feed-linked record's hiddenFromFeed status changes; detail: { slotId, hidden }. */
+export const PLANNER_HIDDEN_EVENT = "planner:hidden"
 
 /** Window event fired when syncing the feed to the database fails. */
 export const PLANNER_SYNC_ERROR_EVENT = "planner:sync-error"
