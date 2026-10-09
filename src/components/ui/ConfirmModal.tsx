@@ -57,11 +57,11 @@ export function ConfirmModal({
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-all duration-200 ${visible ? "bg-black/30 backdrop-blur-sm" : "bg-transparent"}`}
+      className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-3 sm:p-4 transition-all duration-200 ${visible ? "bg-black/30 backdrop-blur-sm" : "bg-transparent"}`}
       onClick={handleCancel}
     >
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transition-all duration-200 ${visible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"}`}
+        className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden transition-all duration-200 ${visible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-4"}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-2">

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fdfdfd;
-  --foreground: #4a4a4a;
-  
+  --background: #faf9f8;
+  --foreground: #3f3f46;
+
   /* Delicate pastel pinks */
   --pastel-pink-50: #fff1f2;
   --pastel-pink-100: #ffe4e6;
@@ -11,11 +11,15 @@
   --pastel-pink-300: #fda4af;
   --pastel-pink-400: #fb7185;
   --pastel-pink-500: #f43f5e;
-  
+  --pastel-pink-600: #e11d48;
+  --pastel-pink-700: #be123c;
+
   /* Soft greys */
-  --soft-grey-50: #f9fafb;
-  --soft-grey-100: #f3f4f6;
-  --soft-grey-200: #e5e7eb;
+  --soft-grey-50: #f8f8f7;
+  --soft-grey-100: #f1f1ef;
+  --soft-grey-200: #e6e5e2;
+  --soft-grey-300: #d4d3cf;
+  --soft-grey-400: #a8a7a2;
 }
 
 @theme inline {
@@ -23,25 +27,95 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  
+
   --color-pastel-50: var(--pastel-pink-50);
   --color-pastel-100: var(--pastel-pink-100);
   --color-pastel-200: var(--pastel-pink-200);
   --color-pastel-300: var(--pastel-pink-300);
   --color-pastel-400: var(--pastel-pink-400);
   --color-pastel-500: var(--pastel-pink-500);
+  --color-pastel-600: var(--pastel-pink-600);
+  --color-pastel-700: var(--pastel-pink-700);
 
   --color-soft-50: var(--soft-grey-50);
   --color-soft-100: var(--soft-grey-100);
   --color-soft-200: var(--soft-grey-200);
-  
+  --color-soft-300: var(--soft-grey-300);
+  --color-soft-400: var(--soft-grey-400);
+
   /* Diffused shadows */
-  --shadow-diffused: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
-  --shadow-diffused-sm: 0 4px 20px -5px rgba(0, 0, 0, 0.03);
+  --shadow-diffused: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
+  --shadow-diffused-sm: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  --shadow-float: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px -8px rgba(0, 0, 0, 0.12);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, var(--pastel-pink-50), transparent 60%),
+    radial-gradient(900px 500px at 110% 0%, #f5f3ff, transparent 55%),
+    var(--background);
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
+}
+
+::selection {
+  background: var(--pastel-pink-200);
+  color: #18181b;
+}
+
+:focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 2px;
+}
+
+/* Hide scrollbars while keeping scroll */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Composable enter animations: animate-in + fade-in / zoom-in-95 / slide-in-from-* */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale(var(--tw-enter-scale, 1));
+  }
+}
+
+@utility animate-in {
+  animation: enter var(--tw-duration, 200ms) cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@utility fade-in {
+  --tw-enter-opacity: 0;
+}
+@utility zoom-in-95 {
+  --tw-enter-scale: 0.95;
+}
+@utility slide-in-from-bottom-* {
+  --tw-enter-translate-y: calc(var(--spacing) * --value(integer));
+}
+@utility slide-in-from-top-* {
+  --tw-enter-translate-y: calc(var(--spacing) * --value(integer) * -1);
+}
+
+@utility pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

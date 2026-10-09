@@ -56,7 +56,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
   const avatarUrl = profile.avatarUrl || session?.user?.image;
 
   return (
-    <div className="w-full bg-white flex flex-col pt-8 pb-4 px-5 select-none">
+    <div className="w-full bg-white flex flex-col pt-6 sm:pt-8 pb-4 px-4 sm:px-5 select-none">
       {/* Top Bar - Centered Layout */}
       <div className="relative flex items-center justify-center mb-5 min-h-[36px]">
         <div className="absolute left-0 flex items-center gap-3">
@@ -81,7 +81,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
             />
           ) : (
             <>
-              <span className="font-extrabold text-[16px] text-slate-900 tracking-tight">{profile.username}</span>
+              <span className="font-bold text-base text-zinc-900 tracking-tight max-w-[140px] truncate">{profile.username}</span>
               <ChevronDown size={15} className="text-slate-500" strokeWidth={2.5} />
             </>
           )}
@@ -91,7 +91,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
           {status === "authenticated" && (
             <button 
               onClick={isEditing ? saveProfile : () => setIsEditing(true)} 
-              className="p-2 bg-soft-100 border border-soft-200 hover:bg-slate-900 hover:text-white rounded-full text-slate-800 transition-all shadow-xs cursor-pointer flex items-center justify-center"
+              className={`p-2 border rounded-full transition-all cursor-pointer flex items-center justify-center ${isEditing ? "bg-zinc-900 border-zinc-900 text-white" : "bg-soft-100 border-soft-200 text-zinc-800 hover:bg-zinc-900 hover:border-zinc-900 hover:text-white"}`}
               title={isEditing ? "Save Profile" : "Edit Profile"}
             >
               {isEditing ? (
@@ -111,7 +111,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
       <div className="flex items-center justify-between px-1">
         <div className="relative shrink-0">
           <div 
-            className={`w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-slate-200 via-slate-400 to-slate-900 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            className={`w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             onClick={() => {
               if (isEditing) document.getElementById('profile-upload')?.click();
             }}

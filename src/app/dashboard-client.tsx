@@ -410,11 +410,11 @@ export function DashboardClient() {
       const el = document.getElementById(`grid-slot-${activeSlotId}`);
       if (el) {
         const rect = el.getBoundingClientRect();
-        const container = el.closest(".flex-1.flex.overflow-hidden.relative") || document.body;
+        const container = document.getElementById("grid-workspace") || document.body;
         if (container) {
           const containerRect = container.getBoundingClientRect();
           const targetY = rect.top - containerRect.top;
-          const baselineTop = window.innerWidth >= 768 ? 80 : 0;
+          const baselineTop = window.innerWidth >= 1024 ? 32 : 0; // matches lg:top-8 on the editor panel
           const topOffset = Math.max(
             -20,
             Math.min(600, targetY - baselineTop - 20) // -20 to align roughly with the top of the modal
@@ -526,7 +526,7 @@ export function DashboardClient() {
   if (!isLoaded) return null;
 
   return (
-    <div className="w-full flex flex-col min-h-screen bg-soft-50">
+    <div className="w-full flex flex-col h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-4rem)]">
       {showReconnectOverlay && (
         <div 
           className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
@@ -545,11 +545,11 @@ export function DashboardClient() {
             }
           }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FolderHeart size={32} className="text-blue-600" />
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-gradient-to-tr from-pastel-100 to-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FolderHeart size={30} className="text-pastel-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Reconnect to Mac</h2>
+            <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 mb-2">Reconnect to Mac</h2>
             <p className="text-slate-600 mb-6 text-sm">
               Click anywhere to automatically restore connection to your local save folder and load your latest changes.
             </p>
@@ -562,22 +562,23 @@ export function DashboardClient() {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* Main Planner Workspace */}
-        <div className="flex-1 bg-soft-50 flex flex-col h-full overflow-hidden">
-          {/* View Toggle & Tabs */}
-          <div className="flex flex-wrap sm:flex-nowrap justify-between items-center px-4 sm:px-8 pt-4 sm:pt-6 pb-2 gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5 pb-1 sm:pb-2 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={status === "authenticated" ? handleManualSync : undefined}
                 disabled={syncStatus === "Saving..."}
-                className={`text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 sm:py-2 rounded-full shadow-sm border transition-all flex items-center gap-2 ${
+                title="Sync now"
+                className={`shrink-0 text-xs sm:text-sm font-medium h-9 px-3 sm:px-4 rounded-full border transition-all flex items-center gap-2 ${
                   syncStatus === "Saving..."
                     ? "bg-amber-50 text-amber-600 border-amber-200 cursor-default"
                     : (syncStatus === "Saved" || syncStatus === "Saved Locally")
                       ? "bg-green-50 text-green-600 border-green-200 cursor-default"
                       : syncStatus === "Error"
                         ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
-                        : "bg-white border-soft-200 text-foreground/70 hover:text-foreground cursor-pointer"
-                } ${status !== "authenticated" ? "opacity-0 invisible pointer-events-none" : ""}`}
+                        : "bg-white/80 backdrop-blur border-soft-200 text-zinc-600 hover:text-zinc-900 hover:border-soft-300 cursor-pointer"
+                } ${status !== "authenticated" ? "hidden" : ""}`}
               >
                 {syncStatus === "Saving..." ? (
                   <RefreshCw size={13} className="animate-spin" />
@@ -586,7 +587,7 @@ export function DashboardClient() {
                 ) : (
                   <RefreshCw size={13} />
                 )}
-                <span>
+                <span className="hidden sm:inline">
                   {syncStatus === "Saving..."
                     ? "Syncing..."
                     : syncStatus === "Saved"
@@ -601,6 +602,7 @@ export function DashboardClient() {
 
 
               {/* Grid Search Navigation Bar */}
+              <div className="min-w-0 flex-1 sm:flex-none">
               <GridSearchNav
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -608,19 +610,20 @@ export function DashboardClient() {
                 onClearSearch={handleClearSearch}
                 placeholder="Search placeholders (e.g. selfie)..."
               />
+              </div>
             </div>
 
-            <div className="flex items-center bg-white rounded-full p-1 shadow-sm border border-soft-200">
+            <div className="hidden sm:flex shrink-0 items-center bg-white/80 backdrop-blur rounded-full p-1 border border-soft-200">
               <button
                 onClick={() => setDeviceView("phone")}
-                className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "phone" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+                className={`p-1.5 rounded-full transition-colors cursor-pointer ${deviceView === "phone" ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-900"}`}
                 title="Phone View"
               >
                 <Smartphone size={16} />
               </button>
               <button
                 onClick={() => setDeviceView("desktop")}
-                className={`p-1.5 sm:p-2 rounded-full transition-colors cursor-pointer ${deviceView === "desktop" ? "bg-pastel-100 text-pastel-700 font-bold" : "text-foreground/40 hover:text-foreground"}`}
+                className={`p-1.5 rounded-full transition-colors cursor-pointer ${deviceView === "desktop" ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-900"}`}
                 title="Desktop View"
               >
                 <Monitor size={16} />
@@ -629,27 +632,26 @@ export function DashboardClient() {
           </div>
 
           {/* Grid Workspace */}
-          <div className="flex-1 overflow-y-auto p-2 sm:p-6 md:p-8 relative flex justify-center">
+          <div id="grid-workspace" className="flex-1 overflow-y-auto px-0 pt-2 sm:p-6 lg:p-8 relative flex justify-center">
               {/* Dynamic View Container (Phone or Desktop) */}
               <div
                 className={`
                 ${
                   deviceView === "phone"
-                    ? "w-full max-w-full sm:max-w-[360px] sm:border-[12px] sm:border-slate-900 sm:ring-[2px] sm:ring-slate-800 sm:rounded-[3.5rem] shadow-2xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[600px] sm:h-[780px]"
-                    : "w-full max-w-4xl border border-soft-200 rounded-xl shadow-xl overflow-hidden relative bg-white flex flex-col mx-auto min-h-[700px]"
+                    ? "w-full max-w-full sm:max-w-[380px] sm:border-[10px] sm:border-zinc-900 sm:ring-1 sm:ring-zinc-700 sm:rounded-[3.25rem] sm:shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)] overflow-hidden relative bg-white flex flex-col mx-auto h-full sm:h-[min(800px,100%)] sm:min-h-[640px]"
+                    : "w-full max-w-4xl sm:border border-soft-200 sm:rounded-2xl sm:shadow-float overflow-hidden relative bg-white flex flex-col mx-auto h-full sm:min-h-[640px]"
                 } transition-all duration-300 ease-in-out
               `}
               >
                 {deviceView === "phone" && (
-                  <div className="hidden sm:flex absolute top-2 left-1/2 -translate-x-1/2 w-[100px] h-[26px] bg-black rounded-full z-50 shadow-inner items-center justify-between px-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-slate-800/80"></div>
-                    <div className="w-2 h-2 rounded-full bg-blue-900/40"></div>
+                  <div className="hidden sm:flex absolute top-2 left-1/2 -translate-x-1/2 w-[96px] h-[26px] bg-black rounded-full z-50 items-center justify-end px-3 pointer-events-none">
+                    <div className="w-2 h-2 rounded-full bg-indigo-950 ring-1 ring-zinc-800"></div>
                   </div>
                 )}
 
                 <div
                   id="main-scroll-container"
-                  className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-1" : ""}`}
+                  className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-3" : ""}`}
                 >
                   <ProfileHeader
                     session={session}
@@ -720,37 +722,35 @@ export function DashboardClient() {
                   />
 
                   {/* Grid Tabs */}
-                  <div className="flex items-center justify-around border-t border-b border-soft-100 py-2.5 sticky top-0 bg-white/95 backdrop-blur-md z-40 px-2 gap-1">
-                    <button
-                      onClick={() => setGridFilter("All")}
-                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "All" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
-                    >
-                      Posts
-                    </button>
-                    <button
-                      onClick={() => setGridFilter("Reel")}
-                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Reel" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
-                    >
-                      Reels
-                    </button>
-                    <button
-                      onClick={() => setGridFilter("Story")}
-                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Story" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
-                    >
-                      Stories
-                    </button>
-                    <button
-                      onClick={() => setGridFilter("Placeholders")}
-                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Placeholders" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
-                    >
-                      Drafts
-                    </button>
-                    <button
-                      onClick={() => setGridFilter("Inspo")}
-                      className={`flex-1 flex justify-center py-1.5 transition-all text-[11px] uppercase tracking-wider font-bold rounded-full ${gridFilter === "Inspo" ? "bg-slate-900 text-white shadow-sm" : "text-foreground/40 hover:text-foreground/80 hover:bg-soft-100"}`}
-                    >
-                      Inspo
-                    </button>
+                  <div className="@container sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-y border-soft-100 px-2 py-2">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                      {(
+                        [
+                          ["All", "Posts", Grid3X3],
+                          ["Reel", "Reels", Clapperboard],
+                          ["Story", "Stories", Circle],
+                          ["Placeholders", "Drafts", SquarePlus],
+                          ["Inspo", "Inspo", FolderHeart],
+                        ] as const
+                      ).map(([value, label, Icon]) => {
+                        const isActive = gridFilter === value;
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => setGridFilter(value)}
+                            aria-pressed={isActive}
+                            className={`flex-1 min-w-fit flex items-center justify-center gap-1.5 px-2.5 @md:px-3 h-8 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                              isActive
+                                ? "bg-zinc-900 text-white shadow-sm"
+                                : "text-zinc-500 hover:text-zinc-900 hover:bg-soft-100"
+                            }`}
+                          >
+                            <Icon size={13} strokeWidth={2.2} className="hidden @md:block" />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="w-full flex-1 flex flex-col min-h-0">
@@ -759,7 +759,7 @@ export function DashboardClient() {
                         <div className="w-16 h-16 bg-soft-100 rounded-full flex items-center justify-center mb-2">
                           <Grid3X3 className="text-soft-400" size={32} />
                         </div>
-                        <h3 className="text-xl font-bold text-foreground">
+                        <h3 className="text-xl font-semibold tracking-tight text-zinc-900">
                           Sign up first or login
                         </h3>
                         <p className="text-foreground/60 max-w-xs text-sm">
@@ -916,19 +916,19 @@ export function DashboardClient() {
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
                 <div
-                  className="fixed inset-0 bg-black/40 backdrop-blur-xs md:hidden z-40 animate-in fade-in duration-200"
+                  className="fixed inset-0 bg-black/40 backdrop-blur-xs lg:hidden z-[70] animate-in fade-in duration-200"
                   onClick={() => setActiveSlotId(null)}
                 />
 
                 <div
-                  className={`max-md:fixed max-md:inset-x-2 max-md:bottom-2 max-md:z-50 md:absolute ${
+                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:absolute ${
                     deviceView === "phone"
-                      ? "md:left-[calc(50%+195px)] md:top-20"
-                      : "md:right-6 md:top-16"
-                  } md:w-80 bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col transition-all duration-200 animate-in slide-in-from-bottom-4`}
+                      ? "lg:right-6 xl:right-auto xl:left-[calc(50%+206px)] lg:top-8"
+                      : "lg:right-6 lg:top-8"
+                  } lg:w-80 lg:max-h-[calc(100%-4rem)] bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
                   style={{
                     transform:
-                      typeof window !== "undefined" && window.innerWidth >= 768
+                      typeof window !== "undefined" && window.innerWidth >= 1024
                         ? `translate(${modalPos.x}px, ${modalPos.y}px)`
                         : "none",
                   }}
@@ -941,13 +941,13 @@ export function DashboardClient() {
                     onPointerCancel={handleModalPointerUp}
                   >
                     <div className="flex items-center gap-2">
-                      <Sparkles size={16} className="text-slate-700" />
-                      <h3 className="font-bold text-base text-foreground tracking-tight">
+                      <Sparkles size={16} className="text-pastel-500" />
+                      <h3 className="font-semibold text-base text-zinc-900 tracking-tight">
                         Edit Slot
                       </h3>
                     </div>
 
-                    <div className="w-10 h-1 bg-soft-300 rounded-full md:hidden"></div>
+                    <div className="w-10 h-1 bg-soft-300 rounded-full lg:hidden"></div>
 
                     <button
                       type="button"
@@ -961,7 +961,7 @@ export function DashboardClient() {
                       <X size={18} />
                     </button>
                   </div>
-                  <div className="pointer-events-auto">
+                  <div className="pointer-events-auto flex-1 min-h-0 overflow-y-auto no-scrollbar">
                     <EditorPanel
                       activeSlot={activeSlot}
                       updateSlot={updateItem}

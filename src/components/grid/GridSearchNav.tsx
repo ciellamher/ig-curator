@@ -20,14 +20,14 @@ export function GridSearchNav({
   hideMatchCount = false,
 }: GridSearchNavProps) {
   return (
-    <div className="flex items-center gap-2 bg-white border border-soft-200 rounded-full px-3 py-1.5 shadow-xs transition-all focus-within:border-slate-800 focus-within:ring-2 focus-within:ring-slate-800/10">
+    <div className="flex items-center gap-2 h-9 w-full sm:w-auto bg-white/80 backdrop-blur border border-soft-200 rounded-full px-3 transition-all hover:border-soft-300 focus-within:bg-white focus-within:border-zinc-900 focus-within:ring-4 focus-within:ring-zinc-900/5">
       <Search size={14} className="text-foreground/40 shrink-0" />
       <input
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         placeholder={placeholder}
-        className="w-36 sm:w-52 bg-transparent text-xs font-semibold text-foreground outline-none placeholder:text-foreground/40"
+        className="min-w-0 flex-1 sm:flex-none sm:w-56 lg:w-64 bg-transparent text-base sm:text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
       />
 
       {searchQuery.trim() !== "" && (

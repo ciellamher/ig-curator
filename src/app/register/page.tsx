@@ -65,41 +65,41 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-soft-50 p-4">
-      <div className="w-full max-w-sm bg-white rounded-3xl shadow-sm border border-soft-100 p-8">
+    <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:py-16">
+      <div className="w-full max-w-sm bg-white/80 backdrop-blur-xl rounded-3xl shadow-float border border-white p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-500 rounded-full flex items-center justify-center mb-4">
+          <div className="w-12 h-12 bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-pink-500/25">
             <Camera size={24} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Create Account</h1>
+          <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Create Account</h1>
           <p className="text-sm text-foreground/60 mt-1">Start curating your feed</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-xl text-center">
+          <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl text-center">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Username</label>
+            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Username</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-soft-200 focus:outline-none focus:ring-2 focus:ring-pastel-500/20 focus:border-pastel-500 transition-all text-sm"
+              className="w-full h-11 px-4 rounded-xl bg-white border border-soft-200 hover:border-soft-300 focus:outline-none focus:ring-4 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-base sm:text-sm placeholder:text-zinc-400"
               placeholder="curator"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+            <label className="block text-sm font-medium text-zinc-700 mb-1.5">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-soft-200 focus:outline-none focus:ring-2 focus:ring-pastel-500/20 focus:border-pastel-500 transition-all text-sm"
+              className="w-full h-11 px-4 rounded-xl bg-white border border-soft-200 hover:border-soft-300 focus:outline-none focus:ring-4 focus:ring-zinc-900/5 focus:border-zinc-900 transition-all text-base sm:text-sm placeholder:text-zinc-400"
               placeholder="••••••••"
               required
             />
@@ -108,7 +108,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-foreground text-white py-2.5 rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+            className="w-full h-11 bg-zinc-900 text-white rounded-xl text-sm font-semibold hover:bg-black active:scale-[0.99] transition-all disabled:opacity-50 mt-2 cursor-pointer shadow-sm"
           >
             {loading ? "Creating account..." : "Sign Up"}
           </button>
