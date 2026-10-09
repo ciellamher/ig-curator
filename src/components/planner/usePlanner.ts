@@ -1,9 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { attachMediaToContent, createContent, deleteContents, listContent, loadSampleData, setContentFeedLink, updateContent } from "@/app/actions/content"
+import { createContent, deleteContents, listContent, loadSampleData, setContentFeedLink, updateContent } from "@/app/actions/content"
 import { feedKindFor } from "@/lib/planner/feed"
-import { saveMediaBlob } from "@/lib/idb"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
 import { createOrder, deleteOrder, listOrders, renameOrder, setOrderBatches, setOrderDate, setOrderStage } from "@/app/actions/orders"
@@ -160,7 +159,7 @@ export function usePlanner(enabled: boolean) {
 
   /**
    * Keeps a page's place in the feed matching its category: Post → grid, Reels → reel, Story → story folder,
-   * none of those → not in the feed. A page only appears once it has a photo.
+   * none of those → not in the feed. The box starts empty; photos are added to it in the feed.
    */
   const reconcileFeed = useCallback(async (page: ContentDTO) => {
     const want = feedKindFor(page.categories)
@@ -174,7 +173,7 @@ export function usePlanner(enabled: boolean) {
       current = res.data
       window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: [page.slotId!] }))
     }
-    if (want && current.media.length) {
+    if (want) {
       const res = await setContentFeedLink(page.id, { slotId: newSlotId(), contentType: want })
       if (!res.success) return setError(res.error)
       current = res.data
@@ -183,32 +182,11 @@ export function usePlanner(enabled: boolean) {
     setItems((curr) => curr.map((i) => (i.id === page.id ? current : i)))
   }, [])
 
-  /** Saves photos in this browser and adds them to the page; they show in the feed if its category puts it there. */
-  const attachPhotos = useCallback(async (item: ContentDTO, files: File[]) => {
-    if (!files.length) return
-    const urls: string[] = []
-    for (const file of files) {
-      const kind = file.type.startsWith("video/") ? "video" : "image"
-      const id = `media-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
-      await saveMediaBlob(id, new Blob([await file.arrayBuffer()], { type: file.type }))
-      urls.push(`local-media://${id}`)
-    }
-    const want = feedKindFor(item.categories)
-    const link = !item.slotId && want ? { slotId: newSlotId(), contentType: want } : null
-    const res = await attachMediaToContent(item.id, urls, link)
-    if (!res.success) {
-      setError(res.error)
-      return
-    }
-    setItems((curr) => curr.map((i) => (i.id === item.id ? res.data : i)))
-    if (res.data.slotId) showInFeed(res.data, link ? res.data.media.map((m) => m.url) : urls)
-  }, [])
-
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, attachPhotos, loadSamples, saveLink, removeLink }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

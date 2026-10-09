@@ -2,7 +2,7 @@
 
 import { SHEIN_ENABLED } from "@/lib/features"
 import { Dropdown } from "@/components/ui/Dropdown"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { CalendarClock, Check, CheckCheck, MapPin, Plus, Trash2, X } from "lucide-react"
 import { LocalMediaImage } from "@/components/grid/LocalMedia"
 import { RETURN_WINDOW_DAYS, clothingAlert, itemTimeline, orderAlert, orderFor } from "@/lib/planner/clothing"
@@ -54,7 +54,6 @@ export function ItemDrawer({
   const t = itemTimeline(item, byId, planner.ordersById, items)
   const alert = order ? orderAlert(order, items) : clothingAlert(item, byId)
   const postRef = useRef<HTMLDivElement>(null)
-  const [uploading, setUploading] = useState(false)
   const feedKind = feedKindFor(item.categories)
   const panelRef = useRef<HTMLElement>(null)
 
@@ -115,36 +114,13 @@ export function ItemDrawer({
             </button>
           </div>
 
-          {/* Photos: adding one here also puts it in the feed */}
-          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
-            {item.media.map((m) => (
-              <LocalMediaImage key={m.id} src={m.url} className="h-36 w-28 shrink-0 rounded-xl object-cover" />
-            ))}
-            <label
-              className={`h-36 ${item.media.length ? "w-28" : "w-full"} shrink-0 rounded-xl border-2 border-dashed border-zinc-300 hover:border-zinc-950 flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-zinc-950 cursor-pointer transition-colors`}
-            >
-              <Plus size={18} />
-              <span className="text-xs font-semibold">{uploading ? "Adding…" : "Add photos"}</span>
-              {!item.media.length && (
-                <span className="text-[11px] text-zinc-400 px-3 text-center">
-                  {feedKind ? `Shows in your feed as a ${feedKind === "StoryFolder" ? "story" : feedKind === "Reel" ? "reel" : "post"}` : "Stays in the planner — pick Post, Reels or Story to show it in the feed"}
-                </span>
-              )}
-              <input
-                type="file"
-                accept="image/*,video/*"
-                multiple
-                className="hidden"
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files ?? [])
-                  e.target.value = ""
-                  setUploading(true)
-                  await planner.attachPhotos(item, files)
-                  setUploading(false)
-                }}
-              />
-            </label>
-          </div>
+          {item.media.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {item.media.map((m) => (
+                <LocalMediaImage key={m.id} src={m.url} className="h-14 w-11 shrink-0 rounded-md object-cover" />
+              ))}
+            </div>
+          )}
 
           <div className="flex flex-col">
             <Row label="Status">
@@ -252,7 +228,7 @@ export function ItemDrawer({
             {item.slotId
               ? "In your feed. Photos and the title stay in sync with its box."
               : feedKind
-                ? "Not in your feed yet — add a photo to put it there."
+                ? "In your feed once you add a photo to its box."
                 : "Planner only. Pick Post, Reels or Story (Category) to show it in the feed."}
           </p>
         </div>

@@ -779,9 +779,9 @@ export function DashboardClient() {
           }));
           return [...folder, ...curr, ...stories];
         }
-        if (box) return curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...urls] } : i));
+        if (box) return urls.length ? curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...urls] } : i)) : curr;
         return [
-          { id: slotId, type: "image", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post" },
+          { id: slotId, type: urls.length ? "image" : "placeholder", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post" },
           ...curr,
         ];
       });
