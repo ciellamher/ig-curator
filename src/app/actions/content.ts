@@ -201,6 +201,8 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
 export async function listContent(): Promise<Result<ContentDTO[]>> {
   return run(async () => {
     const userId = await requireUserId()
+    // Nothing to edit toward yet: To Edit without an edit date or a post date is To Schedule
+    await prisma.content.updateMany({ where: { userId, status: "To Edit", editStart: null, postStart: null }, data: { status: "To Schedule" } })
     const rows = await prisma.content.findMany({ where: { userId }, include: { media: true }, orderBy: { createdAt: "desc" } })
     // Move extra feed boxes kept in the old JSON form into their own column
     for (const r of rows.filter((r) => r.contentType?.startsWith('{"primary"') || legacyHidden(r.extraSlots))) {

@@ -152,12 +152,35 @@ describe("automatic edit dates", () => {
     expect(withScheduleRules(scheduled, { edit: { start: "2026-05-01", end: null } }).edit?.start).toBe("2026-05-01")
   })
 
-  it("moves To Schedule to To Edit once there's an edit date, but never overrides a chosen status", () => {
+  it("moves To Schedule to To Edit only once there's a post date, but never overrides a chosen status", () => {
     const waiting = { ...base, status: "To Schedule" }
-    expect(withScheduleRules(waiting, { edit: { start: "2026-05-01", end: null } }).status).toBe("To Edit")
+    expect(withScheduleRules(waiting, { edit: { start: "2026-05-01", end: null } }).status).toBeUndefined()
+    expect(withScheduleRules(waiting, { shoot: { start: "2026-05-01", end: null } }).status).toBeUndefined()
     expect(withScheduleRules(waiting, { post: { start: "2026-05-10", end: null } }).status).toBe("To Edit")
     expect(withScheduleRules(waiting, { post: { start: "2026-05-10", end: null }, status: "Posted" }).status).toBe("Posted")
     expect(withScheduleRules({ ...base, status: "To Shoot" }, { post: { start: "2026-05-10", end: null } }).status).toBeUndefined()
+  })
+})
+
+describe("edit lead time", () => {
+  it("is a week whenever it's a post or reel, even if it's also a story", () => {
+    expect(editLeadDays(["Story"])).toBe(3)
+    expect(editLeadDays(["Story", "Post"])).toBe(7)
+    expect(editLeadDays(["Reels", "Story"])).toBe(7)
+    expect(editLeadDays(["Post"])).toBe(7)
+  })
+})
+
+describe("To Edit without dates", () => {
+  const base = { status: "To Edit", categories: ["Post"], edited: false, post: { start: null, end: null }, edit: { start: null, end: null } }
+  it("goes back to To Schedule when it has neither an edit date nor a post date", () => {
+    const dated = { ...base, post: { start: "2026-05-10", end: null }, edit: { start: "2026-05-03", end: null } }
+    expect(withScheduleRules(dated, { post: { start: null, end: null }, edit: { start: null, end: null } }).status).toBe("To Schedule")
+    expect(withScheduleRules(base, { title: "x" }).status).toBe("To Schedule")
+  })
+  it("stays To Edit while it has either date, or when the status is picked by hand", () => {
+    expect(withScheduleRules({ ...base, edit: { start: "2026-05-03", end: null } }, { title: "x" }).status).toBeUndefined()
+    expect(withScheduleRules(base, { status: "To Edit" }).status).toBe("To Edit")
   })
 })
 

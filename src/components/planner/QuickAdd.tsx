@@ -5,7 +5,7 @@ import { X } from "lucide-react"
 import { Dropdown } from "@/components/ui/Dropdown"
 import { formatDate, type DateField } from "@/lib/planner/dates"
 import { DEFAULT_STATUS, STATUS_OPTIONS, STATUS_STYLES } from "@/lib/planner/options"
-import { autoEditDate } from "@/lib/planner/rules"
+import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
 import { toggleCategory } from "@/lib/planner/feed"
 import type { ContentPatch } from "@/lib/planner/types"
 import { Badge } from "./Fields"
@@ -112,7 +112,7 @@ export function QuickAdd({
         {autoEdit && (
           <p className="text-xs text-zinc-500">
             Edit date set automatically to <span className="font-semibold text-zinc-800">{formatDate(autoEdit, { weekday: true })}</span> (
-            {categories.includes("Story") ? "3 days" : "1 week"} before posting)
+            {editLeadDays(categories) === 3 ? "3 days" : "1 week"} before posting)
           </p>
         )}
 

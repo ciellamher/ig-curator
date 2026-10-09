@@ -7,7 +7,7 @@ import { Check, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { itemTimeline, orderBatches, orderFor, orderStage, orderTimeline } from "@/lib/planner/clothing"
 import { addDaysISO, formatDate, formatSchedule, moveSchedule, scheduleCovers, todayISO, weekday, type DateField } from "@/lib/planner/dates"
 import { GROUP_DOT, STATUS_OPTIONS, STATUS_STYLES, statusGroup } from "@/lib/planner/options"
-import { matchesSearch } from "@/lib/planner/views"
+import { matchesSearch, toEditView, toPostView, toShootView } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
 import { Badge, CategoryBadges } from "./Fields"
 import { Section, Tabs } from "./Section"
@@ -27,6 +27,7 @@ const MODES: { id: Mode; label: string }[] = [
 const FIELD: Record<Mode, DateField> = { "shoot-week": "shoot", "shoot-month": "shoot", edit: "edit", post: "post" }
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 const FIELD_LABEL: Record<DateField, string> = { shoot: "Shoot Date", edit: "Edit Date", post: "Post Now" }
+const STAGE_TAB: Record<DateField, string> = { shoot: "To Shoot", edit: "To Edit", post: "To Post" }
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 const MARKER_STYLE = {
@@ -39,10 +40,27 @@ function monthStart(date: string) {
   return `${date.slice(0, 7)}-01`
 }
 
-export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; query: string; onOpen: (item: ContentDTO) => void }) {
+export function ContentCalendar({
+  planner,
+  query,
+  onOpen,
+  stage,
+  onStage,
+}: {
+  planner: Planner
+  query: string
+  onOpen: (item: ContentDTO) => void
+  stage: DateField
+  onStage: (stage: DateField) => void
+}) {
   const { items, byId, update } = planner
   const today = todayISO()
-  const [mode, setMode] = useState<Mode>("shoot-month")
+  const [shootWeek, setShootWeek] = useState(false)
+  const mode: Mode = stage === "shoot" ? (shootWeek ? "shoot-week" : "shoot-month") : stage
+  const setMode = (m: Mode) => {
+    setShootWeek(m === "shoot-week")
+    onStage(FIELD[m])
+  }
   const [cursor, setCursor] = useState(today)
   const [selected, setSelected] = useState(today)
   const [statusFilter, setStatusFilter] = useState("All")
@@ -66,6 +84,12 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
   const visible = useMemo(() => {
     return items.filter((i) => i[field].start && matchesSearch(i, query) && (statusFilter === "All" || i.status === statusFilter))
   }, [items, query, statusFilter, field])
+
+  // Everything in the matching database tab that has no date for this calendar yet
+  const undated = useMemo(() => {
+    const inTab = field === "shoot" ? toShootView(items) : field === "edit" ? toEditView(items) : toPostView(items)
+    return inTab.filter((i) => !i[field].start && matchesSearch(i, query) && (statusFilter === "All" || i.status === statusFilter))
+  }, [items, field, query, statusFilter])
 
   const eventsOn = (day: string): CalEvent[] => {
     const out: CalEvent[] = visible.filter((i) => scheduleCovers(i[field], day)).map((item) => ({ key: `${item.id}-${field}`, item, kind: "date" }))
@@ -167,10 +191,9 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
       setDragOver(null)
       const item = byId.get(e.dataTransfer.getData("text/plain"))
       if (!item) return
-      // Only this calendar's date field changes (time of day and range length are kept). Scheduling something
-      // from To Schedule moves it on to To Edit.
-      const fromReady = item.status === "To Schedule"
-      update(item.id, { [field]: moveSchedule(item[field], day), ...(fromReady ? { status: "To Edit" } : {}) })
+      // Only this calendar's date field changes (time of day and range length are kept). The status follows the
+      // usual rules (a post date moves To Schedule on to To Edit).
+      update(item.id, { [field]: moveSchedule(item[field], day) })
     },
   })
 
@@ -288,6 +311,29 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
             {eventsOn(selected).length === 0 && <div className="text-xs text-zinc-300">Nothing scheduled</div>}
           </div>
         </>
+      )}
+      {undated.length > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-dashed border-zinc-300 p-2.5">
+          <div className="text-xs font-semibold text-zinc-700">
+            No {FIELD_LABEL[field]} yet <span className="font-normal text-zinc-400">· {undated.length} in {STAGE_TAB[field]} · drag onto a day</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {undated.map((item) => (
+              <button
+                key={item.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("text/plain", item.id)
+                  e.dataTransfer.effectAllowed = "move"
+                }}
+                onClick={() => onOpen(item)}
+                className="max-w-full truncate rounded-full border border-zinc-200 bg-white px-2.5 h-7 text-xs font-medium text-zinc-800 hover:border-zinc-950 cursor-grab active:cursor-grabbing"
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
       <p className="hidden sm:block text-[11px] text-zinc-400">
         Press + or double-click a day to add · drag cards between days to reschedule their {FIELD_LABEL[field]} · drag from Ready to Post to schedule

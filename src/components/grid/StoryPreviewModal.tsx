@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { SlotItem } from "@/types";
 import { X } from "lucide-react";
+import { LocalMediaImage } from "./LocalMedia";
 
 interface StoryPreviewModalProps {
   stories: SlotItem[];
@@ -83,7 +84,7 @@ export function StoryPreviewModal({ stories, initialIndex = 0, onClose }: StoryP
         
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <img src={imageUrl} alt="" className="w-full h-full object-cover select-none" />
+          <LocalMediaImage src={imageUrl} alt="" className="w-full h-full object-cover select-none" />
           
           {/* Text Overlay if present */}
           {currentItem.text && (

@@ -9,6 +9,7 @@ import { ContentRows, type Column } from "./ContentRows"
 import { Section, Tabs } from "./Section"
 import { BulkBar, useSelection } from "./Selection"
 import type { Planner } from "./usePlanner"
+import type { DateField } from "@/lib/planner/dates"
 
 type Tab = "shoot" | "edit" | "post" | "all"
 
@@ -43,6 +44,8 @@ export function ContentTable({
   onDeleteMany,
   focus,
   onFocusItem,
+  stage,
+  onStage,
 }: {
   planner: Planner
   query: string
@@ -50,8 +53,18 @@ export function ContentTable({
   onDeleteMany: (ids: string[]) => Promise<boolean>
   focus?: { id: string; reveal: number } | null
   onFocusItem?: (item: ContentDTO) => void
+  stage: DateField
+  onStage: (stage: DateField) => void
 }) {
-  const [tab, setTab] = useState<Tab>("shoot")
+  const [tab, setTabState] = useState<Tab>(stage)
+  const setTab = (t: Tab) => {
+    setTabState(t)
+    if (t !== "all") onStage(t)
+  }
+  // The calendar switched stage: show the same tab
+  useEffect(() => {
+    setTabState((t) => (t === stage ? t : stage))
+  }, [stage])
   const [edited, setEdited] = useState<EditedFilter>("any")
 
   const source = planner.items.filter((i) => matchesSearch(i, query))

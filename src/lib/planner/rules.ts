@@ -3,7 +3,7 @@
 import { addDaysISO, datePart } from "./dates"
 import type { ContentDTO, ContentPatch } from "./types"
 
-/** Stories are edited 3 days before they go up; posts and reels a week before. */
+/** Story-only content is edited 3 days before it goes up; anything that is also a post or reel, a week before. */
 export const STORY_EDIT_LEAD_DAYS = 3
 export const POST_EDIT_LEAD_DAYS = 7
 
@@ -20,7 +20,8 @@ export function autoEditDate(postStart: string | null, categories: string[]): st
 /**
  * Adds the automatic changes a patch implies:
  * - setting Post Now (or changing categories) moves Edit Date to 3 days (Story) / 1 week (Post, Reels) before it;
- * - an item waiting in "To Schedule" moves to "To Edit" once it has an edit date.
+ * - an item waiting in "To Schedule" moves to "To Edit" once it has a post date;
+ * - an item in "To Edit" with neither an edit date nor a post date goes back to "To Schedule".
  */
 export function withScheduleRules(item: Pick<ContentDTO, "status" | "categories" | "post" | "edit" | "edited">, patch: ContentPatch): ContentPatch {
   const next: ContentPatch = { ...patch }
@@ -48,9 +49,11 @@ export function withScheduleRules(item: Pick<ContentDTO, "status" | "categories"
     edited = true
   }
 
-  // Automatic "To Schedule" -> "To Edit" progression if it's placed on the calendar
-  if (!("status" in next) && !("status" in patch) && status === "To Schedule" && edit.start) {
-    next.status = "To Edit"
+  // "To Schedule" → "To Edit" once it has a date to post; "To Edit" with no edit and no post date → "To Schedule"
+  const postNow = next.post ?? post
+  if (!("status" in next) && !("status" in patch)) {
+    if (status === "To Schedule" && postNow.start) next.status = "To Edit"
+    else if (status === "To Edit" && !edit.start && !postNow.start) next.status = "To Schedule"
   }
 
   return next

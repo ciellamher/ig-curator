@@ -15,6 +15,7 @@ import { OutfitsTable } from "./OutfitsTable"
 import { QuickLinks } from "./Sidebar"
 import { ItemDrawer } from "./ItemDrawer"
 import { CalendarConnect } from "./CalendarConnect"
+import type { DateField } from "@/lib/planner/dates"
 
 export function PlannerClient() {
   const { status } = useSession()
@@ -34,6 +35,8 @@ export function PlannerClient() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [drawerFromFeed, setDrawerFromFeed] = useState(false)
   const [query, setQuery] = useState("")
+  // The calendar and the database tabs show the same stage: To Shoot ↔ Shoot, To Edit ↔ Edit, To Post ↔ Post
+  const [stage, setStage] = useState<DateField>("shoot")
   const { confirm, modalProps } = useConfirmModal()
 
   const openItem = openId ? planner.byId.get(openId) ?? null : null
@@ -205,9 +208,9 @@ export function PlannerClient() {
         [0, 1, 2].map((i) => <div key={i} className="bg-white border border-zinc-200 rounded-2xl h-64 animate-pulse" />)
       ) : (
         <>
-          <ContentCalendar planner={planner} query={query} onOpen={open} />
+          <ContentCalendar planner={planner} query={query} onOpen={open} stage={stage} onStage={setStage} />
           <AvailablePosts planner={planner} query={query} onOpen={open} />
-          <ContentTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focus={focus} onFocusItem={focusItem} />
+          <ContentTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focus={focus} onFocusItem={focusItem} stage={stage} onStage={setStage} />
           {SHEIN_ENABLED && (
             <OutfitsTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focusId={focus?.id ?? null} onFocusItem={focusItem} />
           )}

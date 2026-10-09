@@ -2,6 +2,7 @@ import { SlotItem } from "@/types";
 import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { LocalMediaImage } from "./LocalMedia";
 
 interface StoryListViewProps {
   folders: SlotItem[];
@@ -64,7 +65,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
       <div className="p-3 grid grid-cols-1 gap-3">
         {folders.map(folder => {
           const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
-          const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex]).slice(0, 3);
+          const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex] ?? s.urls[0]).filter(Boolean).slice(0, 3);
           
           return (
             <div 
@@ -77,18 +78,18 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                 {previewImages.length > 0 ? (
                   <>
                     <div className="flex-1 h-full overflow-hidden">
-                      <img src={previewImages[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <LocalMediaImage src={previewImages[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     </div>
                     {previewImages.length > 1 ? (
                       <div className="flex-1 h-full overflow-hidden">
-                        <img src={previewImages[1]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <LocalMediaImage src={previewImages[1]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       </div>
                     ) : (
                       <div className="flex-1 h-full bg-zinc-50" />
                     )}
                     {previewImages.length > 2 ? (
                       <div className="flex-1 h-full overflow-hidden">
-                        <img src={previewImages[2]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                        <LocalMediaImage src={previewImages[2]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                       </div>
                     ) : (
                       <div className="flex-1 h-full bg-zinc-50" />
