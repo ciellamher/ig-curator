@@ -94,7 +94,8 @@ describe("Ready to Post", () => {
   it("lists content waiting in To Schedule (not batches)", () => {
     expect(isAvailablePost(item({ status: "To Schedule" }))).toBe(true)
     expect(isAvailablePost(item({ status: "To Edit" }))).toBe(false)
-    expect(isAvailablePost(item({ status: "Ready to Post" }))).toBe(false)
+    expect(isAvailablePost(item({ status: "Ready to Post" }))).toBe(true)
+    expect(isAvailablePost(item({ status: "Ready to Post", post: { start: "2026-10-10", end: null } }))).toBe(false)
     expect(isAvailablePost(item({ status: "To Schedule", title: "Batch C" }))).toBe(false)
   })
 
@@ -287,8 +288,8 @@ describe("feed sync mapping", () => {
   it("sets the starting status from where the slot was added", () => {
     expect(statusForFeedSlot({ location: "drafts", mediaUrls: [], isFolder: false })).toBe("To Board")
     expect(statusForFeedSlot({ location: "grid", mediaUrls: [], isFolder: false })).toBe("To Shoot")
-    expect(statusForFeedSlot({ location: "grid", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Edit")
-    expect(statusForFeedSlot({ location: "story", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Edit")
+    expect(statusForFeedSlot({ location: "grid", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Schedule")
+    expect(statusForFeedSlot({ location: "story", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Schedule")
     expect(statusForFeedSlot({ location: "story", mediaUrls: [], isFolder: true })).toBe("To Shoot")
     expect(statusForFeedSlot({ location: "inspo", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Board")
     expect(categoryForFeedSlot({ location: "inspo", contentType: "InspoPost" })).toBeNull()

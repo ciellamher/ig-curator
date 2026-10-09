@@ -7,7 +7,7 @@ import type { FeedSlotSync } from "./types"
 export function statusForFeedSlot(slot: Pick<FeedSlotSync, "location" | "mediaUrls" | "isFolder">): Status {
   if (slot.location === "drafts" || slot.location === "inspo") return "To Board"
   if (slot.isFolder) return "To Shoot"
-  return slot.mediaUrls.length > 0 ? "To Edit" : "To Shoot"
+  return slot.mediaUrls.length > 0 ? "To Schedule" : "To Shoot"
 }
 
 /** Statuses the feed may still move automatically; anything later was set by hand and is left alone. */
