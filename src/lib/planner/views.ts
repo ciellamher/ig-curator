@@ -86,9 +86,9 @@ export function availablePostsView(items: ContentDTO[]): ContentDTO[] {
 
 // ---- Outfits to Prep ----
 
-/** Clothing still in progress (Buy Clothes, Ordered, Delivered), or content whose status is "To Buy/Plan Clothes". */
+/** Clothing still in progress (Buy Clothes, Ordered), or content whose status is "To Buy/Plan Clothes". */
 export function needsOutfitPrep(item: ContentDTO): boolean {
-  const clothingOpen = !!item.clothingStatus && clothingGroup(item.clothingStatus) !== "Complete"
+  const clothingOpen = !!item.clothingStatus && item.clothingStatus !== "Delivered" && clothingGroup(item.clothingStatus) !== "Complete"
   return clothingOpen || item.status === "To Buy/Plan Clothes"
 }
 
