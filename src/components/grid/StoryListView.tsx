@@ -61,54 +61,78 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
-      {folders.map(folder => {
-        const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
-        const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex]).slice(0, 3);
-        
-        return (
-          <div 
-            key={folder.id}
-            data-slot-id={folder.id}
-            onClick={() => onFolderClick(folder.id)}
-            className="w-full flex items-center justify-between p-4 border-b border-soft-100 cursor-pointer hover:bg-soft-50 transition-colors"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col">
+      <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {folders.map(folder => {
+          const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
+          const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex]).slice(0, 3);
+          
+          return (
+            <div 
+              key={folder.id}
+              data-slot-id={folder.id}
+              onClick={() => onFolderClick(folder.id)}
+              className="flex flex-col group cursor-pointer"
+            >
+              <div className="w-full aspect-square rounded-2xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm">
+                {previewImages.length > 0 ? (
+                  <>
+                    <div className="flex-1 h-full overflow-hidden">
+                      <img src={previewImages[0]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    </div>
+                    {previewImages.length > 1 ? (
+                      <div className="flex-1 h-full overflow-hidden">
+                        <img src={previewImages[1]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    ) : (
+                      <div className="flex-1 h-full bg-zinc-50" />
+                    )}
+                    {previewImages.length > 2 ? (
+                      <div className="flex-1 h-full overflow-hidden">
+                        <img src={previewImages[2]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      </div>
+                    ) : (
+                      <div className="flex-1 h-full bg-zinc-50" />
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 h-full bg-zinc-100" />
+                    <div className="flex-1 h-full bg-zinc-100" />
+                    <div className="flex-1 h-full bg-zinc-100" />
+                  </>
+                )}
+                
+                {onDeleteFolder && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(folder.id);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                    title="Delete Folder"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              
+              <div className="mt-3 px-1">
                 <input 
                   value={folder.text || folder.caption || ""}
                   onChange={(e) => updateItem(folder.id, { text: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="New Folder"
-                  className="font-bold text-foreground text-[18px] tracking-tight mb-0.5 bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-1 -ml-1 w-full"
+                  className="font-bold text-zinc-950 text-[17px] tracking-tight mb-0.5 bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-200 rounded px-1 -ml-1 w-full truncate cursor-text"
                 />
-                <span className="text-foreground/80 font-medium text-[15px] px-1">
-                  {storiesInFolder.length} items
-                </span>
-                {folder.scheduledTime && (
-                  <span className="text-foreground font-medium text-[14px] mt-0.5 px-1">
-                    Scheduled: {folder.scheduledTime}
-                  </span>
-                )}
+                <div className="text-[13px] font-medium text-zinc-500 px-1">
+                  {storiesInFolder.length} Pin{storiesInFolder.length !== 1 ? 's' : ''}
+                  {folder.scheduledTime && ` • ${folder.scheduledTime}`}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {onDeleteFolder && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteTarget(folder.id);
-                  }}
-                  className="p-2 text-foreground/30 hover:text-zinc-800 hover:bg-zinc-50 rounded-full transition-colors"
-                  title="Delete Folder"
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
-              <ChevronRight size={20} className="text-foreground/30" />
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
