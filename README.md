@@ -43,7 +43,6 @@ Sits beside the feed on the home page (feed on the left, planner on the right). 
 - **Content tables** — To Shoot (all To-do statuses), To Edit (In progress, not edited), To Post (Ready to Post, Edited filter Any/Yes/No), and All. Select rows (or select all) to delete in bulk.
 - **Ready to Post** — everything in To Schedule. Drag a card onto the calendar to schedule it; it moves to To Edit.
 - **Automatic edit dates** — setting Post Now sets Edit Date 3 days before (stories) or 1 week before (posts, reels), and follows whenever Post Now or the category changes.
-- **Outfits to Prep** — one SHEIN order covers two batches. Order 7 days before the first shoot; the 14-day return window counts from delivery, with a reminder from day 11 and a black "over 14 days" flag once it has closed. The original outfits table sits underneath.
 - **Quick Links** gallery.
 - **Feed ↔ planner sync** — boxes in the Posts tab (the main grid) get a planner row; drafts, stories and inspo stay in the feed only. Uploaded photos attach to the row, and renaming or deleting on either side updates the other.
 
