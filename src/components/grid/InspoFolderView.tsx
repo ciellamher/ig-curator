@@ -351,15 +351,12 @@ export function InspoFolderView({
 
       {/* Sub-Folders Section */}
       {subFolders.length > 0 && (
-        <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-2 px-3 py-3 border-b border-zinc-100 bg-white">
+        <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3 gap-x-3 gap-y-4 px-3 py-3 border-b border-zinc-100 bg-white">
           {subFolders.map((item) => {
             const customCover = item.urls?.[0];
             const folderImages = customCover
-              ? [customCover]
+              ? [customCover, ...getFolderImages(item.id).filter((u) => u !== customCover)].slice(0, 3)
               : getFolderImages(item.id);
-            const hasSubFolders = (childrenByFolderId.get(item.id) || []).some(
-              (i) => i.contentType === "InspoFolder",
-            );
 
             return (
               <div
@@ -415,62 +412,22 @@ export function InspoFolderView({
                   }
                 }}
               >
-                <div className="aspect-square bg-zinc-100 rounded-xl overflow-hidden relative group-hover:shadow-md transition-all">
-                  {/* Folder Thumbnail */}
-                  {!customCover && hasSubFolders && folderImages.length >= 4 ? (
-                    <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-[1px] bg-white">
-                      {folderImages.slice(0, 4).map((url, idx) => (
-                        <div
-                          key={idx}
-                          className="w-full h-full overflow-hidden bg-soft-100"
-                        >
-                          {url?.startsWith("data:video") || url?.includes("-video-") ? (
-                            <LocalMediaVideo
-                              src={url}
-                              className="w-full h-full object-cover"
-                              muted
-                              loop
-                              autoPlay
-                              playsInline
-                            />
+                <div className="aspect-[5/2] bg-zinc-100 rounded-xl overflow-hidden relative flex gap-0.5 shadow-sm group-hover:shadow-md transition-all">
+                  {/* Three photos side by side, like the story folders */}
+                  {[0, 1, 2].map((n) => {
+                    const url = folderImages[n];
+                    return (
+                      <div key={n} className="flex-1 h-full overflow-hidden bg-zinc-50">
+                        {url ? (
+                          url.startsWith("data:video") || url.includes("-video-") ? (
+                            <LocalMediaVideo src={url} className="w-full h-full object-cover" muted loop playsInline />
                           ) : (
-                            <LocalMediaImage
-                              src={url}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : folderImages.length > 0 ? (
-                    folderImages[0]?.startsWith("data:video") || folderImages[0]?.includes("-video-") ? (
-                      <LocalMediaVideo
-                        src={folderImages[0]}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        muted
-                        loop
-                        autoPlay
-                        playsInline
-                      />
-                    ) : (
-                      <LocalMediaImage
-                        src={folderImages[0]}
-                        alt={item.text}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )
-                  ) : (
-                    <div className="absolute inset-0 p-3 flex flex-col items-center justify-center gap-1.5 opacity-60">
-                      <div className="w-8 h-8 rounded-lg border-2 border-slate-400/50 flex items-center justify-center">
-                        <Grid3X3 size={16} className="text-slate-400" />
+                            <LocalMediaImage src={url} alt="" className="w-full h-full object-cover" />
+                          )
+                        ) : null}
                       </div>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5 pt-6 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
-                    <span className="block text-[11px] font-semibold text-white truncate drop-shadow-sm">{item.text || "Sub-board"}</span>
-                  </div>
+                    );
+                  })}
 
                   {/* Edit & Delete Buttons */}
                   <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
@@ -504,6 +461,12 @@ export function InspoFolderView({
                       <Trash2 size={14} />
                     </button>
                   </div>
+                </div>
+                <div className="px-1 -mt-1">
+                  <span className="block font-bold text-zinc-950 text-sm tracking-tight truncate">{item.text || "Sub-board"}</span>
+                  <span className="block text-[11px] font-medium text-zinc-500">
+                    {(childrenByFolderId.get(item.id) || []).filter((c) => c.urls?.length).length} Pins
+                  </span>
                 </div>
               </div>
             );

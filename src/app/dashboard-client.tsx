@@ -84,6 +84,16 @@ const LEGACY_PLACEHOLDER_COLORS: Record<string, string> = {
   "#f4acb7": "#A1A1AA",
 };
 
+/** The side panel's tabs: Drafts, then the board collections. */
+const LIBRARY_TABS = [
+  ["drafts", "Drafts"],
+  ["inspo", "Inspo"],
+  ["other", "Other content"],
+  ["fits", "Fits"],
+  ["highlights", "Other highlights"],
+] as const;
+type LibraryTab = (typeof LIBRARY_TABS)[number][0];
+
 function toMonochrome(items: SlotItem[]): SlotItem[] {
   return removeRepeatedPhotos(items).items.map((i) => {
     const grey = LEGACY_PLACEHOLDER_COLORS[i.hexColor?.toLowerCase() ?? ""];
@@ -605,13 +615,13 @@ export function DashboardClient() {
 
   // ---- Drafts & Inspo live beside the feed (in the right column), not inside the phone ----
   const [libraryEl, setLibraryEl] = useState<HTMLElement | null>(null);
-  const [libraryTab, setLibraryTab] = useState<"drafts" | "inspo">("drafts");
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>("drafts");
   const [libraryOpen, setLibraryOpen] = useState(true);
   useEffect(() => {
     setLibraryEl(document.getElementById("library-slot"));
     try {
       const saved = JSON.parse(localStorage.getItem("ig-curator-library") || "{}");
-      if (saved.tab === "drafts" || saved.tab === "inspo") setLibraryTab(saved.tab);
+      if (LIBRARY_TABS.some(([id]) => id === saved.tab)) setLibraryTab(saved.tab);
       if (saved.open === false) setLibraryOpen(false);
     } catch {}
   }, []);
@@ -628,7 +638,9 @@ export function DashboardClient() {
     }
   }, [gridFilter]);
   const draftCount = items.filter((i) => i.folderId === "draft-pool").length;
-  const boardCount = items.filter((i) => i.contentType === "InspoFolder" && !i.folderId).length;
+  // Board collections beside the phone: Inspo, Other content, Fits, Other highlights
+  const boardsIn = (tab: LibraryTab) =>
+    items.filter((i) => i.contentType === "InspoFolder" && !i.folderId && (i.library ?? "inspo") === tab);
 
   // Profile edits are backed up too
   const itemsRef = useRef(items);
@@ -1040,6 +1052,7 @@ export function DashboardClient() {
       hexColor: hexColor || "#E4E4E7",
       text: title,
       contentType: "InspoFolder",
+      ...(libraryTab !== "drafts" && libraryTab !== "inspo" ? { library: libraryTab } : {}),
     };
     updateItems((curr) => [newFolder, ...curr]);
     setActiveInspoFolderId(newFolder.id);
@@ -1552,22 +1565,18 @@ export function DashboardClient() {
       )}
       {libraryEl && status === "authenticated" &&
         createPortal(
-          <section aria-label="Drafts and Inspo" className="@container bg-white border border-zinc-200 rounded-2xl overflow-hidden">
-            <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-100">
-              {(
-                [
-                  ["drafts", "Drafts", draftCount],
-                  ["inspo", "Inspo", boardCount],
-                ] as const
-              ).map(([id, label, count]) => (
+          <section aria-label="Drafts and boards" className="@container bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-100 overflow-x-auto no-scrollbar">
+              {LIBRARY_TABS.map(([id, label]) => [id, label, id === "drafts" ? draftCount : boardsIn(id).length] as const).map(([id, label, count]) => (
                 <button
                   key={id}
                   onClick={() => {
+                    if (id !== libraryTab) setActiveInspoFolderId(null);
                     setLibraryTab(id);
                     setLibraryOpen(true);
                   }}
                   aria-pressed={libraryTab === id}
-                  className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-sm font-semibold cursor-pointer transition-colors ${
+                  className={`shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-sm font-semibold cursor-pointer transition-colors ${
                     libraryTab === id && libraryOpen ? "bg-zinc-950 text-white" : "text-zinc-600 hover:bg-zinc-100"
                   }`}
                 >
@@ -1575,10 +1584,10 @@ export function DashboardClient() {
                   <span className="text-xs opacity-60 tabular-nums">{count}</span>
                 </button>
               ))}
-              <span className="ml-2 hidden sm:inline text-xs text-zinc-400">Transfer anything to put it in the phone&apos;s grid</span>
+              <span className="ml-2 hidden @5xl:inline shrink-0 text-xs text-zinc-400">Transfer anything to put it in the phone&apos;s grid</span>
               <button
                 onClick={() => setLibraryOpen((o) => !o)}
-                className="ml-auto px-3 h-8 rounded-full text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
+                className="ml-auto shrink-0 px-3 h-8 rounded-full text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
                 aria-expanded={libraryOpen}
               >
                 {libraryOpen ? "Hide" : "Show"}
@@ -1586,7 +1595,7 @@ export function DashboardClient() {
             </div>
             {libraryOpen && (
               <div className="max-h-[70vh] overflow-y-auto">
-                {libraryTab === "inspo" ? (
+                {libraryTab !== "drafts" ? (
                       activeInspoFolderId && items.find((i) => i.id === activeInspoFolderId) ? (
                         <InspoFolderView
                           folder={items.find(
@@ -1617,10 +1626,8 @@ export function DashboardClient() {
                         />
                       ) : (
                         <InspoFolderListView
-                          folders={items.filter(
-                            (i) =>
-                              i.contentType === "InspoFolder" && !i.folderId,
-                          )}
+                          name={LIBRARY_TABS.find(([id]) => id === libraryTab)?.[1] ?? "Inspo"}
+                          folders={boardsIn(libraryTab)}
                           allItems={items}
                           onFolderClick={(folderId) =>
                             setActiveInspoFolderId(folderId)

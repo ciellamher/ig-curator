@@ -20,4 +20,7 @@ export type SlotItem = {
   // Instagram Sync
   isLocked?: boolean;
   isHiddenFromGrid?: boolean;
+
+  /** Which collection a board belongs to beside the phone (none = Inspo). */
+  library?: "other" | "fits" | "highlights";
 };

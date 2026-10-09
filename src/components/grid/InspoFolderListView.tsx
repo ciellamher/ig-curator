@@ -13,6 +13,8 @@ interface InspoFolderListViewProps {
   onAddFolder: (title: string, hexColor?: string, coverUrl?: string) => void;
   onDeleteFolder: (folderId: string) => void;
   updateItem?: (id: string, updates: Partial<SlotItem>) => void;
+  /** The collection's name, e.g. "Inspo" or "Fits" */
+  name?: string;
 }
 
 export function InspoFolderListView({
@@ -22,6 +24,7 @@ export function InspoFolderListView({
   onAddFolder,
   onDeleteFolder,
   updateItem,
+  name = "Inspo",
 }: InspoFolderListViewProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
@@ -129,7 +132,7 @@ export function InspoFolderListView({
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-zinc-100 px-4 py-3 flex items-center gap-2">
         <div className="min-w-0">
-          <h2 className="text-base font-bold text-zinc-950 leading-tight">Inspo boards</h2>
+          <h2 className="text-base font-bold text-zinc-950 leading-tight">{name} boards</h2>
           <p className="text-[11px] text-zinc-500">{folders.length} board{folders.length === 1 ? "" : "s"}</p>
         </div>
         <button
@@ -252,7 +255,7 @@ export function InspoFolderListView({
             <div className="w-14 h-14 rounded-2xl border-2 border-dashed border-zinc-300 flex items-center justify-center text-zinc-400">
               <Plus size={22} />
             </div>
-            <p className="text-sm font-semibold text-zinc-800">No inspo boards yet</p>
+            <p className="text-sm font-semibold text-zinc-800">No {name.toLowerCase()} boards yet</p>
             <p className="text-xs text-zinc-500">Make a board for each trip, shoot or mood, then add photos to it.</p>
             <button
               onClick={() => {
@@ -269,19 +272,15 @@ export function InspoFolderListView({
         )}
 
         {/* Boards */}
-        <div className="grid grid-cols-2 @xl:grid-cols-4 @4xl:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3 gap-x-3 gap-y-4">
           {folders
             .slice()
             .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
             .map((folder) => {
               const customCover = folder.urls?.[0];
               const folderImages = customCover
-                ? [customCover]
-                : getFolderImages(folder.id);
-              const hasSubFolders = allItems.some(
-                (i) =>
-                  i.folderId === folder.id && i.contentType === "InspoFolder",
-              );
+                ? [customCover, ...getFolderImages(folder.id, 3).filter((u) => u !== customCover)].slice(0, 3)
+                : getFolderImages(folder.id, 3);
 
               return (
                 <div
@@ -317,59 +316,24 @@ export function InspoFolderListView({
                   }`}
                 >
                   <div
-                    className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
+                    className="w-full aspect-[5/2] rounded-xl overflow-hidden relative shadow-sm flex gap-0.5"
                     style={{ backgroundColor: folder.hexColor || "#E4E4E7" }}
                   >
-                    {!customCover &&
-                    hasSubFolders &&
-                    folderImages.length >= 4 ? (
-                      <div className="w-full h-full grid grid-cols-2 grid-rows-2 gap-[2px] bg-white">
-                        {folderImages.slice(0, 4).map((url, idx) => (
-                          <div
-                            key={idx}
-                            className="w-full h-full overflow-hidden bg-soft-100"
-                          >
-                            {url?.startsWith("data:video") || url?.includes("-video-") ? (
-                              <LocalMediaVideo
-                                src={url}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                muted
-                                loop
-                                playsInline
-                              />
+                    {/* Three photos side by side, like the story folders */}
+                    {[0, 1, 2].map((n) => {
+                      const url = folderImages[n];
+                      return (
+                        <div key={n} className="flex-1 h-full overflow-hidden bg-zinc-50">
+                          {url ? (
+                            url.startsWith("data:video") || url.includes("-video-") ? (
+                              <LocalMediaVideo src={url} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" muted loop playsInline />
                             ) : (
-                              <LocalMediaImage
-                                src={url}
-                                alt=""
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : folderImages.length > 0 ? (
-                      folderImages[0]?.startsWith("data:video") || folderImages[0]?.includes("-video-") ? (
-                        <LocalMediaVideo
-                          src={folderImages[0]}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          muted
-                          loop
-                          playsInline
-                        />
-                      ) : (
-                        <LocalMediaImage
-                          src={folderImages[0]}
-                          alt={folder.text || ""}
-                          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      )
-                    ) : null}
-
-                    {/* Name in white over a soft fade */}
-                    <div className="absolute inset-x-0 bottom-0 z-10 px-2.5 pb-2 pt-8 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none">
-                      <h3 className="text-[13px] font-semibold text-white truncate drop-shadow-sm">{folder.text || "Untitled board"}</h3>
-                      <p className="text-[10px] text-white/80">{countPhotos(folder.id)} photos</p>
-                    </div>
+                              <LocalMediaImage src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            )
+                          ) : null}
+                        </div>
+                      );
+                    })}
 
                     {/* Edit & delete: on hover with a mouse, always visible on touch screens */}
                     <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
@@ -395,7 +359,12 @@ export function InspoFolderListView({
                       </button>
                     </div>
                   </div>
-
+                  <div className="px-1 -mt-0.5">
+                    <h3 className="font-bold text-zinc-950 text-sm tracking-tight truncate">{folder.text || "Untitled board"}</h3>
+                    <p className="text-[11px] font-medium text-zinc-500">
+                      {countPhotos(folder.id)} {countPhotos(folder.id) === 1 ? "Pin" : "Pins"}
+                    </p>
+                  </div>
                 </div>
               );
             })}
