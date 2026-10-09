@@ -16,7 +16,7 @@ import { InspoFolderView } from "@/components/grid/InspoFolderView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
 import { PhotoVault } from "@/components/grid/PhotoVault";
-import { splitInspo } from "@/lib/clearInspo";
+import { splitDrafts, splitInspo } from "@/lib/clearInspo";
 import {
   Calendar,
   Image as ImageIcon,
@@ -451,6 +451,27 @@ export function DashboardClient() {
       } catch {}
       localStorage.setItem(CLEAR_FLAG, new Date().toISOString());
       localStorage.setItem("ig-curator-restored-2026-10-09", "skipped");
+    })();
+  }, [isLoaded, userId]);
+
+  // One-time removal of all draft boxes for the ciellamher account (requested Oct 9). Posts, reels and stories are
+  // kept; photo files used only by drafts are deleted, and their planner rows go with them.
+  const draftsClearedRef = useRef(false);
+  useEffect(() => {
+    const CLEAR_FLAG = "ig-curator-drafts-cleared-2026-10-09";
+    if (!isLoaded || userId !== "cmrsbownc0000l404vsncrtxr" || draftsClearedRef.current) return;
+    draftsClearedRef.current = true;
+    if (localStorage.getItem(CLEAR_FLAG)) return;
+    (async () => {
+      // Wait for the Inspo clear-out above to finish so the two don't overwrite each other
+      for (let i = 0; i < 50 && !localStorage.getItem("ig-curator-inspo-cleared-2026-10-09"); i++) await new Promise((r) => setTimeout(r, 200));
+      const { keep, removed, mediaToDelete } = splitDrafts(itemsRef.current);
+      if (removed.length) {
+        setItems(keep);
+        await setItem("ig-curator-items", keep).catch(() => {});
+        for (const id of mediaToDelete) await deleteMediaBlob(id).catch(() => {});
+      }
+      localStorage.setItem(CLEAR_FLAG, new Date().toISOString());
     })();
   }, [isLoaded, userId]);
 

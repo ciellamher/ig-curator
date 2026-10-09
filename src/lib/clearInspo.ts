@@ -2,10 +2,12 @@ import type { SlotItem } from "@/types";
 
 const LOCAL = "local-media://";
 
+type Split = { keep: SlotItem[]; removed: SlotItem[]; mediaToDelete: string[] };
+
 /** Splits the feed into inspo (boards, sub-boards and everything inside them) and everything else. */
-export function splitInspo(items: SlotItem[]): { keep: SlotItem[]; removed: SlotItem[]; mediaToDelete: string[] } {
+export function splitInspo(items: SlotItem[]): Split {
   const byId = new Map(items.map((i) => [i.id, i]));
-  const isInspo = (item: SlotItem): boolean => {
+  return splitBy(items, (item) => {
     const seen = new Set<string>();
     let cur: SlotItem | undefined = item;
     while (cur && !seen.has(cur.id)) {
@@ -14,10 +16,18 @@ export function splitInspo(items: SlotItem[]): { keep: SlotItem[]; removed: Slot
       cur = cur.folderId ? byId.get(cur.folderId) : undefined;
     }
     return false;
-  };
+  });
+}
+
+/** Splits the feed into draft boxes and everything else. */
+export function splitDrafts(items: SlotItem[]): Split {
+  return splitBy(items, (item) => item.folderId === "draft-pool");
+}
+
+function splitBy(items: SlotItem[], remove: (item: SlotItem) => boolean): Split {
   const keep: SlotItem[] = [];
   const removed: SlotItem[] = [];
-  for (const i of items) (isInspo(i) ? removed : keep).push(i);
+  for (const i of items) (remove(i) ? removed : keep).push(i);
 
   // Only delete photo files that nothing outside Inspo still uses
   const stillUsed = new Set(keep.flatMap((i) => i.urls ?? []));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { splitInspo } from "./clearInspo"
+import { splitDrafts, splitInspo } from "./clearInspo"
 import type { SlotItem } from "@/types"
 
 const box = (id: string, extra: Partial<SlotItem> = {}): SlotItem => ({ id, type: "image", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: "", ...extra })
@@ -21,5 +21,20 @@ describe("splitInspo", () => {
     expect(keep.map((i) => i.id)).toEqual(["post", "draft", "story-folder", "story"])
     expect(removed.map((i) => i.id)).toEqual(["board", "sub-board", "inspo-1", "inspo-2", "loose"])
     expect(mediaToDelete.sort()).toEqual(["i1", "i2", "i3"]) // "shared" is still used by a draft
+  })
+})
+
+describe("splitDrafts", () => {
+  it("removes draft boxes only, keeping photos still used elsewhere", () => {
+    const items = [
+      box("post", { contentType: "Post", urls: ["local-media://shared"] }),
+      box("d1", { contentType: "Post", folderId: "draft-pool", urls: ["local-media://d1", "local-media://shared"] }),
+      box("d2", { contentType: "Reel", folderId: "draft-pool", urls: ["local-media://d2"] }),
+      box("story", { contentType: "Story", urls: ["local-media://s1"] }),
+    ]
+    const { keep, removed, mediaToDelete } = splitDrafts(items)
+    expect(keep.map((i) => i.id)).toEqual(["post", "story"])
+    expect(removed.map((i) => i.id)).toEqual(["d1", "d2"])
+    expect(mediaToDelete.sort()).toEqual(["d1", "d2"])
   })
 })
