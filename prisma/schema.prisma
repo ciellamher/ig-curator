@@ -69,6 +69,7 @@ model UserGrid {
   user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   itemsData   String // JSON stringified array of SlotItem
   profileData String? // JSON stringified profile data
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model GridSlot {

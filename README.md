@@ -49,7 +49,7 @@ Sits beside the feed on the home page (feed on the left, planner on the right). 
 
 Dates are stored as Asia/Manila wall-clock strings (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`), so date-only values never shift a day.
 
-**Database setup** — the schema lives in `prisma/schema.prisma` and is applied with `db push` (the repo has no migrations folder):
+**Database setup** — on Vercel, every deploy runs `prisma db push` automatically (`scripts/db-sync.mjs`), creating any missing tables. It refuses changes that would lose data, so a risky schema change fails the deploy instead. Locally, run it yourself:
 
 ```bash
 # .env needs POSTGRES_PRISMA_URL and POSTGRES_URL_NON_POOLING
@@ -57,6 +57,8 @@ npx prisma db push
 ```
 
 No local Postgres? `npx prisma dev` starts a temporary one; point both variables at the URL it prints.
+
+**Cloud backup** — the feed (boxes, folders, profile) is saved to the database a few seconds after each change, so it appears on every device. Photos upload to Vercel Blob in the background, resized to 1440px (Instagram's maximum) to save space; videos upload as-is. To turn photo upload on, create a Blob store in Vercel (Storage → Create → Blob) and connect it to the project — that adds `BLOB_READ_WRITE_TOKEN`. Until then, photos stay in the browser they were added from.
 
 **Sample data** — on an empty planner, click **Load sample data** for fictional records (titles end in "(sample)").
 

@@ -39,6 +39,10 @@ import {
 import { setItem, getItem, removeItem } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
+import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
+import { deleteCloudMedia } from "@/app/actions/media";
+import { useCloudMedia } from "@/hooks/useCloudMedia";
+import { isCloudMediaUrl } from "@/lib/media/compress";
 import {
   PLANNER_DELETED_EVENT,
   PLANNER_REFRESH_EVENT,
@@ -65,6 +69,22 @@ function toMonochrome(items: SlotItem[]): SlotItem[] {
     const grey = LEGACY_PLACEHOLDER_COLORS[i.hexColor?.toLowerCase() ?? ""];
     return grey ? { ...i, hexColor: grey } : i;
   });
+}
+
+// ---- Cloud backup bookkeeping (per user, in this browser) ----
+type CloudMeta = { syncedAt: string | null; dirty: boolean; localChangedAt: string | null };
+const cloudMetaKey = (userId: string) => `ig-curator-cloud:${userId}`;
+function readCloudMeta(userId: string): CloudMeta {
+  try {
+    return { syncedAt: null, dirty: false, localChangedAt: null, ...JSON.parse(localStorage.getItem(cloudMetaKey(userId)) || "{}") };
+  } catch {
+    return { syncedAt: null, dirty: false, localChangedAt: null };
+  }
+}
+function writeCloudMeta(userId: string, patch: Partial<CloudMeta>) {
+  try {
+    localStorage.setItem(cloudMetaKey(userId), JSON.stringify({ ...readCloudMeta(userId), ...patch }));
+  } catch {}
 }
 
 /**
@@ -129,6 +149,8 @@ const STARTER_SLOT_IDS = new Set(initialItems.map((i) => i.id));
 
 export function DashboardClient() {
   const { data: session, status } = useSession();
+  // @ts-ignore - id is added in the session callback
+  const userId: string | null = status === "authenticated" ? session?.user?.id ?? null : null;
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
@@ -312,7 +334,34 @@ export function DashboardClient() {
       try {
         const saved = await getItem<SlotItem[]>("ig-curator-items");
         const emergencyBackup = localStorage.getItem("ig-curator-items");
-        
+
+        // Cloud copy: use it on a new device, or when it was changed on another device more recently than here.
+        if (userId) {
+          const cloud = await fetchGridFromCloud();
+          if (cloud.success && cloud.data && cloud.data.items.length) {
+            const meta = readCloudMeta(userId);
+            const hasLocal = Boolean(emergencyBackup) || Boolean(saved && saved.length);
+            const changedElsewhere = !meta.syncedAt || cloud.data.updatedAt > meta.syncedAt;
+            const localIsOlder = !meta.dirty || !meta.localChangedAt || cloud.data.updatedAt > meta.localChangedAt;
+            if (!hasLocal || (changedElsewhere && localIsOlder)) {
+              const adopted = toMonochrome(cloud.data.items);
+              if (isMounted) {
+                cloudPushedRef.current = adopted;
+                setItems(adopted);
+              }
+              await setItem("ig-curator-items", adopted).catch(() => {});
+              localStorage.removeItem("ig-curator-items");
+              if (cloud.data.profile) {
+                localStorage.setItem("ig-curator-profile", JSON.stringify(cloud.data.profile));
+                window.dispatchEvent(new Event("ig-curator:profile"));
+              }
+              writeCloudMeta(userId, { syncedAt: cloud.data.updatedAt, dirty: false, localChangedAt: null });
+              if (isMounted) setIsLoaded(true);
+              return;
+            }
+          }
+        }
+
         if (emergencyBackup) {
           try {
             const parsed = JSON.parse(emergencyBackup);
@@ -336,7 +385,60 @@ export function DashboardClient() {
     return () => {
       isMounted = false;
     };
-  }, [status]);
+  }, [status, userId]);
+
+  // ---- Cloud backup of the feed ----
+  const cloudPushedRef = useRef<SlotItem[] | null>(null);
+  const [cloudState, setCloudState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    if (cloudPushedRef.current === null) {
+      cloudPushedRef.current = items; // baseline after load
+      if (!readCloudMeta(userId).dirty) return;
+    }
+    if (cloudPushedRef.current === items && !readCloudMeta(userId).dirty) return;
+    if (cloudPushedRef.current !== items) writeCloudMeta(userId, { dirty: true, localChangedAt: new Date().toISOString() });
+
+    const timeoutId = setTimeout(async () => {
+      setCloudState("saving");
+      let profile: unknown = null;
+      try {
+        profile = JSON.parse(localStorage.getItem("ig-curator-profile") || "null");
+      } catch {}
+      const res = await syncGridToCloud(items, profile);
+      if (res.success) {
+        cloudPushedRef.current = items;
+        writeCloudMeta(userId, { syncedAt: res.data.updatedAt, dirty: false });
+        setCloudState("saved");
+      } else {
+        console.error("Feed backup failed:", res.error);
+        setCloudState("error");
+      }
+    }, 2500);
+    return () => clearTimeout(timeoutId);
+  }, [items, isLoaded, userId]);
+
+  // Profile edits are backed up too
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  useEffect(() => {
+    if (!userId) return;
+    const onSaved = async () => {
+      setCloudState("saving");
+      const res = await syncGridToCloud(itemsRef.current, JSON.parse(localStorage.getItem("ig-curator-profile") || "null"));
+      if (res.success) {
+        writeCloudMeta(userId, { syncedAt: res.data.updatedAt, dirty: false });
+        setCloudState("saved");
+      } else setCloudState("error");
+    };
+    window.addEventListener("ig-curator:profile-saved", onSaved);
+    return () => window.removeEventListener("ig-curator:profile-saved", onSaved);
+  }, [userId]);
+
+  // ---- Photos: upload to cloud storage, and clean up ones no longer used ----
+  const cloudMedia = useCloudMedia(items, setItems, userId, isLoaded);
+  const referencedCloudRef = useRef<Set<string> | null>(null);
+  const pendingMediaDeletes = useRef<Set<string>>(new Set());
 
 
   // Removed cloud sync effect
@@ -377,6 +479,25 @@ export function DashboardClient() {
   }, [status, session]);
 
   const activeSlot = items.find((item) => item.id === activeSlotId) || null;
+
+  // A cloud photo is deleted once neither the feed nor the undo history uses it any more.
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    const referenced = new Set<string>();
+    for (const state of [items, ...history]) for (const i of state) for (const u of i.urls ?? []) if (isCloudMediaUrl(u)) referenced.add(u);
+    const prev = referencedCloudRef.current;
+    referencedCloudRef.current = referenced;
+    if (!prev) return;
+    for (const u of prev) if (!referenced.has(u)) pendingMediaDeletes.current.add(u);
+    for (const u of referenced) pendingMediaDeletes.current.delete(u);
+    if (!pendingMediaDeletes.current.size) return;
+    const timeoutId = setTimeout(async () => {
+      const urls = [...pendingMediaDeletes.current];
+      const res = await deleteCloudMedia(urls);
+      if (res.success) urls.forEach((u) => pendingMediaDeletes.current.delete(u));
+    }, 10_000);
+    return () => clearTimeout(timeoutId);
+  }, [items, history, isLoaded, userId]);
 
   const lastSavedItemsRef = useRef<SlotItem[]>(items);
 
@@ -544,8 +665,15 @@ export function DashboardClient() {
     setSyncStatus("Saving...");
     try {
       await setItem("ig-curator-items", items);
-      setSyncStatus("Saved Locally");
-      setTimeout(() => setSyncStatus((prev) => (prev === "Saved Locally" ? "Idle" : prev)), 2000);
+      if (userId) {
+        const res = await syncGridToCloud(items, JSON.parse(localStorage.getItem("ig-curator-profile") || "null"));
+        if (!res.success) throw new Error(res.error);
+        cloudPushedRef.current = items;
+        writeCloudMeta(userId, { syncedAt: res.data.updatedAt, dirty: false });
+        setCloudState("saved");
+      }
+      setSyncStatus("Saved");
+      setTimeout(() => setSyncStatus((prev) => (prev === "Saved" ? "Idle" : prev)), 2000);
     } catch (e: any) {
       console.error("Manual save exception:", e);
       setSyncStatus("Error");
@@ -729,7 +857,11 @@ export function DashboardClient() {
               <button
                 onClick={status === "authenticated" ? handleManualSync : undefined}
                 disabled={syncStatus === "Saving..."}
-                title="Sync now"
+                title={
+                  cloudMedia.enabled === false
+                    ? "Your feed is backed up, but photos stay in this browser until cloud photo storage (Vercel Blob) is connected"
+                    : "Back up now"
+                }
                 className={`shrink-0 text-xs sm:text-sm font-medium h-9 px-3 sm:px-4 rounded-full border transition-all flex items-center gap-2 ${
                   syncStatus === "Saving..."
                     ? "bg-zinc-50 text-zinc-900 border-zinc-200 cursor-default"
@@ -750,13 +882,15 @@ export function DashboardClient() {
                 <span className="hidden sm:inline">
                   {syncStatus === "Saving..."
                     ? "Syncing..."
-                    : syncStatus === "Saved"
-                      ? "Saved to cloud"
-                      : syncStatus === "Saved Locally"
-                        ? "Saved locally"
-                        : syncStatus === "Error"
-                          ? "Sync Error"
-                          : "Up to date"}
+                    : syncStatus === "Error" || cloudState === "error"
+                      ? "Backup failed — retry"
+                      : cloudMedia.enabled && cloudMedia.pending > 0
+                        ? `Uploading ${cloudMedia.pending} photo${cloudMedia.pending === 1 ? "" : "s"}…`
+                        : cloudState === "saving"
+                          ? "Backing up…"
+                          : cloudMedia.enabled === false
+                            ? "Photos on this device"
+                            : "Backed up"}
                 </span>
               </button>
 

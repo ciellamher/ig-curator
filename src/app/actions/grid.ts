@@ -1,61 +1,39 @@
 "use server"
 
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { SlotItem } from "@/types"
+import { requireUserId, run, type Result } from "@/lib/planner/server"
+import type { SlotItem } from "@/types"
 
-export async function syncGridToCloud(items: SlotItem[], profileData?: any) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+export type CloudGrid = { items: SlotItem[]; profile: unknown | null; updatedAt: string }
 
-    // @ts-ignore
-    const userId = session.user.id
+const MAX_GRID_BYTES = 20 * 1024 * 1024
 
-    await prisma.userGrid.upsert({
+/** Saves the feed (boxes, folders, photo links) and profile so it's backed up and available on every device. */
+export async function syncGridToCloud(items: SlotItem[], profile?: unknown): Promise<Result<{ updatedAt: string }>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    if (!Array.isArray(items)) throw new Error("Invalid feed")
+    const itemsData = JSON.stringify(items)
+    if (itemsData.length > MAX_GRID_BYTES) throw new Error("Feed is too large to back up")
+    const profileData = profile ? JSON.stringify(profile) : undefined
+    const row = await prisma.userGrid.upsert({
       where: { userId },
-      update: {
-        itemsData: JSON.stringify(items),
-        profileData: profileData ? JSON.stringify(profileData) : undefined,
-      },
-      create: {
-        userId,
-        itemsData: JSON.stringify(items),
-        profileData: profileData ? JSON.stringify(profileData) : null,
-      }
+      update: { itemsData, ...(profileData ? { profileData } : {}) },
+      create: { userId, itemsData, profileData: profileData ?? null },
     })
-
-    return { success: true }
-  } catch (e: any) {
-    return { success: false, error: String(e.message || e) }
-  }
+    return { updatedAt: row.updatedAt.toISOString() }
+  })
 }
 
-export async function fetchGridFromCloud() {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) return { success: false, data: null }
-
-    // @ts-ignore
-    const userId = session.user.id
-
-    const grid = await prisma.userGrid.findUnique({
-      where: { userId }
-    })
-
-    if (!grid) return { success: true, data: null }
-
-    return { 
-      success: true, 
-      data: {
-        items: JSON.parse(grid.itemsData),
-        profile: grid.profileData ? JSON.parse(grid.profileData) : null
-      }
+export async function fetchGridFromCloud(): Promise<Result<CloudGrid | null>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    const grid = await prisma.userGrid.findUnique({ where: { userId } })
+    if (!grid) return null
+    return {
+      items: JSON.parse(grid.itemsData),
+      profile: grid.profileData ? JSON.parse(grid.profileData) : null,
+      updatedAt: grid.updatedAt.toISOString(),
     }
-  } catch (e: any) {
-    return { success: false, error: String(e.message || e) }
-  }
+  })
 }

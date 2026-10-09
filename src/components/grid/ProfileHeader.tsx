@@ -48,8 +48,21 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
     }
   }, [session, status]);
 
+  // The cloud copy of the profile was loaded (e.g. on a new device)
+  useEffect(() => {
+    const reload = () => {
+      try {
+        const saved = localStorage.getItem("ig-curator-profile");
+        if (saved) setProfile(JSON.parse(saved));
+      } catch {}
+    };
+    window.addEventListener("ig-curator:profile", reload);
+    return () => window.removeEventListener("ig-curator:profile", reload);
+  }, []);
+
   const saveProfile = () => {
     localStorage.setItem("ig-curator-profile", JSON.stringify(profile));
+    window.dispatchEvent(new Event("ig-curator:profile-saved"));
     setIsEditing(false);
   };
 

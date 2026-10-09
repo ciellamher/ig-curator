@@ -2,6 +2,7 @@
 
 import { Dropdown } from "@/components/ui/Dropdown"
 import { useState } from "react"
+import { Plus } from "lucide-react"
 import { byTitle, matchesSearch, sortBy, toEditView, toPostView, toShootView, type EditedFilter } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
 import { ContentRows, type Column } from "./ContentRows"
@@ -24,6 +25,9 @@ const COLUMNS: Record<Tab, Column[]> = {
   post: ["edited", "title", "post", "status", "category", "pinterest"],
   all: ["title", "status", "category", "shoot", "edit", "post"],
 }
+
+/** New items start in the stage of the tab they're added from. */
+const NEW_STATUS: Record<Tab, string | null> = { shoot: "To Shoot", edit: "To Edit", post: "Ready to Post", all: null }
 
 const EMPTY: Record<Tab, string> = {
   shoot: "Nothing in the To-do stage.",
@@ -60,22 +64,33 @@ export function ContentTable({
     <Section
       title="Content"
       actions={
-        tab === "post" && (
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-            Edited
-            <Dropdown
-              label="Edited filter"
-              options={[
-                { value: "any", label: "Any" },
-                { value: "yes", label: "Yes" },
-                { value: "no", label: "No" },
-              ]}
-              selected={[edited]}
-              onSelect={(v) => setEdited(v as EditedFilter)}
-              className="w-24"
-            />
-          </div>
-        )
+        <>
+          {tab === "post" && (
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              Edited
+              <Dropdown
+                label="Edited filter"
+                options={[
+                  { value: "any", label: "Any" },
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                selected={[edited]}
+                onSelect={(v) => setEdited(v as EditedFilter)}
+                className="w-24"
+              />
+            </div>
+          )}
+          <button
+            onClick={async () => {
+              const created = await planner.create({ title: "Untitled", ...(NEW_STATUS[tab] ? { status: NEW_STATUS[tab] } : {}) })
+              if (created) onOpen(created)
+            }}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-black cursor-pointer"
+          >
+            <Plus size={14} /> Add
+          </button>
+        </>
       }
     >
       <Tabs
