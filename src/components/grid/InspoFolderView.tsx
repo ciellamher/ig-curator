@@ -134,7 +134,7 @@ export function InspoFolderView({
       i.contentType === "Post",
   );
 
-  // Pinterest-style masonry: photos keep their own shape, columns about 220px wide, and each photo goes to the
+  // Pinterest-style masonry: photos keep their own shape, columns about 140px wide, and each photo goes to the
   // shortest column (so the newest are along the top and the columns stay even).
   const masonryRef = useRef<HTMLDivElement>(null);
   const [masonryCols, setMasonryCols] = useState(2);
@@ -149,7 +149,7 @@ export function InspoFolderView({
     if (!el) return;
     const measure = () => {
       const w = el.getBoundingClientRect().width;
-      setMasonryCols(Math.max(2, Math.min(8, Math.floor((w + 16) / 236))));
+      setMasonryCols(Math.max(3, Math.min(12, Math.floor((w + 10) / 150))));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -520,14 +520,14 @@ export function InspoFolderView({
           <p className="text-xs">Use “Add photos” above, or drag photos here.</p>
         </div>
       ) : (
-        <div ref={masonryRef} className="flex items-start gap-4 px-4 pb-8 bg-white mt-3">
+        <div ref={masonryRef} className="flex items-start gap-2.5 px-3 pb-8 bg-white mt-2">
           {masonryColumns.map((column, c) => (
-          <div key={c} className="flex-1 min-w-0 flex flex-col gap-4">
+          <div key={c} className="flex-1 min-w-0 flex flex-col gap-2.5">
           {column.map((item) => (
             <div
               key={item.id}
               data-slot-id={item.id}
-              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-2xl transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
+              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-xl transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {
                   setSelectedItems(prev => {
