@@ -18,6 +18,8 @@ interface EditorPanelProps {
   updateSlot: (id: string, updates: Partial<SlotItem>) => void;
   onClose?: () => void;
   onDeleteSlot?: (id: string) => void;
+  /** Editing a planner page that has no grid box: no "Move to Drafts" */
+  pageOnly?: boolean;
 }
 
 export function EditorPanel({
@@ -25,6 +27,7 @@ export function EditorPanel({
   updateSlot,
   onClose,
   onDeleteSlot,
+  pageOnly = false,
 }: EditorPanelProps) {
   const [activeTab, setActiveTab] = useState<"details" | "appearance">(
     "details",
@@ -152,7 +155,7 @@ export function EditorPanel({
             >
               <Upload size={18} strokeWidth={2.2} />
             </button>
-            {activeSlot.folderId !== "draft-pool" && (
+            {activeSlot.folderId !== "draft-pool" && !pageOnly && (
               <button
                 onClick={() => {
                   updateSlot(activeSlot.id, { folderId: "draft-pool" });

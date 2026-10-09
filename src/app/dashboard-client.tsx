@@ -54,6 +54,8 @@ import {
   PLANNER_OPEN_EVENT,
   PAGE_EDITOR_EVENT,
   PLANNER_SLOTS_EVENT,
+  FEED_REMOVE_PHOTOS_EVENT,
+  type FeedRemovePhotos,
   type PageEditorHost,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
@@ -859,10 +861,17 @@ export function DashboardClient() {
       const { slotId, hidden } = (e as CustomEvent<{ slotId: string; hidden: boolean }>).detail;
       setItems((curr) => curr.map((i) => (i.id === slotId && i.isHiddenFromGrid !== hidden ? { ...i, isHiddenFromGrid: hidden } : i)));
     };
+    // Photos removed on a story page: its stories with those photos leave the folder
+    const onRemovePhotos = (e: Event) => {
+      const { folderId, urls } = (e as CustomEvent<FeedRemovePhotos>).detail;
+      setItems((curr) => curr.filter((i) => !(i.folderId === folderId && i.urls?.length && urls.includes(i.urls[0]))));
+    };
+    window.addEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
     window.addEventListener(PLANNER_DELETED_EVENT, onDeleted);
     window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
     window.addEventListener(PLANNER_HIDDEN_EVENT, onHidden);
     return () => {
+      window.removeEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
       window.removeEventListener(PLANNER_DELETED_EVENT, onDeleted);
       window.removeEventListener(PLANNER_TITLE_EVENT, onTitle);
       window.removeEventListener(PLANNER_HIDDEN_EVENT, onHidden);

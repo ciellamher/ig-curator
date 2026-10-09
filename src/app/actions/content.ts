@@ -327,6 +327,22 @@ export async function addContentMedia(id: string, urls: string[]): Promise<Resul
   })
 }
 
+/** Replaces a page's photos (order kept), e.g. after deleting one in its editor. */
+export async function setContentMedia(id: string, urls: string[]): Promise<Result<ContentDTO>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    const row = await prisma.content.findFirst({ where: { id, userId } })
+    if (!row) throw new Error("This item no longer exists")
+    const clean = cleanMediaUrls(urls)
+    await prisma.$transaction([
+      prisma.contentMedia.deleteMany({ where: { contentId: id } }),
+      prisma.contentMedia.createMany({ data: clean.map((url, position) => ({ contentId: id, url, position })) }),
+    ])
+    const updated = await prisma.content.findFirst({ where: { id, userId }, include: { media: true } })
+    return toDTO(updated!)
+  })
+}
+
 /** Feed boxes deleted from the database (or another browser's feed), so this feed can remove them too. */
 export async function listDeletedFeedSlots(): Promise<Result<string[]>> {
   return run(async () => {

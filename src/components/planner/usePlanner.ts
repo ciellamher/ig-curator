@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { addContentMedia, createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { addContentMedia, createContent, setContentMedia, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
 import { feedKindsFor } from "@/lib/planner/feed"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
@@ -17,6 +17,8 @@ import {
   type ContentDTO,
   type ContentPatch,
   type FeedAttach,
+  type FeedRemovePhotos,
+  FEED_REMOVE_PHOTOS_EVENT,
   type OrderDTO,
   type OrderStage,
   type QuickLinkDTO,
@@ -249,11 +251,32 @@ export function usePlanner(enabled: boolean) {
     else setError(res.error)
   }, [])
 
+  /** The photos of a page without a post/reel box, as edited in its page (added and removed). */
+  const setPagePhotos = useCallback(async (page: ContentDTO, urls: string[]) => {
+    const before = page.media.map((m) => m.url)
+    const added = urls.filter((u) => !before.includes(u))
+    const removed = before.filter((u) => !urls.includes(u))
+    const folder = page.contentType === "StoryFolder" ? page.slotId : page.extraSlots?.StoryFolder
+    if (folder) {
+      if (added.length) addPhotos(page, added)
+      if (removed.length) {
+        const detail: FeedRemovePhotos = { folderId: folder, urls: removed }
+        window.dispatchEvent(new CustomEvent(FEED_REMOVE_PHOTOS_EVENT, { detail }))
+      }
+      // Shown right away; the feed sync then confirms it
+      setItems((curr) => curr.map((i) => (i.id === page.id ? { ...i, media: urls.map((url, position) => ({ id: `${page.id}-${position}`, url, position })) } : i)))
+      return
+    }
+    const res = await setContentMedia(page.id, urls)
+    if (res.success) setItems((curr) => curr.map((i) => (i.id === page.id ? res.data : i)))
+    else setError(res.error)
+  }, [addPhotos])
+
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink, addPhotos }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink, addPhotos, setPagePhotos }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

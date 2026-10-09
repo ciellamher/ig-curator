@@ -144,6 +144,10 @@ export type FeedAttach = {
   hidden?: boolean
 }
 
+/** Fired by a story page when photos are removed: its stories with those photos leave the folder. */
+export const FEED_REMOVE_PHOTOS_EVENT = "feed:remove-photos"
+export type FeedRemovePhotos = { folderId: string; urls: string[] }
+
 /** Fired by the planner with every feed box that belongs to a page (those are edited in their page). */
 export const PLANNER_SLOTS_EVENT = "planner:slots"
 

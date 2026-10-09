@@ -3,8 +3,7 @@
 import { SHEIN_ENABLED } from "@/lib/features"
 import { Dropdown } from "@/components/ui/Dropdown"
 import { useEffect, useRef, useState } from "react"
-import { CalendarClock, Check, CheckCheck, ImagePlus, MapPin, Plus, Trash2, X } from "lucide-react"
-import { LocalMediaImage } from "@/components/grid/LocalMedia"
+import { CalendarClock, Check, CheckCheck, MapPin, Plus, Trash2, X } from "lucide-react"
 import { RETURN_WINDOW_DAYS, clothingAlert, itemTimeline, orderAlert, orderFor } from "@/lib/planner/clothing"
 import { formatDate } from "@/lib/planner/dates"
 import { STATUS_STYLES } from "@/lib/planner/options"
@@ -14,7 +13,8 @@ import { feedKindsFor } from "@/lib/planner/feed"
 import { DATE_FIELDS, PAGE_EDITOR_EVENT, type ContentDTO, type Location, type PageEditorHost } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
-import { saveFilesLocally } from "@/lib/localUpload"
+import { EditorPanel } from "@/components/editor/EditorPanel"
+import type { SlotItem } from "@/types"
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -61,8 +61,19 @@ export function ItemDrawer({
   const gridSlotId = item.contentType && item.contentType !== "StoryFolder" ? item.slotId : (item.extraSlots?.Post ?? item.extraSlots?.Reel ?? null)
   const slotHostRef = useRef<HTMLDivElement>(null)
   const storyFolderSlotId = item.contentType === "StoryFolder" ? item.slotId : (item.extraSlots?.StoryFolder ?? null)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [uploading, setUploading] = useState(false)
+  // A page without a post/reel box is edited as a "slot" of its own: its photos, title and post time
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const pageUrls = item.media.map((m) => m.url)
+  const pageSlot: SlotItem = {
+    id: item.id,
+    type: pageUrls.length ? (pageUrls[Math.min(photoIndex, pageUrls.length - 1)].includes("-video-") ? "video" : "image") : "placeholder",
+    urls: pageUrls,
+    currentUrlIndex: Math.min(photoIndex, Math.max(0, pageUrls.length - 1)),
+    hexColor: "#E4E4E7",
+    text: item.title,
+    scheduledTime: item.post.start ? (item.post.start.length === 10 ? `${item.post.start}T09:00` : item.post.start) : "",
+    contentType: storyFolderSlotId ? "Story" : "Post",
+  }
   useEffect(() => {
     const el = slotHostRef.current
     if (!gridSlotId || !el) return
@@ -141,48 +152,23 @@ export function ItemDrawer({
             </section>
           )}
 
-          {/* Story folder (no post/reel box: its photos are its stories) or a page not in the feed yet */}
-          {(storyFolderSlotId || !gridSlotId) && (
-            <section aria-label={storyFolderSlotId ? "Stories" : "Photos"} className="flex flex-col gap-2 rounded-2xl border border-zinc-200 p-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-zinc-700">{storyFolderSlotId ? "Stories" : "Photos"}</span>
-                <span className="text-[11px] text-zinc-400 truncate">
-                  {storyFolderSlotId ? "added to its story folder" : item.media.length ? "go to the feed once it's a Post, Reel or Story" : "none yet"}
-                </span>
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                  className="ml-auto shrink-0 inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black disabled:opacity-50 cursor-pointer"
-                >
-                  <ImagePlus size={13} /> {uploading ? "Adding…" : storyFolderSlotId ? "Add stories" : "Add photos"}
-                </button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  className="hidden"
-                  onChange={async (e) => {
-                    const files = Array.from(e.target.files ?? [])
-                    e.target.value = ""
-                    if (!files.length) return
-                    setUploading(true)
-                    try {
-                      await planner.addPhotos(item, await saveFilesLocally(files))
-                    } finally {
-                      setUploading(false)
-                    }
-                  }}
-                />
-              </div>
-              {item.media.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                  {item.media.map((m) => (
-                    <LocalMediaImage key={m.id} src={m.url} className="h-14 w-11 shrink-0 rounded-md object-cover" />
-                  ))}
-                </div>
-              )}
+          {/* Story pages and pages not in the feed yet: the same Edit Slot tools, working on the page itself */}
+          {!gridSlotId && (
+            <section aria-label={storyFolderSlotId ? "Stories" : "Photos"} className="rounded-2xl border border-zinc-200 overflow-hidden">
+              <EditorPanel
+                pageOnly
+                activeSlot={pageSlot}
+                updateSlot={(_, changes) => {
+                  if (changes.urls) planner.setPagePhotos(item, changes.urls)
+                  if (typeof changes.currentUrlIndex === "number") setPhotoIndex(changes.currentUrlIndex)
+                  if (typeof changes.text === "string" && changes.text.trim() && changes.text.trim() !== item.title) update(item.id, { title: changes.text.trim() })
+                  if (typeof changes.scheduledTime === "string") update(item.id, { post: { start: changes.scheduledTime ? changes.scheduledTime.slice(0, 16) : null, end: null } })
+                }}
+                onDeleteSlot={() => onDelete(item)}
+              />
+              <p className="px-4 pb-3 -mt-1 text-[11px] text-zinc-400">
+                {storyFolderSlotId ? "Photos added here become stories in its story folder." : "Photos stay with this page and go to the feed once it's a Post, Reel or Story."}
+              </p>
             </section>
           )}
 
