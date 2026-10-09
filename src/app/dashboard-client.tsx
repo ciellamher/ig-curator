@@ -551,7 +551,9 @@ export function DashboardClient() {
       return;
     }
     const sel = `#grid-slot-${CSS.escape(highlightSlotId)}, [data-slot-id="${CSS.escape(highlightSlotId)}"]`;
-    style.textContent = `${sel} { outline: 3px solid #09090b !important; outline-offset: -3px; position: relative; z-index: 5; }`;
+    // Story folder cards are only scrolled to, not outlined
+    const outlined = `#grid-slot-${CSS.escape(highlightSlotId)}, [data-slot-id="${CSS.escape(highlightSlotId)}"]:not([data-no-outline])`;
+    style.textContent = `${outlined} { outline: 3px solid #09090b !important; outline-offset: -3px; position: relative; z-index: 5; }`;
     let tries = 0;
     let timer: ReturnType<typeof setTimeout>;
     const reveal = () => {

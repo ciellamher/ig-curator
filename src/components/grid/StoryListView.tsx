@@ -71,6 +71,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
             <div 
               key={folder.id}
               data-slot-id={folder.id}
+              data-no-outline
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"
             >
