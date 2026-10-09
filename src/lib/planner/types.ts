@@ -110,3 +110,6 @@ export const PLANNER_REFRESH_EVENT = "planner:refresh"
 
 /** Fired by the planner when an item is opened, to highlight its box in the feed; detail: slot id. */
 export const PLANNER_FOCUS_EVENT = "planner:focus"
+
+/** Fired by the feed when a box is selected, so the planner can show its row; detail: slot id. */
+export const FEED_SELECT_EVENT = "feed:select"

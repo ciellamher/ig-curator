@@ -120,6 +120,8 @@ export function InspoFolderView({
     return images.slice(0, max);
   };
 
+  const parentFolder = folder.folderId ? allItems.find((i) => i.id === folder.folderId) : undefined;
+
   // Sub-folders
   const subFolders = itemsInFolder
     .filter((i) => i.contentType === "InspoFolder")
@@ -262,21 +264,17 @@ export function InspoFolderView({
         multiple
       />
 
-      {/* Header Bar */}
-      <div className="sticky top-0 z-10 bg-white border-b border-soft-100 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="p-1 -ml-1 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
-          title="Back to Collections"
-        >
-          <ChevronLeft size={28} strokeWidth={1.5} />
-        </button>
-
-        <h2 className="text-base font-bold text-slate-900 leading-tight truncate px-2">
-          {folder.text || "Inspo Folder"}
-        </h2>
-
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-zinc-100 px-3 pt-2.5 pb-3 flex flex-col gap-2.5">
         <div className="flex items-center gap-1">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-0.5 pl-0.5 pr-2 h-8 rounded-full text-sm font-medium text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer max-w-[45%]"
+            title="Back"
+          >
+            <ChevronLeft size={20} strokeWidth={2} className="shrink-0" />
+            <span className="truncate">{parentFolder?.text || "Boards"}</span>
+          </button>
           <button
             onClick={() => {
               if (isSelectionMode) {
@@ -286,53 +284,40 @@ export function InspoFolderView({
                 setIsSelectionMode(true);
               }
             }}
-            className="px-2 py-1 text-sm font-semibold text-slate-800 hover:bg-soft-100 rounded-lg transition-colors cursor-pointer"
+            className={`ml-auto px-3 h-8 rounded-full text-xs font-semibold transition-colors cursor-pointer ${isSelectionMode ? "bg-zinc-950 text-white" : "text-zinc-700 hover:bg-zinc-100"}`}
           >
             {isSelectionMode ? "Done" : "Select"}
           </button>
-          <button
-            onClick={handleAddSubFolder}
-            className="p-1.5 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
-            title="Add sub-folder"
-          >
-            <FolderPlus size={24} strokeWidth={1.5} />
-          </button>
+        </div>
+        <div className="px-1">
+          <h2 className="text-lg font-bold text-zinc-950 leading-tight truncate">{folder.text || "Untitled board"}</h2>
+          <p className="text-[11px] text-zinc-500">
+            {postItems.length} photo{postItems.length === 1 ? "" : "s"}
+            {subFolders.length ? ` · ${subFolders.length} sub-board${subFolders.length === 1 ? "" : "s"}` : ""}
+          </p>
+        </div>
+        <div className="flex gap-2 px-1">
           <button
             onClick={handleUploadClick}
             disabled={isUploading}
-            className="p-1.5 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black disabled:opacity-50 transition-colors cursor-pointer"
             title="Add new post inspo"
           >
-            <Plus size={28} strokeWidth={1.5} />
+            <Plus size={14} strokeWidth={2.5} /> {isUploading ? "Adding…" : "Add photos"}
           </button>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-soft-100">
-        <div
-          className="flex-1 flex justify-center items-center py-3 border-b-2 border-slate-900 text-slate-900"
-          title="Feed Inspo"
-        >
-          <Grid3X3 size={22} />
-        </div>
-        <div
-          className="flex-1 flex justify-center items-center py-3 border-b-2 border-transparent text-foreground/40"
-          title="Reels"
-        >
-          <PlaySquare size={22} />
-        </div>
-        <div
-          className="flex-1 flex justify-center items-center py-3 border-b-2 border-transparent text-foreground/40"
-          title="Tags"
-        >
-          <UserSquare2 size={22} />
+          <button
+            onClick={handleAddSubFolder}
+            className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-zinc-300 text-zinc-800 text-xs font-semibold hover:border-zinc-950 transition-colors cursor-pointer"
+            title="Add sub-folder"
+          >
+            <FolderPlus size={14} /> New sub-board
+          </button>
         </div>
       </div>
 
       {/* Sub-Folders Section */}
       {subFolders.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 px-4 py-4 border-b border-soft-100 bg-white">
+        <div className="grid grid-cols-3 gap-2 px-3 py-3 border-b border-zinc-100 bg-white">
           {subFolders.map((item) => {
             const customCover = item.urls?.[0];
             const folderImages = customCover
@@ -396,7 +381,7 @@ export function InspoFolderView({
                   }
                 }}
               >
-                <div className="aspect-square bg-soft-100 rounded-2xl overflow-hidden relative border border-soft-200 group-hover:border-slate-400 group-hover:shadow-md transition-all">
+                <div className="aspect-square bg-zinc-100 rounded-xl overflow-hidden relative group-hover:shadow-md transition-all">
                   {/* Folder Thumbnail */}
                   {!customCover && hasSubFolders && folderImages.length >= 4 ? (
                     <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-[1px] bg-white">
@@ -449,8 +434,12 @@ export function InspoFolderView({
                     </div>
                   )}
 
+                  <div className="absolute inset-x-0 bottom-0 px-2 pb-1.5 pt-6 bg-gradient-to-t from-black/70 to-transparent pointer-events-none">
+                    <span className="block text-[11px] font-semibold text-white truncate drop-shadow-sm">{item.text || "Sub-board"}</span>
+                  </div>
+
                   {/* Edit & Delete Buttons */}
-                  <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -482,11 +471,6 @@ export function InspoFolderView({
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-xs font-bold text-slate-800 text-center truncate px-1">
-                    {item.text || "Sub-Folder"}
-                  </span>
-                </div>
               </div>
             );
           })}
@@ -499,18 +483,16 @@ export function InspoFolderView({
           <div className="w-16 h-16 rounded-full border-2 border-dashed border-soft-200 flex items-center justify-center mb-4">
             <Plus size={24} className="text-soft-300" />
           </div>
-          <p className="text-sm font-medium mb-1">No post inspo yet</p>
-          <p className="text-xs">
-            Tap + at top right to add photos, or create a sub-folder!
-          </p>
+          <p className="text-sm font-medium mb-1">No photos in this board yet</p>
+          <p className="text-xs">Use “Add photos” above, or drag photos here.</p>
         </div>
       ) : (
-        <div className="columns-2 sm:columns-3 gap-2 px-2 pb-24 bg-white mt-2">
+        <div className="grid grid-cols-3 gap-1 px-1 pb-24 bg-white mt-1">
           {postItems.map((item) => (
             <div
               key={item.id}
               data-slot-id={item.id}
-              className={`relative cursor-pointer group bg-soft-100 overflow-hidden break-inside-avoid mb-2 rounded-xl shadow-sm transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-slate-800 ring-offset-1 scale-[0.98]' : ''}`}
+              className={`relative aspect-[4/5] cursor-pointer group bg-zinc-100 overflow-hidden rounded-md transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {
                   setSelectedItems(prev => {
@@ -543,7 +525,7 @@ export function InspoFolderView({
                 item.urls[item.currentUrlIndex || 0]?.startsWith("data:video") || item.urls[item.currentUrlIndex || 0]?.includes("-video-") ? (
                   <LocalMediaVideo
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                     muted
                     loop
                     autoPlay
@@ -552,18 +534,18 @@ export function InspoFolderView({
                 ) : (
                   <LocalMediaImage
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-300"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
                   />
                 )
               ) : (
                 <div
-                  className="w-full aspect-square"
+                  className="absolute inset-0"
                   style={{ backgroundColor: item.hexColor || "#E4E4E7" }}
                 />
               )}
 
               {/* Overlay Buttons */}
-              <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-20">
+              <div className={`absolute top-1.5 right-1.5 flex flex-col gap-1 z-20 transition-opacity ${isSelectionMode ? "hidden" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100"}`}>
                 {item.urls && item.urls.length > 0 && (
                   <button
                     onClick={async (e) => {

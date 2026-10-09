@@ -10,7 +10,7 @@ import { SAMPLE_ORDERS, SAMPLE_QUICK_LINKS, sampleContent } from "@/lib/planner/
 import { withScheduleRules } from "@/lib/planner/rules"
 import type { ContentDTO, ContentPatch, FeedSlotSync, FeedSyncRequest, Location } from "@/lib/planner/types"
 
-const MAX_SYNC_SLOTS = 1000
+const MAX_SYNC_SLOTS = 10000
 const MAX_URL_LENGTH = 2048
 const DEFAULT_TITLE = /^(Untitled( (Post|Reel|Carousel|Story|Inspo|InspoPost|InspoStory|InspoHighlight|Inspo Board|Story Folder))?|New Folder)$/
 
@@ -341,61 +341,79 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
     const topLevel = new Set(feedRecords.filter((r) => !r.parentId).map((r) => r.id))
     let created = 0
     let updated = 0
+    const parentsWithChildren = new Set(
+      (await prisma.content.findMany({ where: { userId, parentId: { not: null } }, select: { parentId: true } })).map((r) => r.parentId!),
+    )
 
-    await prisma.$transaction(async (tx) => {
-      for (const slot of clean) {
-        const current = bySlot.get(slot.slotId)
-        const media = slot.mediaUrls.map((url, position) => ({ url, position }))
-        const parentCandidate = slot.parentSlotId ? idBySlot.get(slot.parentSlotId) : undefined
-        const parentId = parentCandidate && topLevel.has(parentCandidate) ? parentCandidate : null
-        const category = categoryForFeedSlot(slot)
-
-        if (!current) {
-          const row = await tx.content.create({
-            data: {
+    // New boxes are created in bulk — parents first, so sub-items can point at them — instead of one
+    // query per box, which timed out on large feeds.
+    const fresh = clean.filter((s) => !bySlot.has(s.slotId))
+    for (const pass of [fresh.filter((s) => !s.parentSlotId), fresh.filter((s) => s.parentSlotId)]) {
+      for (let i = 0; i < pass.length; i += 200) {
+        const chunk = pass.slice(i, i + 200)
+        const rows = await prisma.content.createManyAndReturn({
+          data: chunk.map((slot) => {
+            const parentCandidate = slot.parentSlotId ? idBySlot.get(slot.parentSlotId) : undefined
+            const category = categoryForFeedSlot(slot)
+            return {
               userId,
               slotId: slot.slotId,
               contentType: slot.contentType,
-              parentId,
+              parentId: parentCandidate && topLevel.has(parentCandidate) ? parentCandidate : null,
               title: slot.title || defaultFeedTitle(slot),
               status: statusForFeedSlot(slot),
               categories: category ? [category] : [],
-              media: { create: media },
-            },
-          })
-          idBySlot.set(slot.slotId, row.id)
-          feedRecordIds.add(row.id)
-          if (!parentId) topLevel.add(row.id)
-          created++
-          continue
+            }
+          }),
+          skipDuplicates: true,
+          select: { id: true, slotId: true, parentId: true },
+        })
+        const bySlotId = new Map(chunk.map((s) => [s.slotId, s]))
+        const media = rows.flatMap((r) => (bySlotId.get(r.slotId!)?.mediaUrls ?? []).map((url, position) => ({ contentId: r.id, url, position })))
+        if (media.length) await prisma.contentMedia.createMany({ data: media })
+        for (const r of rows) {
+          idBySlot.set(r.slotId!, r.id)
+          feedRecordIds.add(r.id)
+          if (!r.parentId) topLevel.add(r.id)
         }
-
-        const data: Prisma.ContentUncheckedUpdateInput = {}
-        if (current.contentType !== slot.contentType) data.contentType = slot.contentType
-        const followTitle = slot.titleChanged || DEFAULT_TITLE.test(current.title)
-        if (slot.title && followTitle && current.title !== slot.title) data.title = slot.title
-        const autoStatus = statusForFeedSlot(slot)
-        if (AUTO_STATUSES.includes(current.status) && autoStatus !== current.status && autoStatus !== "To Board") data.status = autoStatus
-        // Follow folder moves in the feed, but keep parents assigned by hand to planner-only records.
-        const parentIsFromFeed = !current.parentId || feedRecordIds.has(current.parentId)
-        if (parentIsFromFeed && current.parentId !== parentId && current.id !== parentId) {
-          const hasChildren = parentId ? await tx.content.count({ where: { parentId: current.id } }) : 0
-          if (!hasChildren) {
-            data.parentId = parentId
-            if (parentId) data.orderId = null
-          }
-        }
-
-        const currentUrls = [...current.media].sort((a, b) => a.position - b.position).map((m) => m.url)
-        const mediaChanged = currentUrls.join("\n") !== slot.mediaUrls.join("\n")
-        if (mediaChanged) {
-          await tx.contentMedia.deleteMany({ where: { contentId: current.id } })
-          if (media.length) await tx.contentMedia.createMany({ data: media.map((m) => ({ ...m, contentId: current.id })) })
-        }
-        if (Object.keys(data).length) await tx.content.update({ where: { id: current.id }, data })
-        if (mediaChanged || Object.keys(data).length) updated++
+        created += rows.length
       }
-    })
+    }
+
+    // Existing boxes: only touch the ones that actually changed
+    for (const slot of clean) {
+      const current = bySlot.get(slot.slotId)
+      if (!current) continue
+      const parentCandidate = slot.parentSlotId ? idBySlot.get(slot.parentSlotId) : undefined
+      const parentId = parentCandidate && topLevel.has(parentCandidate) ? parentCandidate : null
+
+      const data: Prisma.ContentUncheckedUpdateInput = {}
+      if (current.contentType !== slot.contentType) data.contentType = slot.contentType
+      const followTitle = slot.titleChanged || DEFAULT_TITLE.test(current.title)
+      if (slot.title && followTitle && current.title !== slot.title) data.title = slot.title
+      const autoStatus = statusForFeedSlot(slot)
+      if (AUTO_STATUSES.includes(current.status) && autoStatus !== current.status && autoStatus !== "To Board") data.status = autoStatus
+      // Follow folder moves in the feed, but keep parents assigned by hand to planner-only records.
+      const parentIsFromFeed = !current.parentId || feedRecordIds.has(current.parentId)
+      if (parentIsFromFeed && current.parentId !== parentId && current.id !== parentId && !(parentId && parentsWithChildren.has(current.id))) {
+        data.parentId = parentId
+        if (parentId) data.orderId = null
+      }
+
+      const currentUrls = [...current.media].sort((a, b) => a.position - b.position).map((m) => m.url)
+      const mediaChanged = currentUrls.join("\n") !== slot.mediaUrls.join("\n")
+      if (!mediaChanged && !Object.keys(data).length) continue
+      await prisma.$transaction([
+        ...(mediaChanged
+          ? [
+              prisma.contentMedia.deleteMany({ where: { contentId: current.id } }),
+              prisma.contentMedia.createMany({ data: slot.mediaUrls.map((url, position) => ({ contentId: current.id, url, position })) }),
+            ]
+          : []),
+        ...(Object.keys(data).length ? [prisma.content.update({ where: { id: current.id }, data })] : []),
+      ])
+      updated++
+    }
 
     return { created, updated, deleted }
   })

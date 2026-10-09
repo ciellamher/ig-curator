@@ -16,7 +16,7 @@ import { InspoFolderView } from "@/components/grid/InspoFolderView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
 import { PhotoVault } from "@/components/grid/PhotoVault";
-import { hasLegacyFeed, restoreFromLegacy, type RestoreProgress, type RestoreSummary } from "@/lib/restoreFromLegacy";
+import { splitInspo } from "@/lib/clearInspo";
 import {
   Calendar,
   Image as ImageIcon,
@@ -39,11 +39,12 @@ import {
   Check,
   Archive,
 } from "lucide-react";
-import { setItem, getItem, removeItem, saveFeedBackup } from "@/lib/idb";
+import { setItem, getItem, removeItem, saveFeedBackup, deleteMediaBlob } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
 import {
+  FEED_SELECT_EVENT,
   PLANNER_DELETED_EVENT,
   PLANNER_FOCUS_EVENT,
   PLANNER_REFRESH_EVENT,
@@ -428,29 +429,28 @@ export function DashboardClient() {
   // ---- Photos & backups: recover photos not in any box, restore layout snapshots, download a ZIP ----
   const [vaultOpen, setVaultOpen] = useState(false);
 
-  // One-time automatic restore of boards and photos from this browser's older storage (see restoreFromLegacy)
-  const [restoreProgress, setRestoreProgress] = useState<RestoreProgress | null>(null);
-  const [restoreSummary, setRestoreSummary] = useState<RestoreSummary | null>(null);
-  const restoreStartedRef = useRef(false);
+  // One-time clear-out of Inspo for the ciellamher account (requested Oct 9, to start Inspo fresh).
+  // Posts, reels, stories and drafts are kept; photo files used only by Inspo are deleted from this browser.
+  const inspoClearedRef = useRef(false);
   useEffect(() => {
-    if (!isLoaded || !userId || restoreStartedRef.current) return;
-    restoreStartedRef.current = true;
+    const CLEAR_FLAG = "ig-curator-inspo-cleared-2026-10-09";
+    if (!isLoaded || userId !== "cmrsbownc0000l404vsncrtxr" || inspoClearedRef.current) return;
+    inspoClearedRef.current = true;
+    if (localStorage.getItem(CLEAR_FLAG)) return;
     (async () => {
-      if (!(await hasLegacyFeed())) return;
-      setRestoreProgress({ stage: "Starting", done: 0, total: 1 });
-      try {
-        const result = await restoreFromLegacy(itemsRef.current, setRestoreProgress);
-        if (result) {
-          setItems(result.items);
-          setRestoreSummary(result.summary);
-          setGridFilter("Inspo");
-          setActiveInspoFolderId(null);
-        }
-      } catch (e) {
-        console.error("Restore failed", e);
-      } finally {
-        setRestoreProgress(null);
+      const { keep, removed, mediaToDelete } = splitInspo(itemsRef.current);
+      if (removed.length) {
+        setItems(keep);
+        await setItem("ig-curator-items", keep).catch(() => {});
+        for (const id of mediaToDelete) await deleteMediaBlob(id).catch(() => {});
+        setActiveInspoFolderId(null);
       }
+      // The older storage area only held the old Inspo boards
+      try {
+        indexedDB.deleteDatabase("ig-curator-db");
+      } catch {}
+      localStorage.setItem(CLEAR_FLAG, new Date().toISOString());
+      localStorage.setItem("ig-curator-restored-2026-10-09", "skipped");
     })();
   }, [isLoaded, userId]);
 
@@ -477,37 +477,51 @@ export function DashboardClient() {
         setGridFilter("Inspo");
         setActiveInspoFolderId(null);
       } else setGridFilter("All");
-      setHighlightSlotId(null);
-      requestAnimationFrame(() => setHighlightSlotId(slotId));
+      setHighlightSlotId(slotId);
     };
     window.addEventListener(PLANNER_FOCUS_EVENT, onFocus);
     return () => window.removeEventListener(PLANNER_FOCUS_EVENT, onFocus);
   }, []);
   useEffect(() => {
-    if (!highlightSlotId) return;
+    // A style rule (rather than a class on the element) so the outline survives re-renders and view switches
+    let style = document.getElementById("feed-highlight-style") as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "feed-highlight-style";
+      document.head.appendChild(style);
+    }
+    if (!highlightSlotId) {
+      style.textContent = "";
+      return;
+    }
+    const sel = `#grid-slot-${CSS.escape(highlightSlotId)}, [data-slot-id="${CSS.escape(highlightSlotId)}"]`;
+    style.textContent = `${sel} { outline: 3px solid #09090b !important; outline-offset: -3px; position: relative; z-index: 5; }`;
     let tries = 0;
     let timer: ReturnType<typeof setTimeout>;
-    const find = () => {
-      const el = document.querySelector<HTMLElement>(`#grid-slot-${CSS.escape(highlightSlotId)}, [data-slot-id="${CSS.escape(highlightSlotId)}"]`);
+    const reveal = () => {
+      const el = document.querySelector<HTMLElement>(sel);
       if (!el) {
-        if (tries++ < 15) timer = setTimeout(find, 100);
+        if (tries++ < 20) timer = setTimeout(reveal, 100);
         return;
       }
-      // Side by side: bring the box into view. On phones the feed is above the planner, so just highlight.
-      if (window.matchMedia("(min-width: 1024px)").matches) el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.animate(
-        [
-          { outline: "3px solid #09090b", outlineOffset: "-3px" },
-          { outline: "3px solid rgba(9,9,11,0.15)", outlineOffset: "-3px" },
-          { outline: "3px solid #09090b", outlineOffset: "-3px" },
-          { outline: "3px solid transparent", outlineOffset: "-3px" },
-        ],
-        { duration: 2200, easing: "ease-in-out" },
-      );
+      // Scroll inside the phone screen only, so the planner beside it doesn't move
+      const box = el.closest<HTMLElement>("#main-scroll-container");
+      if (box) {
+        const b = box.getBoundingClientRect();
+        const r = el.getBoundingClientRect();
+        box.scrollTo({ top: box.scrollTop + (r.top - b.top) - box.clientHeight / 2 + r.height / 2, behavior: "smooth" });
+      }
     };
-    find();
+    reveal();
     return () => clearTimeout(timer);
   }, [highlightSlotId]);
+
+  // Feed → planner: selecting a box shows its row in the planner
+  useEffect(() => {
+    if (!activeSlotId) return;
+    setHighlightSlotId(activeSlotId);
+    window.dispatchEvent(new CustomEvent(FEED_SELECT_EVENT, { detail: activeSlotId }));
+  }, [activeSlotId]);
 
   // Profile edits are backed up too
   const itemsRef = useRef(items);
@@ -1333,41 +1347,6 @@ export function DashboardClient() {
       </div>
       {vaultOpen && (
         <PhotoVault items={items} onClose={() => setVaultOpen(false)} onRestoreLayout={(snapshot) => updateItems(toMonochrome(snapshot))} />
-      )}
-      {(restoreProgress || restoreSummary) && (
-        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div role="dialog" aria-label="Restoring your photos" className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
-            {restoreProgress ? (
-              <>
-                <h2 className="text-lg font-semibold text-zinc-950">Restoring your boards and photos</h2>
-                <p className="text-sm text-zinc-600">Putting your photos back where they were. Please keep this tab open — this can take a few minutes.</p>
-                <div className="flex flex-col gap-1.5">
-                  <div className="h-2 rounded-full bg-zinc-200 overflow-hidden">
-                    <div className="h-full bg-zinc-950 transition-all" style={{ width: `${Math.round((restoreProgress.done / Math.max(1, restoreProgress.total)) * 100)}%` }} />
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    {restoreProgress.stage}
-                    {restoreProgress.total > 1 ? ` · ${restoreProgress.done.toLocaleString()} of ${restoreProgress.total.toLocaleString()}` : "…"}
-                  </div>
-                </div>
-              </>
-            ) : (
-              restoreSummary && (
-                <>
-                  <h2 className="text-lg font-semibold text-zinc-950">Your photos are back</h2>
-                  <ul className="text-sm text-zinc-700 flex flex-col gap-1">
-                    <li>{restoreSummary.boards} inspo boards restored with {restoreSummary.boardPhotos.toLocaleString()} photos and videos</li>
-                    <li>{restoreSummary.drafts.toLocaleString()} newer photos placed in Drafts, newest first</li>
-                  </ul>
-                  <p className="text-xs text-zinc-500">A backup of the feed from before this restore is kept under Photos &amp; backups.</p>
-                  <button onClick={() => setRestoreSummary(null)} className="self-end px-5 h-10 rounded-full bg-zinc-950 text-white text-sm font-semibold cursor-pointer">
-                    Done
-                  </button>
-                </>
-              )
-            )}
-          </div>
-        </div>
       )}
       <ConfirmModal {...modalProps} />
     </div>

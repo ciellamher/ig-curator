@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { SlotItem } from "@/types";
-import { Plus, Trash2, X, Edit2, ChevronLeft } from "lucide-react";
+import { Plus, Trash2, X, Edit2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 
@@ -106,6 +106,15 @@ export function InspoFolderListView({
     setNewCoverUrl(folder.urls?.[0] || null);
   };
 
+  // Photos in a board, including its sub-boards
+  const countPhotos = (folderId: string, seen = new Set<string>()): number => {
+    if (seen.has(folderId)) return 0;
+    seen.add(folderId);
+    return allItems
+      .filter((i) => i.folderId === folderId)
+      .reduce((n, i) => n + (i.contentType === "InspoFolder" ? countPhotos(i.id, seen) : 1), 0);
+  };
+
   return (
     <div className="w-full flex flex-col pb-24">
       <ConfirmModal
@@ -117,16 +126,12 @@ export function InspoFolderListView({
         onConfirm={() => { if (deleteFolderId) onDeleteFolder(deleteFolderId); setDeleteFolderId(null); }}
         onCancel={() => setDeleteFolderId(null)}
       />
-      {/* iOS Header */}
-      <div className="sticky top-0 z-10 bg-white border-b border-soft-100 px-4 py-3 flex items-center justify-between">
-        <button className="p-1 -ml-1 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer opacity-0 pointer-events-none">
-          <ChevronLeft size={28} strokeWidth={1.5} />
-        </button>
-
-        <h2 className="text-base font-bold text-slate-900 leading-tight">
-          Collections
-        </h2>
-
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-zinc-100 px-4 py-3 flex items-center gap-2">
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-zinc-950 leading-tight">Inspo boards</h2>
+          <p className="text-[11px] text-zinc-500">{folders.length} board{folders.length === 1 ? "" : "s"}</p>
+        </div>
         <button
           onClick={() => {
             setNewTitle("");
@@ -134,10 +139,10 @@ export function InspoFolderListView({
             setIsCreating(true);
             setEditingFolderId(null);
           }}
-          className="p-1 -mr-1 text-slate-900 hover:bg-soft-100 rounded-full transition-all cursor-pointer"
+          className="ml-auto inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
           title="New Collection"
         >
-          <Plus size={28} strokeWidth={1.5} />
+          <Plus size={14} strokeWidth={2.5} /> New board
         </button>
       </div>
 
@@ -242,8 +247,29 @@ export function InspoFolderListView({
           </form>
         )}
 
-        {/* Folders Grid */}
-        <div className="grid grid-cols-2 gap-3.5 sm:gap-5">
+        {folders.length === 0 && !isCreating && (
+          <div className="flex flex-col items-center text-center gap-3 py-16 px-6">
+            <div className="w-14 h-14 rounded-2xl border-2 border-dashed border-zinc-300 flex items-center justify-center text-zinc-400">
+              <Plus size={22} />
+            </div>
+            <p className="text-sm font-semibold text-zinc-800">No inspo boards yet</p>
+            <p className="text-xs text-zinc-500">Make a board for each trip, shoot or mood, then add photos to it.</p>
+            <button
+              onClick={() => {
+                setNewTitle("");
+                setNewCoverUrl(null);
+                setIsCreating(true);
+                setEditingFolderId(null);
+              }}
+              className="mt-1 inline-flex items-center gap-1 px-4 h-9 rounded-full bg-zinc-950 text-white text-xs font-semibold cursor-pointer"
+            >
+              <Plus size={14} strokeWidth={2.5} /> Create your first board
+            </button>
+          </div>
+        )}
+
+        {/* Boards */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {folders
             .slice()
             .sort((a, b) => (a.text || "").localeCompare(b.text || ""))
@@ -339,8 +365,14 @@ export function InspoFolderListView({
                       )
                     ) : null}
 
-                    {/* Subtle Edit & Delete Buttons on hover */}
-                    <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* Name in white over a soft fade */}
+                    <div className="absolute inset-x-0 bottom-0 z-10 px-2.5 pb-2 pt-8 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none">
+                      <h3 className="text-[13px] font-semibold text-white truncate drop-shadow-sm">{folder.text || "Untitled board"}</h3>
+                      <p className="text-[10px] text-white/80">{countPhotos(folder.id)} photos</p>
+                    </div>
+
+                    {/* Edit & delete: on hover with a mouse, always visible on touch screens */}
+                    <div className="absolute top-2 right-2 flex gap-1 z-20 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -364,10 +396,6 @@ export function InspoFolderListView({
                     </div>
                   </div>
 
-                  {/* Folder Title */}
-                  <h3 className="text-[13px] font-semibold text-slate-900 truncate">
-                    {folder.text || "Untitled Folder"}
-                  </h3>
                 </div>
               );
             })}

@@ -1,11 +1,11 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import { PLANNER_FOCUS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
+import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -34,11 +34,24 @@ export function PlannerClient() {
   const { confirm, modalProps } = useConfirmModal()
 
   const openItem = openId ? planner.byId.get(openId) ?? null : null
-  const open = (item: ContentDTO) => {
-    setOpenId(item.id)
-    // Show which feed box this item is
+  // The row being looked at: highlighted in the planner, and its box highlighted in the feed
+  const [focus, setFocus] = useState<{ id: string; reveal: number } | null>(null)
+  const focusItem = (item: ContentDTO) => {
+    setFocus({ id: item.id, reveal: 0 })
     if (item.slotId) window.dispatchEvent(new CustomEvent(PLANNER_FOCUS_EVENT, { detail: item.slotId }))
   }
+  const open = (item: ContentDTO) => {
+    setOpenId(item.id)
+    focusItem(item)
+  }
+  useEffect(() => {
+    const onSelect = (e: Event) => {
+      const item = allPlanner.items.find((i) => i.slotId === (e as CustomEvent<string>).detail)
+      if (item) setFocus({ id: item.id, reveal: Date.now() })
+    }
+    window.addEventListener(FEED_SELECT_EVENT, onSelect)
+    return () => window.removeEventListener(FEED_SELECT_EVENT, onSelect)
+  }, [allPlanner.items])
   const dangerCount = planner.alerts.filter((a) => a.alert.severity === "danger").length
 
   const deleteItem = async (item: ContentDTO) => {
@@ -180,8 +193,8 @@ export function PlannerClient() {
         <>
           <ContentCalendar planner={planner} query={query} onOpen={open} />
           <AvailablePosts planner={planner} query={query} onOpen={open} />
-          <ContentTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} />
-          <OutfitsTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} />
+          <ContentTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focus={focus} onFocusItem={focusItem} />
+          <OutfitsTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focusId={focus?.id ?? null} onFocusItem={focusItem} />
           <QuickLinks planner={planner} onDelete={deleteLink} />
         </>
       )}

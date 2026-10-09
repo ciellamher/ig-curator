@@ -1,7 +1,7 @@
 "use client"
 
 import { Dropdown } from "@/components/ui/Dropdown"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Plus } from "lucide-react"
 import { byTitle, matchesSearch, sortBy, toEditView, toPostView, toShootView, type EditedFilter } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
@@ -41,11 +41,15 @@ export function ContentTable({
   query,
   onOpen,
   onDeleteMany,
+  focus,
+  onFocusItem,
 }: {
   planner: Planner
   query: string
   onOpen: (item: ContentDTO) => void
   onDeleteMany: (ids: string[]) => Promise<boolean>
+  focus?: { id: string; reveal: number } | null
+  onFocusItem?: (item: ContentDTO) => void
 }) {
   const [tab, setTab] = useState<Tab>("shoot")
   const [edited, setEdited] = useState<EditedFilter>("any")
@@ -59,6 +63,19 @@ export function ContentTable({
   }
   const rows = views[tab]
   const selection = useSelection(rows.map((i) => i.id))
+
+  // A box picked in the feed: open the tab that lists it and bring its row into view
+  useEffect(() => {
+    if (!focus?.reveal) return
+    const order: Tab[] = ["shoot", "edit", "post", "all"]
+    const target = order.find((t) => views[t].some((i) => i.id === focus.id))
+    if (target && target !== tab) setTab(target)
+    const t = setTimeout(() => {
+      if (!window.matchMedia("(min-width: 1024px)").matches) return // phones: feed is above, don't jump away
+      document.querySelector(`[data-row-id="${CSS.escape(focus.id)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 60)
+    return () => clearTimeout(t)
+  }, [focus?.id, focus?.reveal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Section
@@ -115,6 +132,8 @@ export function ContentTable({
         planner={planner}
         onOpen={onOpen}
         selection={selection}
+        focusId={focus?.id ?? null}
+        onFocusItem={onFocusItem}
         empty={query ? "No titles match your search." : EMPTY[tab]}
       />
     </Section>

@@ -255,14 +255,14 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
         >
           {item.text ? (
             <span 
-              className="text-zinc-900 text-center font-extrabold leading-tight w-full break-words px-2"
+              className="text-white text-center font-extrabold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
               style={{ fontSize: `${item.fontSize || 14}px` }}
             >
               {item.text}
             </span>
           ) : (
             <span 
-              className="text-zinc-400 text-center font-bold leading-tight w-full break-words px-2"
+              className="text-white text-center font-bold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
               style={{ fontSize: `${item.fontSize || 14}px` }}
             >
               Slot

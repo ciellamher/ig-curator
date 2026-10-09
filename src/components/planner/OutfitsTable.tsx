@@ -199,11 +199,15 @@ export function OutfitsTable({
   query,
   onOpen,
   onDeleteMany,
+  focusId,
+  onFocusItem,
 }: {
   planner: Planner
   query: string
   onOpen: (item: ContentDTO) => void
   onDeleteMany: (ids: string[]) => Promise<boolean>
+  focusId?: string | null
+  onFocusItem?: (item: ContentDTO) => void
 }) {
   const { items, orders, orderActions } = planner
   const rows = outfitsView(items.filter((i) => matchesSearch(i, query)), items)
@@ -292,6 +296,8 @@ export function OutfitsTable({
         planner={planner}
         onOpen={onOpen}
         selection={selection}
+        focusId={focusId}
+        onFocusItem={onFocusItem}
         empty="No outfits to prep. Set a Clothing status, or the status To Buy/Plan Clothes, to track an item here."
       />
     </Section>

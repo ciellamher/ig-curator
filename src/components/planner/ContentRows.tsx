@@ -56,6 +56,8 @@ export function ContentRows({
   onOpen,
   empty,
   selection,
+  focusId,
+  onFocusItem,
 }: {
   items: ContentDTO[]
   columns: Column[]
@@ -63,6 +65,8 @@ export function ContentRows({
   onOpen: (item: ContentDTO) => void
   empty: string
   selection?: Selection
+  focusId?: string | null
+  onFocusItem?: (item: ContentDTO) => void
 }) {
   const { update, byId } = planner
   const ids = items.map((i) => i.id)
@@ -156,7 +160,14 @@ export function ContentRows({
           {items.map((item) => {
             const isSelected = !!selection?.selected.has(item.id)
             return (
-              <tr key={item.id} className={`group border-b border-zinc-100 last:border-0 align-top ${isSelected ? "bg-zinc-100" : "hover:bg-zinc-50"}`}>
+              <tr
+                key={item.id}
+                data-row-id={item.id}
+                onClick={() => onFocusItem?.(item)}
+                className={`group border-b border-zinc-100 last:border-0 align-top cursor-default ${
+                  item.id === focusId ? "bg-zinc-100 shadow-[inset_3px_0_0_#09090b]" : isSelected ? "bg-zinc-100" : "hover:bg-zinc-50"
+                }`}
+              >
                 {selection && (
                   <td className="px-2 py-2.5">
                     <Checkbox label={`Select ${item.title}`} checked={isSelected} onChange={() => selection.toggle(item.id)} />
