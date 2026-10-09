@@ -134,16 +134,22 @@ export function InspoFolderView({
       i.contentType === "Post",
   );
 
-  // Photos keep their own shape (masonry). They're dealt across the columns in turn, so the order still reads
-  // along the rows (newest first) rather than down each column.
+  // Pinterest-style masonry: photos keep their own shape, columns about 220px wide, and each photo goes to the
+  // shortest column (so the newest are along the top and the columns stay even).
   const masonryRef = useRef<HTMLDivElement>(null);
-  const [masonryCols, setMasonryCols] = useState(3);
+  const [masonryCols, setMasonryCols] = useState(2);
+  const [ratios, setRatios] = useState<Record<string, number>>({}); // height ÷ width, once a photo has loaded
+  const noteRatio = (id: string, w: number, h: number) => {
+    if (!w || !h) return;
+    const r = h / w;
+    setRatios((prev) => (Math.abs((prev[id] ?? 0) - r) < 0.01 ? prev : { ...prev, [id]: r }));
+  };
   useEffect(() => {
     const el = masonryRef.current;
     if (!el) return;
     const measure = () => {
       const w = el.getBoundingClientRect().width;
-      setMasonryCols(w >= 896 ? 6 : w >= 576 ? 5 : 3);
+      setMasonryCols(Math.max(2, Math.min(8, Math.floor((w + 16) / 236))));
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -152,9 +158,14 @@ export function InspoFolderView({
   }, [postItems.length > 0]);
   const masonryColumns = useMemo(() => {
     const cols: SlotItem[][] = Array.from({ length: masonryCols }, () => []);
-    postItems.forEach((item, i) => cols[i % masonryCols].push(item));
+    const heights = new Array(masonryCols).fill(0);
+    for (const item of postItems) {
+      const c = heights.indexOf(Math.min(...heights));
+      cols[c].push(item);
+      heights[c] += (item.urls?.length ? ratios[item.id] ?? 1.25 : 1.25) + 0.08;
+    }
     return cols;
-  }, [postItems, masonryCols]);
+  }, [postItems, masonryCols, ratios]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -509,14 +520,14 @@ export function InspoFolderView({
           <p className="text-xs">Use “Add photos” above, or drag photos here.</p>
         </div>
       ) : (
-        <div ref={masonryRef} className="flex items-start gap-1 px-1 pb-6 bg-white mt-1">
+        <div ref={masonryRef} className="flex items-start gap-4 px-4 pb-8 bg-white mt-3">
           {masonryColumns.map((column, c) => (
-          <div key={c} className="flex-1 min-w-0 flex flex-col gap-1">
+          <div key={c} className="flex-1 min-w-0 flex flex-col gap-4">
           {column.map((item) => (
             <div
               key={item.id}
               data-slot-id={item.id}
-              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-md transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
+              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-2xl transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {
                   setSelectedItems(prev => {
@@ -549,7 +560,8 @@ export function InspoFolderView({
                 item.urls[item.currentUrlIndex || 0]?.startsWith("data:video") || item.urls[item.currentUrlIndex || 0]?.includes("-video-") ? (
                   <LocalMediaVideo
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="block w-full h-auto group-hover:scale-[1.03] transition-transform duration-300"
+                    className="block w-full h-auto group-hover:brightness-90 transition"
+                    onLoadedMetadata={(e) => noteRatio(item.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight)}
                     muted
                     loop
                     autoPlay
@@ -558,7 +570,8 @@ export function InspoFolderView({
                 ) : (
                   <LocalMediaImage
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="block w-full h-auto group-hover:scale-[1.03] transition-transform duration-300"
+                    className="block w-full h-auto group-hover:brightness-90 transition"
+                    onLoad={(e) => noteRatio(item.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)}
                   />
                 )
               ) : (
