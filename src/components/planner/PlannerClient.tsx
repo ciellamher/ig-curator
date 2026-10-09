@@ -1,7 +1,7 @@
 "use client"
 
 import { SHEIN_ENABLED } from "@/lib/features"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
@@ -34,6 +34,8 @@ export function PlannerClient() {
   }, [allPlanner, showPosted])
   const [openId, setOpenId] = useState<string | null>(null)
   const [drawerFromFeed, setDrawerFromFeed] = useState(false)
+  const openIdRef = useRef(openId)
+  openIdRef.current = openId
   const [query, setQuery] = useState("")
   // The calendar and the database tabs show the same stage: To Shoot ↔ Shoot, To Edit ↔ Edit, To Post ↔ Post
   const [stage, setStage] = useState<DateField>("shoot")
@@ -58,6 +60,8 @@ export function PlannerClient() {
       const slotId = (e as CustomEvent<string>).detail
       const item = allPlanner.items.find((i) => i.slotId === slotId || Object.values(i.extraSlots ?? {}).includes(slotId))
       if (!item) return
+      // The feed echoing a page opened here (e.g. from the calendar): stay where you are
+      if (openIdRef.current === item.id) return
       setFocus({ id: item.id, reveal: Date.now() })
       // A box that belongs to a page is edited in that page (next to the feed on wide screens)
       setOpenId(item.id)
