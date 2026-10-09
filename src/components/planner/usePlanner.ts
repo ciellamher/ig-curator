@@ -35,13 +35,41 @@ export function usePlanner(enabled: boolean) {
 
   const reload = useCallback(async () => {
     const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
-    if (content.success) setItems(content.data)
+    if (content.success) {
+      setItems(content.data)
+      
+      // Auto-fix any items that have feed categories (e.g. from Notion import or sample data) 
+      // but didn't get added to the grid yet, or items that the grid lost.
+      // We do this by simulating a grid attach for items that already have slotIds,
+      // and running reconcileFeed for items missing slotIds.
+      setTimeout(() => {
+        for (const item of content.data) {
+          const wants = feedKindsFor(item.categories)
+          const has = [item.contentType, ...Object.keys(item.extraSlots ?? {})].filter(Boolean)
+          
+          if (wants.join(",") !== has.join(",")) {
+            // Missing slots entirely -> generate and save them
+            reconcileFeed(item)
+          } else if (has.length > 0) {
+            // Has slots -> ensure the grid knows about them
+            const placements = [
+              ...(item.slotId && item.contentType ? [{ slotId: item.slotId, contentType: item.contentType }] : []),
+              ...Object.entries(item.extraSlots ?? {}).map(([type, id]) => ({ slotId: String(id), contentType: type }))
+            ]
+            for (const box of placements) {
+              const detail: FeedAttach = { ...box, urls: item.media.map(m => m.url), title: item.title }
+              window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+            }
+          }
+        }
+      }, 500)
+    }
     if (quick.success) setLinks([...quick.data].sort(byName))
     if (orderList.success) setOrders(orderList.data)
     const failed = [content, quick, orderList].find((r) => !r.success)
     setError(failed && !failed.success ? failed.error : null)
     setLoading(false)
-  }, [])
+  }, [reconcileFeed])
 
   useEffect(() => {
     if (!enabled) return
