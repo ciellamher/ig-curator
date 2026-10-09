@@ -15,7 +15,8 @@ import { InspoFolderListView } from "@/components/grid/InspoFolderListView";
 import { InspoFolderView } from "@/components/grid/InspoFolderView";
 import { GridSearchNav } from "@/components/grid/GridSearchNav";
 import { InstagramPreviewModal } from "@/components/grid/InstagramPreviewModal";
-import { PhotoVault, useOrphanPhotos } from "@/components/grid/PhotoVault";
+import { PhotoVault } from "@/components/grid/PhotoVault";
+import { hasLegacyFeed, restoreFromLegacy, type RestoreProgress, type RestoreSummary } from "@/lib/restoreFromLegacy";
 import {
   Calendar,
   Image as ImageIcon,
@@ -423,8 +424,33 @@ export function DashboardClient() {
   }, [items, isLoaded, userId]);
 
   // ---- Photos & backups: recover photos not in any box, restore layout snapshots, download a ZIP ----
-  const orphanPhotos = useOrphanPhotos(items, isLoaded);
   const [vaultOpen, setVaultOpen] = useState(false);
+
+  // One-time automatic restore of boards and photos from this browser's older storage (see restoreFromLegacy)
+  const [restoreProgress, setRestoreProgress] = useState<RestoreProgress | null>(null);
+  const [restoreSummary, setRestoreSummary] = useState<RestoreSummary | null>(null);
+  const restoreStartedRef = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || !userId || restoreStartedRef.current) return;
+    restoreStartedRef.current = true;
+    (async () => {
+      if (!(await hasLegacyFeed())) return;
+      setRestoreProgress({ stage: "Starting", done: 0, total: 1 });
+      try {
+        const result = await restoreFromLegacy(itemsRef.current, setRestoreProgress);
+        if (result) {
+          setItems(result.items);
+          setRestoreSummary(result.summary);
+          setGridFilter("Inspo");
+          setActiveInspoFolderId(null);
+        }
+      } catch (e) {
+        console.error("Restore failed", e);
+      } finally {
+        setRestoreProgress(null);
+      }
+    })();
+  }, [isLoaded, userId]);
 
   // ---- Planner → feed: highlight the box an opened planner item belongs to ----
   const [highlightSlotId, setHighlightSlotId] = useState<string | null>(null);
@@ -925,13 +951,10 @@ export function DashboardClient() {
               {userId && (
                 <button
                   onClick={() => setVaultOpen(true)}
-                  title={orphanPhotos.length ? `${orphanPhotos.length} photos aren't in any box — recover them` : "Photos & backups: download all photos, restore a backup"}
-                  className={`shrink-0 h-9 rounded-full border flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer ${
-                    orphanPhotos.length ? "px-3 bg-zinc-950 text-white border-zinc-950" : "w-9 justify-center bg-white/80 border-soft-200 text-zinc-600 hover:text-zinc-950"
-                  }`}
+                  title="Photos & backups: download all photos, restore a layout backup"
+                  className="shrink-0 h-9 w-9 justify-center rounded-full border flex items-center bg-white/80 border-soft-200 text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer"
                 >
                   <Archive size={14} />
-                  {orphanPhotos.length > 0 && <span className="whitespace-nowrap">Recover {orphanPhotos.length}</span>}
                 </button>
               )}
 
@@ -1307,21 +1330,42 @@ export function DashboardClient() {
         </div>
       </div>
       {vaultOpen && (
-        <PhotoVault
-          items={items}
-          orphans={orphanPhotos}
-          onClose={() => setVaultOpen(false)}
-          onRestorePhotos={(boxes) => {
-            updateItems((curr) => [...boxes, ...curr]);
-            const first = boxes.find((b) => b.type === "image");
-            if (first?.folderId === "draft-pool") setGridFilter("Placeholders");
-            else if (boxes[0]?.contentType === "InspoFolder") {
-              setGridFilter("Inspo");
-              setActiveInspoFolderId(boxes[0].id);
-            } else setGridFilter("All");
-          }}
-          onRestoreLayout={(snapshot) => updateItems(toMonochrome(snapshot))}
-        />
+        <PhotoVault items={items} onClose={() => setVaultOpen(false)} onRestoreLayout={(snapshot) => updateItems(toMonochrome(snapshot))} />
+      )}
+      {(restoreProgress || restoreSummary) && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div role="dialog" aria-label="Restoring your photos" className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md flex flex-col gap-4">
+            {restoreProgress ? (
+              <>
+                <h2 className="text-lg font-semibold text-zinc-950">Restoring your boards and photos</h2>
+                <p className="text-sm text-zinc-600">Putting your photos back where they were. Please keep this tab open — this can take a few minutes.</p>
+                <div className="flex flex-col gap-1.5">
+                  <div className="h-2 rounded-full bg-zinc-200 overflow-hidden">
+                    <div className="h-full bg-zinc-950 transition-all" style={{ width: `${Math.round((restoreProgress.done / Math.max(1, restoreProgress.total)) * 100)}%` }} />
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {restoreProgress.stage}
+                    {restoreProgress.total > 1 ? ` · ${restoreProgress.done.toLocaleString()} of ${restoreProgress.total.toLocaleString()}` : "…"}
+                  </div>
+                </div>
+              </>
+            ) : (
+              restoreSummary && (
+                <>
+                  <h2 className="text-lg font-semibold text-zinc-950">Your photos are back</h2>
+                  <ul className="text-sm text-zinc-700 flex flex-col gap-1">
+                    <li>{restoreSummary.boards} inspo boards restored with {restoreSummary.boardPhotos.toLocaleString()} photos and videos</li>
+                    <li>{restoreSummary.drafts.toLocaleString()} newer photos placed in Drafts, newest first</li>
+                  </ul>
+                  <p className="text-xs text-zinc-500">A backup of the feed from before this restore is kept under Photos &amp; backups.</p>
+                  <button onClick={() => setRestoreSummary(null)} className="self-end px-5 h-10 rounded-full bg-zinc-950 text-white text-sm font-semibold cursor-pointer">
+                    Done
+                  </button>
+                </>
+              )
+            )}
+          </div>
+        </div>
       )}
       <ConfirmModal {...modalProps} />
     </div>

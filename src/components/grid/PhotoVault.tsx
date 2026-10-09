@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Archive, Download, History, LifeBuoy, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Archive, Download, History, X } from "lucide-react";
 import { getFeedBackup, getMediaBlob, listFeedBackups, listMediaIds, saveFeedBackup, type FeedBackup } from "@/lib/idb";
-import { LocalMediaImage } from "./LocalMedia";
 import { SlotItem } from "@/types";
 
 const LOCAL = "local-media://";
@@ -17,21 +16,6 @@ function referencedIds(items: SlotItem[]): Set<string> {
   const ids = new Set<string>();
   for (const i of items) for (const u of i.urls ?? []) if (u.startsWith(LOCAL)) ids.add(u.slice(LOCAL.length));
   return ids;
-}
-
-/** Photos saved in this browser that no feed box uses (e.g. after the layout was replaced). */
-export function useOrphanPhotos(items: SlotItem[], ready: boolean) {
-  const [orphans, setOrphans] = useState<string[]>([]);
-  useEffect(() => {
-    if (!ready) return;
-    const t = setTimeout(async () => {
-      const used = referencedIds(items);
-      const all = await listMediaIds();
-      setOrphans(all.filter((id) => !used.has(id)).sort((a, b) => mediaTime(b) - mediaTime(a)));
-    }, 800);
-    return () => clearTimeout(t);
-  }, [items, ready]);
-  return orphans;
 }
 
 // ---- ZIP export ----
@@ -116,26 +100,17 @@ export async function downloadAllPhotos(items: SlotItem[], onProgress: (done: nu
   return { saved, failed };
 }
 
-// ---- Vault dialog ----
-
-type Target = "grid" | "drafts" | "inspo";
+// ---- Photos & backups dialog ----
 
 export function PhotoVault({
   items,
-  orphans,
   onClose,
-  onRestorePhotos,
   onRestoreLayout,
 }: {
   items: SlotItem[];
-  orphans: string[];
   onClose: () => void;
-  onRestorePhotos: (boxes: SlotItem[]) => void;
   onRestoreLayout: (items: SlotItem[]) => void;
 }) {
-  const [tab, setTab] = useState<"recover" | "backups">(orphans.length ? "recover" : "backups");
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(orphans));
-  const [target, setTarget] = useState<Target>("grid");
   const [backups, setBackups] = useState<FeedBackup[] | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
 
@@ -146,50 +121,13 @@ export function PhotoVault({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const allSelected = selected.size === orphans.length && orphans.length > 0;
-  const chosen = useMemo(() => orphans.filter((id) => selected.has(id)), [orphans, selected]);
-
-  const restore = () => {
-    const stamp = Date.now();
-    let folderId: string | undefined;
-    const boxes: SlotItem[] = [];
-    if (target === "inspo") {
-      folderId = `folder-inspo-recovered-${stamp}`;
-      boxes.push({ id: folderId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: "Recovered photos", contentType: "InspoFolder" });
-    }
-    chosen.forEach((id, i) => {
-      const video = id.startsWith("media-video");
-      boxes.push({
-        id: `slot-recovered-${stamp}-${i}`,
-        type: "image",
-        urls: [LOCAL + id],
-        currentUrlIndex: 0,
-        hexColor: "#E4E4E7",
-        text: "",
-        contentType: target === "inspo" ? "InspoPost" : video ? "Reel" : "Post",
-        ...(target === "drafts" ? { folderId: "draft-pool" } : folderId ? { folderId } : {}),
-      });
-    });
-    onRestorePhotos(boxes);
-    onClose();
-  };
-
-  const tabBtn = (id: "recover" | "backups", label: string, Icon: typeof LifeBuoy) => (
-    <button
-      onClick={() => setTab(id)}
-      className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold cursor-pointer ${tab === id ? "bg-zinc-950 text-white" : "text-zinc-600 hover:bg-zinc-100"}`}
-    >
-      <Icon size={13} /> {label}
-    </button>
-  );
-
   return (
     <>
       <div className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-xs animate-in fade-in duration-150" onClick={onClose} />
       <div
         role="dialog"
-        aria-label="Photo backup and recovery"
-        className="fixed z-[95] inset-x-0 bottom-0 max-h-[90dvh] rounded-t-3xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[640px] sm:max-h-[85dvh] sm:rounded-3xl bg-white shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150 pb-safe"
+        aria-label="Photos and backups"
+        className="fixed z-[95] inset-x-0 bottom-0 max-h-[90dvh] rounded-t-3xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[560px] sm:max-h-[85dvh] sm:rounded-3xl bg-white shadow-2xl flex flex-col animate-in fade-in zoom-in-95 duration-150 pb-safe"
       >
         <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-zinc-100">
           <Archive size={18} />
@@ -199,69 +137,29 @@ export function PhotoVault({
           </button>
         </div>
 
-        <div className="px-5 py-3 flex flex-wrap items-center gap-2 border-b border-zinc-100">
-          {tabBtn("recover", `Recover photos (${orphans.length})`, LifeBuoy)}
-          {tabBtn("backups", "Layout backups", History)}
+        <div className="px-5 py-4 border-b border-zinc-100 flex flex-col gap-2">
+          <p className="text-sm text-zinc-600">Save every photo and video to your computer, organised into Posts, Reels, Stories, Drafts and Inspo folders.</p>
           <button
             disabled={!!progress}
             onClick={async () => {
               setProgress("Preparing…");
               const res = await downloadAllPhotos(items, (d, t) => setProgress(`Packing ${d} of ${t}…`));
               setProgress(res.failed ? `Downloaded ${res.saved} · ${res.failed} couldn't be read` : null);
-              if (!res.failed) setTimeout(() => setProgress(null), 0);
             }}
-            className="ml-auto inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold border border-zinc-300 hover:border-zinc-950 disabled:opacity-60 cursor-pointer"
+            className="self-start inline-flex items-center gap-1.5 px-4 h-9 rounded-full text-sm font-semibold bg-zinc-950 text-white hover:bg-black disabled:opacity-60 cursor-pointer"
           >
-            <Download size={13} /> {progress ?? "Download all photos (.zip)"}
+            <Download size={14} /> {progress ?? "Download all photos (.zip)"}
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          {tab === "recover" ? (
-            orphans.length === 0 ? (
-              <p className="py-8 text-center text-sm text-zinc-500">Every photo saved in this browser is in your feed. Nothing to recover.</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-zinc-600">
-                  These {orphans.length} photos are saved in this browser but aren&apos;t in any feed box. Pick the ones to put back (newest first).
-                </p>
-                <label className="flex items-center gap-2 text-sm text-zinc-700">
-                  <input type="checkbox" className="w-4 h-4 accent-zinc-950" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(orphans))} />
-                  Select all
-                </label>
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                  {orphans.map((id) => {
-                    const on = selected.has(id);
-                    return (
-                      <button
-                        key={id}
-                        onClick={() => setSelected((s) => {
-                          const next = new Set(s);
-                          if (next.has(id)) next.delete(id);
-                          else next.add(id);
-                          return next;
-                        })}
-                        aria-pressed={on}
-                        className={`relative aspect-square rounded-lg overflow-hidden cursor-pointer ring-2 ${on ? "ring-zinc-950" : "ring-transparent opacity-60"}`}
-                      >
-                        {id.startsWith("media-video") ? (
-                          <div className="w-full h-full bg-zinc-900 text-white text-[10px] flex items-center justify-center">Video</div>
-                        ) : (
-                          <LocalMediaImage src={LOCAL + id} className="w-full h-full object-cover" />
-                        )}
-                        {on && <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-zinc-950 text-white text-[10px] flex items-center justify-center">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )
-          ) : backups === null ? (
-            <p className="py-8 text-center text-sm text-zinc-400">Loading…</p>
+        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-2">
+          <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+            <History size={13} /> Layout backups
+          </h3>
+          {backups === null ? (
+            <p className="py-4 text-sm text-zinc-400">Loading…</p>
           ) : backups.length === 0 ? (
-            <p className="py-8 text-center text-sm text-zinc-500">
-              No layout backups yet. From now on a snapshot of your feed is kept every day and before anything replaces it.
-            </p>
+            <p className="py-4 text-sm text-zinc-500">A snapshot of your feed layout is kept every day and before anything replaces it.</p>
           ) : (
             <ul className="flex flex-col gap-2">
               {backups.map((b) => (
@@ -287,35 +185,6 @@ export function PhotoVault({
             </ul>
           )}
         </div>
-
-        {tab === "recover" && orphans.length > 0 && (
-          <div className="px-5 py-3 border-t border-zinc-100 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-500">Put back into</span>
-            {(
-              [
-                ["grid", "Posts grid"],
-                ["drafts", "Drafts"],
-                ["inspo", "New Inspo board"],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => setTarget(id)}
-                aria-pressed={target === id}
-                className={`px-3 h-8 rounded-full text-xs font-semibold border cursor-pointer ${target === id ? "bg-zinc-950 text-white border-zinc-950" : "border-zinc-200 text-zinc-700 hover:border-zinc-400"}`}
-              >
-                {label}
-              </button>
-            ))}
-            <button
-              disabled={!chosen.length}
-              onClick={restore}
-              className="ml-auto px-4 h-9 rounded-full text-sm font-semibold bg-zinc-950 text-white hover:bg-black disabled:opacity-40 cursor-pointer"
-            >
-              Restore {chosen.length} photo{chosen.length === 1 ? "" : "s"}
-            </button>
-          </div>
-        )}
       </div>
     </>
   );
