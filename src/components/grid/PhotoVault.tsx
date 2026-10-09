@@ -20,16 +20,29 @@ function referencedIds(items: SlotItem[]): Set<string> {
 
 // ---- ZIP export ----
 
-function slug(s: string) {
-  return s.normalize("NFKD").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").slice(0, 40) || "photo";
+/** A name as it appears in the app, minus only the characters files and folders can't have. */
+export function safeName(s: string, fallback = "photo") {
+  const clean = s
+    .replace(/[\/\\:*?"<>|\u0000-\u001f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/, "")
+    .slice(0, 80);
+  return clean || fallback;
 }
+
+/** Top folder for each board collection, named like its tab. */
+const LIBRARY_FOLDER: Record<string, string> = { fits: "Fits", other: "Other content", highlights: "Other highlights" };
 
 function extFor(type: string, url: string) {
   const map: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/heic": "heic", "video/mp4": "mp4", "video/quicktime": "mov", "video/webm": "webm" };
   return map[type] ?? (url.includes("video") ? "mp4" : "jpg");
 }
 
-/** Folder inside the ZIP for a feed box: Posts, Reels, Drafts, Stories/<folder>, Inspo/<board>/<sub-board>. */
+/**
+ * Folder inside the ZIP for a feed box, named exactly like the app: Posts, Reels, Drafts, Stories/<folder>,
+ * Inspo/<board>/<sub-board> (or Fits, Other content, Other highlights for those boards).
+ */
 function folderFor(item: SlotItem, byId: Map<string, SlotItem>): string {
   if (item.folderId === "draft-pool") return "Drafts";
   const chain: SlotItem[] = [];
@@ -40,9 +53,11 @@ function folderFor(item: SlotItem, byId: Map<string, SlotItem>): string {
     chain.unshift(f);
     f = f.folderId ? byId.get(f.folderId) : undefined;
   }
-  const names = chain.map((c) => slug(c.text || c.caption || "Folder"));
+  const names = chain.map((c) => safeName(c.text || c.caption || "", "Untitled"));
   if (chain[0]?.contentType === "StoryFolder" || item.contentType === "Story") return ["Stories", ...names].join("/");
-  if (chain[0]?.contentType === "InspoFolder" || item.contentType?.startsWith("Inspo")) return ["Inspo", ...names].join("/");
+  if (chain[0]?.contentType === "InspoFolder" || item.contentType?.startsWith("Inspo")) {
+    return [LIBRARY_FOLDER[chain[0]?.library ?? ""] ?? "Inspo", ...names].join("/");
+  }
   if (item.contentType === "Reel") return "Reels";
   return "Posts";
 }
@@ -70,7 +85,7 @@ export async function downloadAllPhotos(items: SlotItem[], onProgress: (done: nu
     const folder = folderFor(item, byId);
     const n = (counters.get(folder) ?? 0) + 1;
     counters.set(folder, n);
-    const base = `${String(n).padStart(3, "0")}-${slug(item.text || item.caption?.split("\n")[0] || item.contentType || "photo")}`;
+    const base = `${String(n).padStart(3, "0")} ${safeName(item.text || item.caption?.split("\n")[0] || item.contentType || "")}`;
     urls.forEach((url, i) => {
       jobs.push({ url, path: `${folder}/${base}${urls.length > 1 ? `-${i + 1}` : ""}` });
       if (url.startsWith(LOCAL)) used.add(url.slice(LOCAL.length));
