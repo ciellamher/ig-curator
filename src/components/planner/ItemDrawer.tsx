@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/planner/dates"
 import { STATUS_STYLES } from "@/lib/planner/options"
 import { batchOptionsFor } from "@/lib/planner/views"
 import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
-import { feedKindFor } from "@/lib/planner/feed"
+import { feedKindsFor } from "@/lib/planner/feed"
 import { DATE_FIELDS, type ContentDTO, type Location } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
@@ -54,7 +54,7 @@ export function ItemDrawer({
   const t = itemTimeline(item, byId, planner.ordersById, items)
   const alert = order ? orderAlert(order, items) : clothingAlert(item, byId)
   const postRef = useRef<HTMLDivElement>(null)
-  const feedKind = feedKindFor(item.categories)
+  const feedKind = feedKindsFor(item.categories)
   const panelRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -194,7 +194,10 @@ export function ItemDrawer({
                 <Dropdown
                   variant="ghost"
                   label="Batch"
-                  options={[{ value: "", label: "No batch" }, ...batchOptions.map((b) => ({ value: b.id, label: b.title }))]}
+                  options={[{ value: "", label: "No batch" }, ...batchOptions.map((b) => {
+                    const orderName = b.orderId ? planner.ordersById.get(b.orderId)?.name : null
+                    return { value: b.id, label: orderName ? `${b.title} (${orderName})` : b.title }
+                  })]}
                   selected={[item.parentId ?? ""]}
                   onSelect={(v) => update(item.id, { parentId: v || null })}
                   placeholder="No batch"
@@ -225,9 +228,9 @@ export function ItemDrawer({
           </div>
 
           <p className="text-xs text-zinc-400">
-            {item.slotId
-              ? "In your feed. Photos and the title stay in sync with its box."
-              : feedKind
+            {item.slotId || (item.extraSlots && Object.keys(item.extraSlots).length > 0)
+              ? "In your feed. Photos and the title stay in sync with its boxes."
+              : feedKind.length > 0
                 ? "In your feed once you add a photo to its box."
                 : "Planner only. Pick Post, Reels or Story (Category) to show it in the feed."}
           </p>

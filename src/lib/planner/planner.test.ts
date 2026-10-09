@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { batchShootDate, clothingAlert, clothingAlerts, itemTimeline, orderAlert, orderStage, orderTimeline } from "./clothing"
 import { addDaysISO, formatDate, moveSchedule, scheduleCovers, todayISO } from "./dates"
-import { categoryForFeedSlot, feedKindFor, statusForFeedSlot, toggleCategory } from "./feed"
+import { categoryForFeedSlot, feedKindsFor, statusForFeedSlot, toggleCategory } from "./feed"
 import { STATUS_NAMES } from "./options"
 import type { ContentDTO, OrderDTO } from "./types"
 import { editLeadDays, withScheduleRules } from "./rules"
@@ -347,7 +347,7 @@ describe("feed placement", () => {
     expect(toggleCategory(["Post", "Facebook"], "Story")).toEqual(["Post", "Facebook", "Story"])
     expect(toggleCategory(["Story"], "Locket")).toEqual(["Story", "Locket"])
     expect(toggleCategory(["Story", "Locket"], "Story")).toEqual(["Locket"])
-    expect(feedKindFor(["Post", "Story"])).toBe("StoryFolder")
-    expect(feedKindFor(["Facebook"])).toBeNull()
+    expect(feedKindsFor(["Post", "Story"])).toBe("StoryFolder")
+    expect(feedKindsFor(["Facebook"])).toBeNull()
   })
 })

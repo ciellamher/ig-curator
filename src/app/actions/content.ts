@@ -36,6 +36,7 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
     body: c.body,
     slotId: c.slotId,
     contentType: c.contentType,
+    extraSlots: c.extraSlots ? (c.extraSlots as Record<string, string>) : null,
     media: [...c.media].sort((a, b) => a.position - b.position).map((m) => ({ id: m.id, url: m.url, position: m.position })),
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
@@ -140,6 +141,9 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
   if ("pinterestUrl" in patch) data.pinterestUrl = cleanUrl(patch.pinterestUrl)
   if ("location" in patch) data.location = cleanLocation(patch.location) ?? Prisma.DbNull
   if ("body" in patch) data.body = String(patch.body ?? "").slice(0, 50_000)
+  if ("slotId" in patch) data.slotId = patch.slotId
+  if ("contentType" in patch) data.contentType = patch.contentType
+  if ("extraSlots" in patch) data.extraSlots = patch.extraSlots ? patch.extraSlots : Prisma.DbNull
   return data
 }
 

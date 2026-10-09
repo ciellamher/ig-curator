@@ -27,12 +27,13 @@ export function defaultFeedTitle(slot: Pick<FeedSlotSync, "location" | "contentT
   return `Untitled ${slot.contentType}`
 }
 
-/** Where a planner page shows in the feed, from its categories: Post → grid, Reels → reel, Story → story folder. */
-export function feedKindFor(categories: string[]): "Post" | "Reel" | "StoryFolder" | null {
-  if (categories.includes("Story")) return "StoryFolder"
-  if (categories.includes("Reels")) return "Reel"
-  if (categories.includes("Post")) return "Post"
-  return null
+/** Where a planner page shows in the feed, from its categories. */
+export function feedKindsFor(categories: string[]): string[] {
+  const kinds = []
+  if (categories.includes("Story")) kinds.push("StoryFolder")
+  if (categories.includes("Reels")) kinds.push("Reel")
+  if (categories.includes("Post")) kinds.push("Post")
+  return kinds
 }
 
 /** Post, Reels and Story decide where a page goes in the feed. */

@@ -31,6 +31,7 @@ export type ContentDTO = {
   body: string
   slotId: string | null
   contentType: string | null
+  extraSlots: Record<string, string> | null
   media: ContentMediaDTO[]
   createdAt: string
   updatedAt: string
@@ -52,7 +53,7 @@ export type ContentPatch = Partial<
     | "body"
     | "parentId"
   >
-> & { slotId?: string; contentType?: string }
+> & { slotId?: string | null; contentType?: string | null; extraSlots?: Record<string, string> | null }
 
 export type OrderDTO = {
   id: string
