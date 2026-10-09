@@ -9,7 +9,6 @@ export const RETURN_WINDOW_DAYS = 14
 /** Return reminder from day 11 after delivery, three days before the window closes. */
 export const RETURN_REMINDER_DAY = 11
 export const DUE_SOON_DAYS = 3
-export const BATCHES_PER_ORDER = 2
 
 export type ClothingStage = "Buy Clothes" | "Ordered" | "Delivered" | "Refunded"
 
@@ -71,12 +70,18 @@ export function orderStage(order: OrderDTO): ClothingStage {
   return "Buy Clothes"
 }
 
+/** The posts an order covers (picked on the order card). */
 export function orderBatches(order: OrderDTO, items: ContentDTO[]): ContentDTO[] {
-  return items.filter((i) => i.orderId === order.id && !i.parentId)
+  return items.filter((i) => i.orderId === order.id)
 }
 
 export function orderTimeline(order: OrderDTO, items: ContentDTO[], today = todayISO()): ClothingTimeline {
-  const shootDate = orderBatches(order, items).map((b) => batchShootDate(b, items)).filter(Boolean).sort()[0] ?? null
+  const byId = new Map(items.map((i) => [i.id, i]))
+  const shootDate =
+    orderBatches(order, items)
+      .map((p) => effectiveShootDate(p, byId) ?? batchShootDate(p, items))
+      .filter(Boolean)
+      .sort()[0] ?? null
   return timeline({ shootDate, orderedAt: order.orderedAt, deliveredAt: order.deliveredAt }, today)
 }
 
@@ -139,7 +144,8 @@ export function clothingAlerts(items: ContentDTO[], orders: OrderDTO[] = [], tod
   for (const order of orders) {
     const alert = orderAlert(order, items, today)
     if (!alert) continue
-    const names = orderBatches(order, items).map((b) => b.title).join(" + ")
+    const posts = orderBatches(order, items).map((b) => b.title)
+    const names = posts.length > 2 ? `${posts.slice(0, 2).join(" + ")} +${posts.length - 2}` : posts.join(" + ")
     out.push({ key: `order-${order.id}`, title: names ? `${order.name} (${names})` : order.name, alert, order })
   }
   for (const item of items) {

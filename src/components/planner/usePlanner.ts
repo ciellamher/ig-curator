@@ -1,19 +1,21 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { attachMediaToContent, createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { saveMediaBlob } from "@/lib/idb"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
 import { createOrder, deleteOrder, listOrders, renameOrder, setOrderBatches, setOrderDate, setOrderStage } from "@/app/actions/orders"
 import { clothingAlerts } from "@/lib/planner/clothing"
 import {
-  FEED_ADD_EVENT,
+  FEED_ATTACH_EVENT,
   PLANNER_DELETED_EVENT,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
   type ContentDTO,
   type ContentPatch,
+  type FeedAttach,
   type OrderDTO,
   type OrderStage,
   type QuickLinkDTO,
@@ -74,15 +76,13 @@ export function usePlanner(enabled: boolean) {
   }, [])
 
   const create = useCallback(async (input: ContentPatch = {}) => {
-    // Top-level items are posts, so they get a box in the Posts grid with the same id
-    const slotId = input.parentId ? undefined : `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-    const contentType = input.categories?.includes("Reels") && !input.categories.includes("Post") ? "Reel" : "Post"
-    const res = await createContent({ ...input, ...(slotId ? { slotId, contentType } : {}) })
+    // Pages start without a feed box; adding a photo puts them in the feed (see attachPhotos)
+    const cats = input.categories ?? []
+    const storyOnly = cats.includes("Story") && !cats.includes("Post") && !cats.includes("Reels")
+    const contentType = storyOnly ? "StoryFolder" : cats.includes("Reels") && !cats.includes("Post") ? "Reel" : "Post"
+    const res = await createContent({ ...input, contentType })
     if (res.success) {
       setItems((curr) => [res.data, ...curr])
-      if (res.data.slotId) {
-        window.dispatchEvent(new CustomEvent(FEED_ADD_EVENT, { detail: [{ slotId: res.data.slotId, title: res.data.title, contentType: res.data.contentType ?? "Post" }] }))
-      }
       return res.data
     }
     setError(res.error)
@@ -150,11 +150,32 @@ export function usePlanner(enabled: boolean) {
     else setError(res.error)
   }, [])
 
+  /** Saves photos in this browser, adds them to the page, and shows them in the feed (creating its box if needed). */
+  const attachPhotos = useCallback(async (item: ContentDTO, files: File[]) => {
+    if (!files.length) return
+    const urls: string[] = []
+    for (const file of files) {
+      const kind = file.type.startsWith("video/") ? "video" : "image"
+      const id = `media-${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+      await saveMediaBlob(id, new Blob([await file.arrayBuffer()], { type: file.type }))
+      urls.push(`local-media://${id}`)
+    }
+    const slotId = item.slotId ?? `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+    const res = await attachMediaToContent(item.id, urls, slotId)
+    if (!res.success) {
+      setError(res.error)
+      return
+    }
+    setItems((curr) => curr.map((i) => (i.id === item.id ? res.data : i)))
+    const detail: FeedAttach = { slotId: res.data.slotId!, urls, title: res.data.title, contentType: res.data.contentType ?? "Post" }
+    window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+  }, [])
+
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, attachPhotos, loadSamples, saveLink, removeLink }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

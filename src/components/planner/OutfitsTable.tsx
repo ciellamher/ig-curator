@@ -1,9 +1,8 @@
 "use client"
 
-import { AlertTriangle, Plus, Trash2 } from "lucide-react"
-import { Dropdown } from "@/components/ui/Dropdown"
+import { useState } from "react"
+import { AlertTriangle, Plus, Trash2, X } from "lucide-react"
 import {
-  BATCHES_PER_ORDER,
   ORDER_LEAD_DAYS,
   RETURN_REMINDER_DAY,
   RETURN_WINDOW_DAYS,
@@ -15,7 +14,7 @@ import {
 } from "@/lib/planner/clothing"
 import { compareNullsLast, formatDate } from "@/lib/planner/dates"
 import { CLOTHING_STYLES, STATUS_STYLES } from "@/lib/planner/options"
-import { batchCandidates, matchesSearch, outfitsView } from "@/lib/planner/views"
+import { matchesSearch, outfitsView, shootDateOf } from "@/lib/planner/views"
 import type { ContentDTO, OrderDTO } from "@/lib/planner/types"
 import { ContentRows, type Column } from "./ContentRows"
 import { BulkBar, useSelection } from "./Selection"
@@ -42,18 +41,27 @@ function DateField({ label, value, onChange, dark }: { label: string; value: str
 
 function OrderCard({ order, planner, onOpen }: { order: OrderDTO; planner: Planner; onOpen: (item: ContentDTO) => void }) {
   const { items, orderActions } = planner
-  const batches = orderBatches(order, items).sort((a, b) => compareNullsLast(batchShootDate(a, items), batchShootDate(b, items)))
+  const byId = new Map(items.map((i) => [i.id, i]))
+  const posts = orderBatches(order, items).sort((a, b) => compareNullsLast(shootDateOf(a, byId), shootDateOf(b, byId)))
+  const [picking, setPicking] = useState(posts.length === 0)
+  const [find, setFind] = useState("")
   const stage = orderStage(order)
   const t = orderTimeline(order, items)
   const alert = orderAlert(order, items)
   const dark = alert?.severity === "danger"
-  const available = batchCandidates(items).filter((b) => !b.orderId || b.orderId === order.id)
+  // Posts that can be picked: anything not already in another order
+  const pickable = items
+    .filter((i) => (!i.orderId || i.orderId === order.id) && i.status !== "Posted" && i.status !== "Worn")
+    .filter((i) => !find.trim() || i.title.toLowerCase().includes(find.trim().toLowerCase()))
+    .sort((a, b) => compareNullsLast(shootDateOf(a, byId), shootDateOf(b, byId)))
+  const setPosts = (ids: string[]) => orderActions.setBatches(order.id, ids)
+  const toggle = (id: string) => setPosts(posts.some((p) => p.id === id) ? posts.filter((p) => p.id !== id).map((p) => p.id) : [...posts.map((p) => p.id), id])
 
-  const setBatch = (slot: number, batchId: string) => {
-    const ids = batches.map((b) => b.id)
-    if (batchId) ids[slot] = batchId
-    else ids.splice(slot, 1)
-    orderActions.setBatches(order.id, Array.from(new Set(ids.filter(Boolean))))
+  // Group the picked posts by the batch they're in (set on each page)
+  const groups = new Map<string, ContentDTO[]>()
+  for (const p of posts) {
+    const batch = p.parentId ? byId.get(p.parentId)?.title ?? "No batch" : "No batch"
+    groups.set(batch, [...(groups.get(batch) ?? []), p])
   }
 
   const progress = t.daysSinceDelivery === null ? 0 : Math.min(1, t.daysSinceDelivery / RETURN_WINDOW_DAYS)
@@ -105,62 +113,79 @@ function OrderCard({ order, planner, onOpen }: { order: OrderDTO; planner: Plann
               ? `Ordered ${formatDate(t.orderedOn)} — waiting for delivery`
               : t.orderBy
                 ? `Order by ${formatDate(t.orderBy, { weekday: true })} (${ORDER_LEAD_DAYS} days before the first shoot)`
-                : "Add shoot dates to the batches to get an order-by date"}
+                : "Add posts with shoot dates to get an order-by date"}
           {alert && stage === "Buy Clothes" && <span className="block mt-1 text-xs font-semibold">{alert.message}</span>}
         </p>
       )}
 
-      {/* The two batches this order covers */}
-      <div className="grid gap-2 sm:grid-cols-2">
-        {Array.from({ length: BATCHES_PER_ORDER }, (_, slot) => {
-          const batch = batches[slot]
-          const children = batch ? items.filter((i) => i.parentId === batch.id) : []
-          const shoot = batch ? batchShootDate(batch, items) : null
-          const options = available.filter((b) => b.id === batch?.id || !batches.some((x) => x.id === b.id))
-          return (
-            <div key={slot} className={`rounded-xl p-2.5 flex flex-col gap-2 min-w-0 ${dark ? "bg-white/10" : "bg-zinc-50 border border-zinc-200"}`}>
-              <Dropdown
-                variant="ghost"
-                label={`Batch ${slot + 1}`}
-                options={[{ value: "", label: "No batch" }, ...options.map((b) => ({ value: b.id, label: b.title }))]}
-                selected={[batch?.id ?? ""]}
-                onSelect={(v) => setBatch(slot, v)}
-                trigger={
-                  <span className={`text-sm font-semibold ${batch ? "" : "opacity-50"}`}>
-                    {batch ? batch.title : `Choose batch ${slot + 1}`}
-                    {shoot && <span className="ml-1.5 text-xs font-normal opacity-70">shoot {formatDate(shoot)}</span>}
+      {/* The posts this order covers, grouped by batch */}
+      <div className={`rounded-xl p-2.5 flex flex-col gap-2 ${dark ? "bg-white/10" : "bg-zinc-50 border border-zinc-200"}`}>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">Posts in this order</span>
+          <span className="text-xs opacity-60">{posts.length}</span>
+          <button
+            onClick={() => setPicking((v) => !v)}
+            className={`ml-auto inline-flex items-center gap-1 px-2.5 h-7 rounded-full text-xs font-semibold cursor-pointer ${dark ? "bg-white text-zinc-950" : "bg-zinc-950 text-white"}`}
+          >
+            {picking ? "Done" : <><Plus size={12} /> Add posts</>}
+          </button>
+        </div>
+
+        {picking && (
+          <div className={`rounded-lg border ${dark ? "border-white/20" : "border-zinc-200 bg-white"} p-2 flex flex-col gap-1.5`}>
+            <input
+              value={find}
+              onChange={(e) => setFind(e.target.value)}
+              placeholder="Search your content…"
+              aria-label="Search posts"
+              className={`h-8 px-2.5 rounded-md text-base sm:text-sm outline-none border ${dark ? "bg-transparent border-white/20" : "border-zinc-200 focus:border-zinc-950"}`}
+            />
+            <ul className="max-h-60 overflow-y-auto flex flex-col">
+              {pickable.length === 0 && <li className="text-xs opacity-60 px-1 py-2">Nothing matches.</li>}
+              {pickable.map((p) => {
+                const on = posts.some((x) => x.id === p.id)
+                const batch = p.parentId ? byId.get(p.parentId)?.title : null
+                return (
+                  <li key={p.id}>
+                    <label className={`flex items-center gap-2 px-1.5 py-1.5 rounded-md cursor-pointer ${dark ? "hover:bg-white/10" : "hover:bg-zinc-50"}`}>
+                      <input type="checkbox" checked={on} onChange={() => toggle(p.id)} className="w-4 h-4 accent-zinc-950" />
+                      <Thumb item={p} size={22} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-xs font-medium truncate">{p.title}</span>
+                        <span className="block text-[11px] opacity-60 truncate">
+                          {batch ? `${batch} · ` : ""}
+                          {shootDateOf(p, byId) ? `shoot ${formatDate(shootDateOf(p, byId))}` : "no shoot date"}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {posts.length === 0 && !picking && <p className="text-xs opacity-60 px-1">No posts yet — click Add posts.</p>}
+        {[...groups.entries()].map(([batch, list]) => (
+          <div key={batch} className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider opacity-60 px-1">{batch}</span>
+            {list.map((c) => (
+              <div key={c.id} className={`flex items-center gap-2 rounded-lg px-1 py-1 ${dark ? "hover:bg-white/10" : "hover:bg-white"}`}>
+                <button onClick={() => onOpen(c)} className="flex-1 min-w-0 flex items-center gap-2 text-left cursor-pointer">
+                  <Thumb item={c} size={22} />
+                  <span className="flex-1 min-w-0 flex flex-col">
+                    <span className="text-xs leading-snug break-words">{c.title}</span>
+                    <span className="text-[11px] opacity-60">shoot {formatDate(shootDateOf(c, byId)) || "—"}</span>
                   </span>
-                }
-                className={`whitespace-normal ${dark ? "hover:bg-white/10" : ""}`}
-              />
-              {batch && (
-                <ul className="flex flex-col gap-1">
-                  {children.length === 0 && <li className="text-xs opacity-50 px-1">No posts under this batch yet</li>}
-                  {children.map((c) => (
-                    <li key={c.id}>
-                      <button
-                        onClick={() => onOpen(c)}
-                        className={`w-full flex items-center gap-2 text-left rounded-lg px-1 py-1 cursor-pointer ${dark ? "hover:bg-white/10" : "hover:bg-white"}`}
-                      >
-                        <Thumb item={c} size={22} />
-                        <span className="flex-1 min-w-0 flex flex-col">
-                          <span className="text-xs leading-snug break-words">{c.title}</span>
-                          <span className="text-[11px] opacity-60">shoot {formatDate(c.shoot.start ?? shoot) || "—"}</span>
-                        </span>
-                        <span className="flex flex-col items-end gap-0.5">
-                          <Badge value={c.status} styles={dark ? { [c.status]: "bg-white/15 text-white" } : STATUS_STYLES} />
-                          {c.clothingStatus && (
-                            <Badge value={c.clothingStatus} styles={dark ? { [c.clothingStatus]: "bg-white/15 text-white" } : CLOTHING_STYLES} />
-                          )}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )
-        })}
+                  <Badge value={c.status} styles={dark ? { [c.status]: "bg-white/15 text-white" } : STATUS_STYLES} />
+                </button>
+                <button onClick={() => toggle(c.id)} aria-label={`Remove ${c.title} from order`} className="p-1 rounded opacity-50 hover:opacity-100 cursor-pointer">
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
       {/* Stage actions and date corrections */}
@@ -218,21 +243,16 @@ export function OutfitsTable({
   const active = visibleOrders.filter((o) => orderStage(o) !== "Refunded")
   const done = visibleOrders.filter((o) => orderStage(o) === "Refunded")
 
-  // A new order pairs the next two batches (by shoot date) that aren't in an order yet.
-  const nextBatches = batchCandidates(items)
-    .filter((b) => !b.orderId && b.clothingStatus !== "Refunded" && b.status !== "Posted" && b.status !== "Worn")
-    .sort((a, b) => compareNullsLast(batchShootDate(a, items), batchShootDate(b, items)))
-    .slice(0, BATCHES_PER_ORDER)
   const standaloneAlerts = planner.alerts.filter((a) => a.item)
 
   return (
     <Section
       id="outfits"
       title="Outfits to Prep"
-      subtitle={`One SHEIN order covers ${BATCHES_PER_ORDER} batches · return within ${RETURN_WINDOW_DAYS} days of delivery (reminder from day ${RETURN_REMINDER_DAY})`}
+      subtitle={`Pick the posts each SHEIN order is for · return within ${RETURN_WINDOW_DAYS} days of delivery (reminder from day ${RETURN_REMINDER_DAY})`}
       actions={
         <button
-          onClick={() => orderActions.create(nextBatches.map((b) => b.id))}
+          onClick={() => orderActions.create([])}
           className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-xs font-semibold bg-zinc-950 text-white hover:bg-black cursor-pointer"
         >
           <Plus size={14} /> New order
@@ -247,8 +267,7 @@ export function OutfitsTable({
         </div>
       ) : (
         <p className="rounded-xl border border-dashed border-zinc-300 p-4 text-sm text-zinc-500">
-          No active orders. Click <span className="font-semibold text-zinc-800">New order</span> to pair your next {BATCHES_PER_ORDER} batches
-          {nextBatches.length ? ` (${nextBatches.map((b) => b.title).join(" + ")})` : ""}.
+          No active orders. Click <span className="font-semibold text-zinc-800">New order</span>, then pick the posts it&apos;s for.
         </p>
       )}
 

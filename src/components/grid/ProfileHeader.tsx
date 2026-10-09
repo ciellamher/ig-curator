@@ -69,7 +69,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
   const avatarUrl = profile.avatarUrl || session?.user?.image;
 
   return (
-    <div className="w-full bg-white flex flex-col pt-6 sm:pt-8 pb-4 px-4 sm:px-5 select-none">
+    <div className="w-full bg-white flex flex-col pt-6 sm:pt-2 pb-4 px-4 sm:px-5 select-none">
       {/* Top Bar - Centered Layout */}
       <div className="relative flex items-center justify-center mb-5 min-h-[36px]">
         <div className="absolute left-0 flex items-center gap-3">

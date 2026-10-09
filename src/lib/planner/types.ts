@@ -122,3 +122,10 @@ export const FEED_ADD_EVENT = "feed:add"
 
 /** Fired by the feed when a box is selected, so the planner can show its row; detail: slot id. */
 export const FEED_SELECT_EVENT = "feed:select"
+
+/** Fired by the planner when photos are added to a page, so the feed shows them; detail: FeedAttach. */
+export const FEED_ATTACH_EVENT = "feed:attach"
+export type FeedAttach = { slotId: string; urls: string[]; title: string; contentType: string }
+
+/** Fired by the planner when a page is opened, so the feed opens that box's editor; detail: slot id. */
+export const PLANNER_OPEN_EVENT = "planner:open"

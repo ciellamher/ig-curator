@@ -46,12 +46,15 @@ import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
 import {
   FEED_ADD_EVENT,
+  FEED_ATTACH_EVENT,
   FEED_SELECT_EVENT,
   PLANNER_DELETED_EVENT,
   PLANNER_FOCUS_EVENT,
+  PLANNER_OPEN_EVENT,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
+  type FeedAttach,
   type FeedBox,
   type FeedSlotSync,
 } from "@/lib/planner/types";
@@ -94,9 +97,10 @@ function writeCloudMeta(userId: string, patch: Partial<CloudMeta>) {
 
 const GRID_TYPES = new Set(["Post", "Reel", "Carousel"]);
 
-/** Boxes shown in the Posts tab (the main grid) — the only feed content that goes to the planner. */
+/** Planner content: boxes in the Posts tab (the main grid), and story folders (one planner page per folder). */
 function isPlannerBox(item: SlotItem): boolean {
-  return !item.folderId && !item.isLocked && !item.isHiddenFromGrid && GRID_TYPES.has(item.contentType ?? "Post");
+  if (item.folderId || item.isLocked || item.isHiddenFromGrid) return false;
+  return item.contentType === "StoryFolder" || GRID_TYPES.has(item.contentType ?? "Post");
 }
 
 /** Projects the Posts-tab boxes into the shape the content database syncs from. */
@@ -105,14 +109,18 @@ function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
     if (!isPlannerBox(item)) return [];
     // The starter grid's blank placeholders only count once they get a photo or text
     if (STARTER_SLOT_IDS.has(item.id) && item.urls.length === 0 && !item.text?.trim()) return [];
+    const isStoryFolder = item.contentType === "StoryFolder";
     return [{
       slotId: item.id,
       contentType: item.contentType ?? "Post",
-      location: "grid" as const,
+      location: isStoryFolder ? ("story" as const) : ("grid" as const),
       title: (item.text?.trim() || item.caption?.split("\n")[0]?.trim() || "").slice(0, 200),
-      mediaUrls: item.urls ?? [],
+      // A story folder's page shows the folder cover plus its stories' photos
+      mediaUrls: isStoryFolder
+        ? [...(item.urls ?? []), ...items.filter((s) => s.folderId === item.id).flatMap((s) => s.urls?.slice(0, 1) ?? [])].slice(0, 20)
+        : item.urls ?? [],
       parentSlotId: null,
-      isFolder: false,
+      isFolder: isStoryFolder,
     }];
   });
 }
@@ -479,8 +487,20 @@ export function DashboardClient() {
       } else setGridFilter("All");
       setHighlightSlotId(slotId);
     };
+    // Opening a planner page also opens its box's editor (or its story folder)
+    const onOpen = (e: Event) => {
+      const slotId = (e as CustomEvent<string>).detail;
+      const item = itemsRef.current.find((i) => i.id === slotId);
+      if (!item) return;
+      if (item.contentType === "StoryFolder") setActiveStoryFolderId(item.id);
+      else if (!item.folderId) setActiveSlotId(item.id);
+    };
     window.addEventListener(PLANNER_FOCUS_EVENT, onFocus);
-    return () => window.removeEventListener(PLANNER_FOCUS_EVENT, onFocus);
+    window.addEventListener(PLANNER_OPEN_EVENT, onOpen);
+    return () => {
+      window.removeEventListener(PLANNER_FOCUS_EVENT, onFocus);
+      window.removeEventListener(PLANNER_OPEN_EVENT, onOpen);
+    };
   }, []);
   useEffect(() => {
     // A style rule (rather than a class on the element) so the outline survives re-renders and view switches
@@ -515,6 +535,13 @@ export function DashboardClient() {
     reveal();
     return () => clearTimeout(timer);
   }, [highlightSlotId]);
+
+  // Opening a story folder in the feed shows its planner page
+  useEffect(() => {
+    if (!activeStoryFolderId) return;
+    setHighlightSlotId(activeStoryFolderId);
+    window.dispatchEvent(new CustomEvent(FEED_SELECT_EVENT, { detail: activeStoryFolderId }));
+  }, [activeStoryFolderId]);
 
   // Feed → planner: selecting a box shows its row in the planner
   useEffect(() => {
@@ -722,8 +749,8 @@ export function DashboardClient() {
           urls: [],
           currentUrlIndex: 0,
           hexColor: "#E4E4E7",
-          text: /^Untitled/.test(b.title) ? "" : b.title,
-          contentType: b.contentType === "Reel" ? "Reel" : "Post",
+          text: b.contentType === "StoryFolder" ? (/^Untitled/.test(b.title) ? "New Folder" : b.title) : /^Untitled/.test(b.title) ? "" : b.title,
+          contentType: b.contentType === "Reel" ? "Reel" : b.contentType === "StoryFolder" ? "StoryFolder" : "Post",
         }));
       return fresh.length ? [...fresh, ...curr] : curr;
     });
@@ -732,15 +759,48 @@ export function DashboardClient() {
   addFeedBoxesRef.current = addFeedBoxes;
   useEffect(() => {
     const onAdd = (e: Event) => addFeedBoxesRef.current((e as CustomEvent<FeedBox[]>).detail ?? []);
+    // Photos added to a planner page: add them to its box (or story folder), creating it if needed
+    const onAttach = (e: Event) => {
+      const { slotId, urls, title, contentType } = (e as CustomEvent<FeedAttach>).detail;
+      setItems((curr) => {
+        const box = curr.find((i) => i.id === slotId);
+        const text = /^Untitled/.test(title) ? "" : title;
+        if (contentType === "StoryFolder") {
+          const folder: SlotItem[] = box ? [] : [{ id: slotId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: text || "New Folder", contentType: "StoryFolder" }];
+          const stories: SlotItem[] = urls.map((u, n) => ({
+            id: `story-${Date.now()}-${n}`,
+            type: u.includes("-video-") ? "video" : "image",
+            urls: [u],
+            currentUrlIndex: 0,
+            hexColor: "#E4E4E7",
+            text: "",
+            contentType: "Story",
+            folderId: slotId,
+          }));
+          return [...folder, ...curr, ...stories];
+        }
+        if (box) return curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...urls] } : i));
+        return [
+          { id: slotId, type: "image", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post" },
+          ...curr,
+        ];
+      });
+    };
     window.addEventListener(FEED_ADD_EVENT, onAdd);
-    return () => window.removeEventListener(FEED_ADD_EVENT, onAdd);
+    window.addEventListener(FEED_ATTACH_EVENT, onAttach);
+    return () => {
+      window.removeEventListener(FEED_ADD_EVENT, onAdd);
+      window.removeEventListener(FEED_ATTACH_EVENT, onAttach);
+    };
   }, []);
 
   // Database → feed: remove boxes deleted in the planner (or another browser), and follow planner renames.
   const removeSlots = (slotIds: string[]) => {
     if (!slotIds.length) return;
     const gone = new Set(slotIds);
-    setItems((curr) => (curr.some((i) => gone.has(i.id)) ? curr.filter((i) => !gone.has(i.id)) : curr));
+    // A removed folder takes the boxes inside it along (as deleting it in the feed does)
+    const removed = (i: SlotItem) => gone.has(i.id) || (!!i.folderId && gone.has(i.folderId));
+    setItems((curr) => (curr.some(removed) ? curr.filter((i) => !removed(i)) : curr));
     if (activeSlotId && gone.has(activeSlotId)) setActiveSlotId(null);
     if (previewSlotId && gone.has(previewSlotId)) setPreviewSlotId(null);
   };
@@ -1066,9 +1126,11 @@ export function DashboardClient() {
                   </div>
                 )}
 
+                {/* Status-bar strip under the notch, so scrolled content never slides beneath it */}
+                <div className="hidden sm:block h-10 shrink-0 bg-white" aria-hidden="true" />
                 <div
                   id="main-scroll-container"
-                  className={`flex-1 overflow-y-auto no-scrollbar pb-6 relative ${deviceView === "phone" ? "sm:pt-3" : ""}`}
+                  className="flex-1 overflow-y-auto no-scrollbar pb-6 relative"
                 >
                   <ProfileHeader
                     session={session}
@@ -1204,6 +1266,19 @@ export function DashboardClient() {
                           )}
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
+                          onAddFolder={() => {
+                            const folder: SlotItem = {
+                              id: `folder-${Math.floor(Math.random() * 1000000000)}`,
+                              type: "placeholder",
+                              urls: [],
+                              currentUrlIndex: 0,
+                              hexColor: "#E4E4E7",
+                              text: "New Folder",
+                              contentType: "StoryFolder",
+                            };
+                            updateItems((curr) => [folder, ...curr]);
+                            setActiveStoryFolderId(folder.id);
+                          }}
                           updateItem={updateItem}
                           onDeleteFolder={async (id) => {
                             const ok = await confirm({
@@ -1279,7 +1354,7 @@ export function DashboardClient() {
                 />
 
                 <div
-                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:fixed lg:left-[464px] xl:left-[504px] lg:top-24 lg:z-[65] lg:w-80 lg:max-h-[calc(100dvh-8rem)] bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
+                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:fixed lg:left-[464px] xl:left-[504px] lg:top-24 lg:z-[65] lg:w-80 lg:max-h-[calc(100dvh-8rem)] bg-white shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
                   style={{
                     transform:
                       typeof window !== "undefined" && window.innerWidth >= 1024

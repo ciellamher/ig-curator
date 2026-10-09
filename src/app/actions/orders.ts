@@ -3,7 +3,6 @@
 import { prisma } from "@/lib/prisma"
 import type { ClothingOrder } from "@prisma/client"
 import { requireUserId, run, type Result } from "@/lib/planner/server"
-import { BATCHES_PER_ORDER } from "@/lib/planner/clothing"
 import { isValidScheduleValue } from "@/lib/planner/dates"
 import type { OrderDTO, OrderStage } from "@/lib/planner/types"
 
@@ -31,7 +30,7 @@ async function ownedOrder(userId: string, id: string) {
   return order
 }
 
-/** Keeps the Clothing property on an order's batches and their outfits in step with the order. */
+/** Keeps the Clothing property on an order's posts (and any posts under them) in step with the order. */
 async function syncClothingStatus(userId: string, orderId: string, clothingStatus: string) {
   const batches = await prisma.content.findMany({ where: { userId, orderId }, select: { id: true } })
   const batchIds = batches.map((b) => b.id)
@@ -69,19 +68,18 @@ export async function renameOrder(id: string, name: string): Promise<Result<Orde
   })
 }
 
-async function assignBatches(userId: string, orderId: string, batchIds: string[]) {
-  const unique = Array.from(new Set(batchIds)).slice(0, BATCHES_PER_ORDER + 1)
-  if (unique.length > BATCHES_PER_ORDER) throw new Error(`An order covers ${BATCHES_PER_ORDER} batches`)
-  const batches = await prisma.content.findMany({ where: { userId, id: { in: unique } } })
-  if (batches.length !== unique.length) throw new Error("Batch not found")
-  if (batches.some((b) => b.parentId)) throw new Error("Only top-level batches can be added to an order")
+/** Sets which posts an order covers. */
+async function assignBatches(userId: string, orderId: string, postIds: string[]) {
+  const unique = Array.from(new Set(postIds)).slice(0, 500)
+  const posts = await prisma.content.findMany({ where: { userId, id: { in: unique } }, select: { id: true } })
+  if (posts.length !== unique.length) throw new Error("Post not found")
   await prisma.$transaction([
     prisma.content.updateMany({ where: { userId, orderId, id: { notIn: unique } }, data: { orderId: null } }),
     prisma.content.updateMany({ where: { userId, id: { in: unique } }, data: { orderId } }),
   ])
 }
 
-/** Sets which batches (up to two) an order covers. */
+/** Sets which posts an order covers. */
 export async function setOrderBatches(id: string, batchIds: string[]): Promise<Result<{ id: string }>> {
   return run(async () => {
     const userId = await requireUserId()

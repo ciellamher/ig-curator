@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
+import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -46,6 +46,7 @@ export function PlannerClient() {
     setOpenId(item.id)
     setDrawerFromFeed(false)
     focusItem(item)
+    if (item.slotId) window.dispatchEvent(new CustomEvent(PLANNER_OPEN_EVENT, { detail: item.slotId }))
   }
   useEffect(() => {
     const onSelect = (e: Event) => {

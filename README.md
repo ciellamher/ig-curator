@@ -29,9 +29,10 @@ Then open `http://localhost:3000`.
 - **Quick Links** gallery.
 
 **Feed ↔ planner**
-- Every box in the Posts tab has exactly one planner row, and items added in the planner appear in the grid.
+- Every box in the Posts tab, and every story folder, has its own planner page.
+- Planner pages can exist before they're in the feed; adding a photo to a page puts it in the feed (story pages as story folders).
 - Renaming or deleting on either side updates the other.
-- Clicking a box opens its planner page; clicking a planner row highlights its box.
+- Clicking a box opens its planner page; opening a page opens its box's editor and highlights it.
 
 ### 03 — STORAGE
 

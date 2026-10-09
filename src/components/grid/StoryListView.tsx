@@ -1,5 +1,5 @@
 import { SlotItem } from "@/types";
-import { ChevronRight, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
@@ -9,22 +9,49 @@ interface StoryListViewProps {
   onFolderClick: (folderId: string) => void;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   onDeleteFolder?: (folderId: string) => void;
+  onAddFolder?: () => void;
 }
 
-export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder }: StoryListViewProps) {
+export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder }: StoryListViewProps) {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const header = (
+    <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-100">
+      <div>
+        <h2 className="text-base font-bold text-zinc-950 leading-tight">Story folders</h2>
+        <p className="text-[11px] text-zinc-500">{folders.length} folder{folders.length === 1 ? "" : "s"}</p>
+      </div>
+      {onAddFolder && (
+        <button
+          onClick={onAddFolder}
+          className="ml-auto inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black cursor-pointer"
+        >
+          <Plus size={14} strokeWidth={2.5} /> New story folder
+        </button>
+      )}
+    </div>
+  );
 
   if (folders.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center pt-20">
-        <p className="text-foreground/50 font-medium text-lg">No story folders yet.</p>
-        <p className="text-foreground/40 text-sm mt-1">Click + to create one.</p>
+      <div className="w-full flex flex-col bg-white">
+        {header}
+        <div className="flex flex-col items-center text-center gap-3 py-16 px-6">
+          <p className="text-sm font-semibold text-zinc-800">No story folders yet</p>
+          <p className="text-xs text-zinc-500">Make a folder for each set of stories (a trip, a launch, a day out), then add stories to it.</p>
+          {onAddFolder && (
+            <button onClick={onAddFolder} className="mt-1 inline-flex items-center gap-1 px-4 h-9 rounded-full bg-zinc-950 text-white text-xs font-semibold cursor-pointer">
+              <Plus size={14} strokeWidth={2.5} /> Create your first story folder
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full flex flex-col bg-white h-full overflow-y-auto">
+      {header}
       <ConfirmModal
         isOpen={!!deleteTarget}
         title="Delete folder"
