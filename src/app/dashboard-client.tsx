@@ -668,6 +668,10 @@ export function DashboardClient() {
         deletedSlotIds.forEach((id) => pendingDeletesRef.current.delete(id));
         restoredSlotIds.forEach((id) => pendingRestoresRef.current.delete(id));
         if (res.data.addToFeed.length) addFeedBoxes(res.data.addToFeed);
+        if (res.data.textForFeed.length) {
+          const titles = new Map(res.data.textForFeed.map((t) => [t.slotId, t.title]));
+          setItems((curr) => curr.map((i) => (titles.has(i.id) && !i.text?.trim() ? { ...i, text: titles.get(i.id)! } : i)));
+        }
         if (res.data.created + res.data.updated + res.data.deleted + res.data.addToFeed.length > 0) window.dispatchEvent(new Event(PLANNER_REFRESH_EVENT));
       } else {
         console.error("Planner sync failed:", res.error);

@@ -34,12 +34,15 @@ export function ItemDrawer({
   onClose,
   onDelete,
   onOpen,
+  overlay = true,
 }: {
   item: ContentDTO
   planner: Planner
   onClose: () => void
   onDelete: (item: ContentDTO) => void
   onOpen: (item: ContentDTO) => void
+  /** false when opened from the feed: no dimmed backdrop, so the feed stays usable alongside */
+  overlay?: boolean
 }) {
   const { items, byId, update, create } = planner
   const holdsPosts = items.filter((i) => i.parentId === item.id)
@@ -54,7 +57,7 @@ export function ItemDrawer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
     window.addEventListener("keydown", onKey)
-    panelRef.current?.focus()
+    if (overlay) panelRef.current?.focus()
     return () => window.removeEventListener("keydown", onKey)
   }, [onClose])
 
@@ -68,12 +71,12 @@ export function ItemDrawer({
 
   return (
     <>
-      <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose} />
+      {overlay && <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose} />}
       <aside
         ref={panelRef}
         tabIndex={-1}
         role="dialog"
-        aria-modal="true"
+        aria-modal={overlay}
         aria-label={item.title}
         className="fixed z-[80] inset-x-0 bottom-0 max-h-[90dvh] rounded-t-3xl sm:inset-x-auto sm:right-3 sm:top-3 sm:bottom-3 sm:w-[460px] sm:max-h-none sm:rounded-3xl bg-white shadow-2xl flex flex-col outline-none animate-in fade-in slide-in-from-bottom-4 duration-300 pb-safe"
       >

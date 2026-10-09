@@ -285,7 +285,7 @@ function cleanMediaUrls(urls: unknown): string[] {
  * "To Board"/"To Shoot" to "To Edit" once a photo is added; renaming a box renames its record; deleting a box deletes
  * its record. Boxes deleted elsewhere are never re-created.
  */
-export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[] }>> {
+export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[]; textForFeed: { slotId: string; title: string }[] }>> {
   return run(async () => {
     const userId = await requireUserId()
     const slots = Array.isArray(request?.slots) ? request.slots : []
@@ -334,7 +334,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
         titleChanged: Boolean(s.titleChanged),
       }]
     })
-    if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [] }
+    if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [], textForFeed: [] }
 
     // Parents before children so sub-items can be linked in the same pass.
     clean.sort((a, b) => Number(Boolean(a.parentSlotId)) - Number(Boolean(b.parentSlotId)))
@@ -354,6 +354,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
     const topLevel = new Set(feedRecords.filter((r) => !r.parentId).map((r) => r.id))
     let created = 0
     let updated = 0
+    const textForFeed: { slotId: string; title: string }[] = []
     const parentsWithChildren = new Set(
       (await prisma.content.findMany({ where: { userId, parentId: { not: null } }, select: { parentId: true } })).map((r) => r.parentId!),
     )
@@ -402,8 +403,9 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
 
       const data: Prisma.ContentUncheckedUpdateInput = {}
       if (current.contentType !== slot.contentType) data.contentType = slot.contentType
-      const followTitle = slot.titleChanged || DEFAULT_TITLE.test(current.title)
-      if (slot.title && followTitle && current.title !== slot.title) data.title = slot.title
+      // The box's text and the planner title are always the same
+      if (slot.title && current.title !== slot.title) data.title = slot.title
+      else if (!slot.title && !DEFAULT_TITLE.test(current.title)) textForFeed.push({ slotId: slot.slotId, title: current.title })
       const autoStatus = statusForFeedSlot(slot)
       if (AUTO_STATUSES.includes(current.status) && autoStatus !== current.status && autoStatus !== "To Board") data.status = autoStatus
       // Follow folder moves in the feed, but keep parents assigned by hand to planner-only records.
@@ -444,6 +446,6 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       }
     }
 
-    return { created, updated, deleted, addToFeed }
+    return { created, updated, deleted, addToFeed, textForFeed }
   })
 }

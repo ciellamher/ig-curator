@@ -47,16 +47,19 @@ export function Dropdown({
     if (!r) return
     const below = window.innerHeight - r.bottom - 8
     const above = r.top - 8
-    const flip = below < 220 && above > below
+    // Room for every option (and group headings) so nothing needs scrolling when the screen allows
+    const groups = new Set(options.map((o) => o.group).filter(Boolean)).size
+    const needed = options.length * 34 + groups * 26 + 10
+    const flip = below < needed && above > below
     const width = Math.max(r.width, 180)
     setPos({
       top: flip ? r.top - 4 : r.bottom + 4,
       left: Math.min(r.left, window.innerWidth - width - 8),
       minWidth: width,
-      maxHeight: Math.min(320, flip ? above : below),
+      maxHeight: Math.min(needed, flip ? above : below),
       flip,
     })
-  }, [])
+  }, [options])
 
   useLayoutEffect(() => {
     if (!open) return
@@ -169,7 +172,7 @@ export function Dropdown({
               lastGroup = o.group
               return (
                 <div key={o.value}>
-                  {header && <div className="px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{header}</div>}
+                  {header && <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">{header}</div>}
                   <div
                     id={`${id}-${i}`}
                     data-index={i}
@@ -177,7 +180,7 @@ export function Dropdown({
                     aria-selected={isSelected}
                     onPointerEnter={() => setActive(i)}
                     onClick={() => choose(o.value)}
-                    className={`flex items-center justify-between gap-3 px-2 py-1.5 rounded-lg text-sm cursor-pointer ${i === active ? "bg-zinc-100" : ""}`}
+                    className={`flex items-center justify-between gap-3 px-2 py-1 min-h-8 rounded-lg text-sm cursor-pointer ${i === active ? "bg-zinc-100" : ""}`}
                   >
                     <span className="min-w-0">{renderOption ? renderOption(o) : o.label ?? o.value}</span>
                     <Check size={14} className={`shrink-0 ${isSelected ? "text-zinc-950" : "invisible"}`} />

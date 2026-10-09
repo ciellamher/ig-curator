@@ -30,6 +30,7 @@ export function PlannerClient() {
     }
   }, [allPlanner, showPosted])
   const [openId, setOpenId] = useState<string | null>(null)
+  const [drawerFromFeed, setDrawerFromFeed] = useState(false)
   const [query, setQuery] = useState("")
   const { confirm, modalProps } = useConfirmModal()
 
@@ -42,12 +43,20 @@ export function PlannerClient() {
   }
   const open = (item: ContentDTO) => {
     setOpenId(item.id)
+    setDrawerFromFeed(false)
     focusItem(item)
   }
   useEffect(() => {
     const onSelect = (e: Event) => {
+      // Found even when Posted (hidden from the lists), so its page always opens
       const item = allPlanner.items.find((i) => i.slotId === (e as CustomEvent<string>).detail)
-      if (item) setFocus({ id: item.id, reveal: Date.now() })
+      if (!item) return
+      setFocus({ id: item.id, reveal: Date.now() })
+      // Side by side: open its page next to the feed without covering it. Phones: the feed's own editor is open.
+      if (window.matchMedia("(min-width: 1024px)").matches) {
+        setOpenId(item.id)
+        setDrawerFromFeed(true)
+      }
     }
     window.addEventListener(FEED_SELECT_EVENT, onSelect)
     return () => window.removeEventListener(FEED_SELECT_EVENT, onSelect)
@@ -199,7 +208,9 @@ export function PlannerClient() {
         </>
       )}
 
-      {openItem && <ItemDrawer item={openItem} planner={planner} onClose={() => setOpenId(null)} onDelete={deleteItem} onOpen={open} />}
+      {openItem && (
+        <ItemDrawer item={openItem} planner={planner} onClose={() => setOpenId(null)} onDelete={deleteItem} onOpen={open} overlay={!drawerFromFeed} />
+      )}
       <ConfirmModal {...modalProps} />
     </div>
   )
