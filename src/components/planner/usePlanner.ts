@@ -33,6 +33,44 @@ export function usePlanner(enabled: boolean) {
   const itemsRef = useRef(items)
   itemsRef.current = items
 
+  const newSlotId = () => `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+
+  /** Gives a page one feed box per placement it's ticked for (Post → grid, Reels → reel, Story → story folder). */
+  const reconcileFeed = useCallback(async (page: ContentDTO) => {
+    const wants = feedKindsFor(page.categories)
+    const current = new Map<string, string>(Object.entries(page.extraSlots ?? {}))
+    if (page.slotId && page.contentType) current.set(page.contentType, page.slotId)
+
+    const removed = [...current].filter(([type]) => !wants.includes(type)).map(([, slotId]) => slotId)
+    const slots = new Map<string, string>()
+    const added: { slotId: string; contentType: string }[] = []
+    for (const type of wants) {
+      const existing = current.get(type)
+      if (existing) slots.set(type, existing)
+      else {
+        const slotId = newSlotId()
+        slots.set(type, slotId)
+        added.push({ slotId, contentType: type })
+      }
+    }
+    if (!added.length && !removed.length && (wants[0] ?? null) === (page.slotId ? page.contentType : null)) return
+
+    const [primary, ...extra] = wants
+    const res = await updateContent(page.id, {
+      slotId: primary ? slots.get(primary)! : null,
+      contentType: primary ?? null,
+      extraSlots: extra.length ? Object.fromEntries(extra.map((type) => [type, slots.get(type)!])) : null,
+    })
+    if (!res.success) return setError(res.error)
+    setItems((curr) => curr.map((i) => (i.id === page.id ? res.data : i)))
+
+    if (removed.length) window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: removed }))
+    for (const box of added) {
+      const detail: FeedAttach = { ...box, urls: res.data.media.map((m) => m.url), title: res.data.title }
+      window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+    }
+  }, [])
+
   const reload = useCallback(async () => {
     const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
     if (content.success) {
@@ -177,44 +215,6 @@ export function usePlanner(enabled: boolean) {
     const res = await deleteQuickLink(id)
     if (res.success) setLinks((curr) => curr.filter((l) => l.id !== id))
     else setError(res.error)
-  }, [])
-
-  const newSlotId = () => `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
-
-  /** Gives a page one feed box per placement it's ticked for (Post → grid, Reels → reel, Story → story folder). */
-  const reconcileFeed = useCallback(async (page: ContentDTO) => {
-    const wants = feedKindsFor(page.categories)
-    const current = new Map<string, string>(Object.entries(page.extraSlots ?? {}))
-    if (page.slotId && page.contentType) current.set(page.contentType, page.slotId)
-
-    const removed = [...current].filter(([type]) => !wants.includes(type)).map(([, slotId]) => slotId)
-    const slots = new Map<string, string>()
-    const added: { slotId: string; contentType: string }[] = []
-    for (const type of wants) {
-      const existing = current.get(type)
-      if (existing) slots.set(type, existing)
-      else {
-        const slotId = newSlotId()
-        slots.set(type, slotId)
-        added.push({ slotId, contentType: type })
-      }
-    }
-    if (!added.length && !removed.length && (wants[0] ?? null) === (page.slotId ? page.contentType : null)) return
-
-    const [primary, ...extra] = wants
-    const res = await updateContent(page.id, {
-      slotId: primary ? slots.get(primary)! : null,
-      contentType: primary ?? null,
-      extraSlots: extra.length ? Object.fromEntries(extra.map((type) => [type, slots.get(type)!])) : null,
-    })
-    if (!res.success) return setError(res.error)
-    setItems((curr) => curr.map((i) => (i.id === page.id ? res.data : i)))
-
-    if (removed.length) window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: removed }))
-    for (const box of added) {
-      const detail: FeedAttach = { ...box, urls: res.data.media.map((m) => m.url), title: res.data.title }
-      window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
-    }
   }, [])
 
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
