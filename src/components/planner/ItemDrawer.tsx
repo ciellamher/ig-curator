@@ -187,20 +187,20 @@ export function ItemDrawer({
                 )}
               </div>
             </Row>
-            <Row label="Batch">
+            <Row label="Order">
               {holdsPosts.length > 0 ? (
                 <span className="block text-sm text-zinc-500 pt-1 px-1">This is a batch · {holdsPosts.length} post{holdsPosts.length === 1 ? "" : "s"}</span>
               ) : (
                 <Dropdown
                   variant="ghost"
-                  label="Batch"
-                  options={[{ value: "", label: "No batch" }, ...batchOptions.map((b) => {
+                  label="Order"
+                  options={[{ value: "", label: "No order" }, ...batchOptions.map((b) => {
                     const orderName = b.orderId ? planner.ordersById.get(b.orderId)?.name : null
-                    return { value: b.id, label: orderName ? `${b.title} (${orderName})` : b.title }
+                    return { value: b.id, label: orderName ? `${orderName} (${b.title})` : b.title }
                   })]}
                   selected={[item.parentId ?? ""]}
                   onSelect={(v) => update(item.id, { parentId: v || null })}
-                  placeholder="No batch"
+                  placeholder="No order"
                   className="w-full max-w-72 text-sm"
                 />
               )}
