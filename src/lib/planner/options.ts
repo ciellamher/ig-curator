@@ -45,45 +45,39 @@ export function statusRank(status: string): number {
   return i === -1 ? STATUS_NAMES.length : i
 }
 
-// Badge colours. Unlisted Notion colours fall back to neutral grey.
-const BLUE = "bg-sky-100 text-sky-800"
-const PURPLE = "bg-violet-100 text-violet-800"
-const YELLOW = "bg-amber-100 text-amber-800"
-const GREEN = "bg-emerald-100 text-emerald-800"
-const PINK = "bg-pink-100 text-pink-800"
-const GRAY = "bg-zinc-200/70 text-zinc-700"
-const NEUTRAL = "bg-zinc-100 text-zinc-600"
+// Monochrome badges: progress reads from outline → grey fill → solid black.
+const OUTLINE = "bg-white text-zinc-600 ring-1 ring-inset ring-zinc-300"
+const LIGHT = "bg-zinc-100 text-zinc-800"
+const MID = "bg-zinc-300 text-zinc-900"
+const STRONG_OUTLINE = "bg-white text-zinc-950 ring-1 ring-inset ring-zinc-950"
+const SOLID = "bg-zinc-950 text-white"
+const MUTED_SOLID = "bg-zinc-500 text-white"
 
 export const STATUS_STYLES: Record<string, string> = {
-  "To Board": NEUTRAL,
-  "To Buy/Plan Clothes": NEUTRAL,
-  "To Planner": NEUTRAL,
-  "To Shoot": NEUTRAL,
-  "To Schedule": BLUE,
-  "To Edit": BLUE,
-  "Ready to Post": YELLOW,
-  Posted: GREEN,
-  Worn: PINK,
+  "To Board": OUTLINE,
+  "To Buy/Plan Clothes": OUTLINE,
+  "To Planner": OUTLINE,
+  "To Shoot": OUTLINE,
+  "To Schedule": LIGHT,
+  "To Edit": MID,
+  "Ready to Post": STRONG_OUTLINE,
+  Posted: SOLID,
+  Worn: MUTED_SOLID,
 }
 
 export const CLOTHING_STYLES: Record<string, string> = {
-  "Buy Clothes": NEUTRAL,
-  Ordered: BLUE,
-  Delivered: BLUE,
-  Refunded: GREEN,
+  "Buy Clothes": OUTLINE,
+  Ordered: LIGHT,
+  Delivered: MID,
+  Refunded: SOLID,
 }
 
-export const CATEGORY_STYLES: Record<string, string> = {
-  Facebook: BLUE,
-  Highlights: BLUE,
-  Story: PURPLE,
-  Post: YELLOW,
-  Reels: GRAY,
-  Locket: NEUTRAL,
-}
+export const CATEGORY_STYLES: Record<string, string> = Object.fromEntries(
+  ["Facebook", "Story", "Post", "Reels", "Highlights", "Locket"].map((c) => [c, LIGHT]),
+)
 
 export const GROUP_DOT: Record<StatusGroup, string> = {
-  "To-do": "bg-zinc-400",
-  "In progress": "bg-sky-500",
-  Complete: "bg-emerald-500",
+  "To-do": "bg-zinc-300",
+  "In progress": "bg-zinc-500",
+  Complete: "bg-zinc-950",
 }

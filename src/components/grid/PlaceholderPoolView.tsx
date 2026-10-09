@@ -28,14 +28,14 @@ interface PlaceholderPoolViewProps {
 }
 
 const PASTEL_COLORS = [
-  "#E5D3C8",
-  "#F3E8EE",
-  "#E2ECE9",
-  "#EAE4E9",
-  "#FDFBFA",
-  "#D8E2DC",
-  "#FFE5D9",
-  "#F4ACB7",
+  "#E4E4E7",
+  "#F4F4F5",
+  "#D4D4D8",
+  "#EDEDEE",
+  "#FAFAFA",
+  "#C9C9CE",
+  "#E9E9EB",
+  "#A1A1AA",
 ];
 
 export function PlaceholderPoolView({
@@ -153,7 +153,7 @@ export function PlaceholderPoolView({
       {toastMessage && (
         <div className="mx-4 mt-2 p-2.5 bg-slate-900 text-white rounded-xl flex items-center justify-between text-xs font-semibold shadow-md animate-in slide-in-from-top-2 z-40">
           <div className="flex items-center gap-2">
-            <Check size={14} className="text-emerald-400" strokeWidth={3} />
+            <Check size={14} className="text-zinc-400" strokeWidth={3} />
             <span>{toastMessage}</span>
           </div>
         </div>
@@ -219,7 +219,7 @@ export function PlaceholderPoolView({
                   ) : (
                     <div
                       className="w-full h-full flex flex-col items-center justify-center p-2 relative"
-                      style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
+                      style={{ backgroundColor: item.hexColor || "#E4E4E7" }}
                     >
                       {item.text ? (
                         <span
@@ -266,7 +266,7 @@ export function PlaceholderPoolView({
                       e.stopPropagation();
                       handleDeleteDraft(item.id);
                     }}
-                    className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-red-50 text-foreground/40 hover:text-red-600 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-30"
+                    className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-zinc-50 text-foreground/40 hover:text-zinc-900 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-30"
                     title="Delete box"
                   >
                     <Trash2 size={12} />

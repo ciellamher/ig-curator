@@ -19,8 +19,6 @@ import {
   Calendar,
   Image as ImageIcon,
   Hash,
-  Smartphone,
-  Monitor,
   Grid3X3,
   Clapperboard,
   Circle,
@@ -40,34 +38,78 @@ import {
 } from "lucide-react";
 import { setItem, getItem, removeItem } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
-import { syncFeedToContent } from "@/app/actions/content";
-import type { FeedSlotSync } from "@/lib/planner/types";
+import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
+import {
+  PLANNER_DELETED_EVENT,
+  PLANNER_REFRESH_EVENT,
+  PLANNER_SYNC_ERROR_EVENT,
+  PLANNER_TITLE_EVENT,
+  type FeedSlotSync,
+} from "@/lib/planner/types";
 
-const FEED_CONTENT_TYPES = new Set(["Post", "Reel", "Carousel", "Story"]);
 
-/** Projects feed slots (posts, reels, stories, drafts) into the shape the content database syncs from. */
+// Old default/pastel placeholder colours → greys for the black & white theme (custom picks are left alone)
+const LEGACY_PLACEHOLDER_COLORS: Record<string, string> = {
+  "#e5d3c8": "#E4E4E7",
+  "#f3e8ee": "#F4F4F5",
+  "#e2ece9": "#D4D4D8",
+  "#eae4e9": "#EDEDEE",
+  "#fdfbfa": "#FAFAFA",
+  "#d8e2dc": "#C9C9CE",
+  "#ffe5d9": "#E9E9EB",
+  "#f4acb7": "#A1A1AA",
+};
+
+function toMonochrome(items: SlotItem[]): SlotItem[] {
+  return items.map((i) => {
+    const grey = LEGACY_PLACEHOLDER_COLORS[i.hexColor?.toLowerCase() ?? ""];
+    return grey ? { ...i, hexColor: grey } : i;
+  });
+}
+
+/**
+ * Projects everything added in the feed (posts, reels, drafts, story folders and stories, inspo boards and photos)
+ * into the shape the content database syncs from.
+ */
 function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
-  const folderTypes = new Map(
-    items.filter((i) => i.contentType?.endsWith("Folder")).map((i) => [i.id, i.contentType]),
-  );
+  const byId = new Map(items.map((i) => [i.id, i]));
+
+  // Story folders and inspo boards become parent records. The database nests one level deep,
+  // so anything inside a nested inspo board hangs off its top-level board.
+  const topFolder = (folderId: string | undefined): SlotItem | undefined => {
+    let folder = folderId ? byId.get(folderId) : undefined;
+    const seen = new Set<string>();
+    while (folder?.folderId && byId.get(folder.folderId)?.contentType?.endsWith("Folder") && !seen.has(folder.id)) {
+      seen.add(folder.id);
+      folder = byId.get(folder.folderId);
+    }
+    return folder?.contentType?.endsWith("Folder") ? folder : undefined;
+  };
+
   return items.flatMap((item) => {
     const contentType = item.contentType ?? "Post";
-    if (!FEED_CONTENT_TYPES.has(contentType) || item.isLocked) return [];
+    if (item.isLocked || contentType === "PlaceholderFolder") return [];
     // The starter grid's blank placeholders only count once they get a photo or text
     if (STARTER_SLOT_IDS.has(item.id) && item.urls.length === 0 && !item.text?.trim()) return [];
 
+    const isFolder = contentType === "StoryFolder" || contentType === "InspoFolder";
+    const parent = topFolder(item.folderId);
+    const parentSlotId = parent && parent.id !== item.id ? parent.id : null;
+
     let location: FeedSlotSync["location"];
     if (item.folderId === "draft-pool") location = "drafts";
-    else if (contentType === "Story" || folderTypes.get(item.folderId ?? "") === "StoryFolder") location = "story";
-    else if (!item.folderId) location = "grid";
-    else return []; // inspo boards and other folders aren't planned content
+    else if (contentType.startsWith("Inspo") || parent?.contentType === "InspoFolder") location = "inspo";
+    else if (contentType === "Story" || contentType === "StoryFolder" || parent?.contentType === "StoryFolder") location = "story";
+    else location = "grid";
 
     return [{
       slotId: item.id,
-      contentType: location === "story" ? "Story" : contentType,
+      contentType: location === "story" && !isFolder ? "Story" : contentType,
       location,
       title: (item.text?.trim() || item.caption?.split("\n")[0]?.trim() || "").slice(0, 200),
       mediaUrls: item.urls ?? [],
+      parentSlotId,
+      isFolder,
     }];
   });
 }
@@ -78,7 +120,7 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
   urls: [],
   currentUrlIndex: 0,
   isLocked: false,
-  hexColor: "#E5D3C8",
+  hexColor: "#E4E4E7",
   text: "",
   contentType: "Post",
 }));
@@ -93,7 +135,7 @@ export function DashboardClient() {
   const [gridFilter, setGridFilter] = useState<
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
-  const [deviceView, setDeviceView] = useState<"phone" | "desktop">("phone");
+  const deviceView = "phone" as const;
   const { confirm, modalProps } = useConfirmModal();
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(
     null,
@@ -113,7 +155,6 @@ export function DashboardClient() {
       if (savedUI) {
         const state = JSON.parse(savedUI);
         if (state.gridFilter) setGridFilter(state.gridFilter);
-        if (state.deviceView) setDeviceView(state.deviceView);
         if (state.activeStoryFolderId !== undefined) setActiveStoryFolderId(state.activeStoryFolderId);
         if (state.activeInspoFolderId !== undefined) setActiveInspoFolderId(state.activeInspoFolderId);
       }
@@ -125,12 +166,11 @@ export function DashboardClient() {
     try {
       localStorage.setItem("ig-curator-ui-state", JSON.stringify({
         gridFilter,
-        deviceView,
         activeStoryFolderId,
         activeInspoFolderId,
       }));
     } catch (e) {}
-  }, [gridFilter, deviceView, activeStoryFolderId, activeInspoFolderId]);
+  }, [gridFilter, activeStoryFolderId, activeInspoFolderId]);
 
   // Search & Match Navigation State
   const [searchQuery, setSearchQuery] = useState("");
@@ -277,12 +317,12 @@ export function DashboardClient() {
           try {
             const parsed = JSON.parse(emergencyBackup);
             localStorage.removeItem("ig-curator-items");
-            if (isMounted) setItems(parsed);
+            if (isMounted) setItems(toMonochrome(parsed));
             await setItem("ig-curator-items", parsed).catch(() => {});
           } catch (e) {}
         } else if (saved && saved.length > 0) {
           const compressed = await compressIfNeeded(saved);
-          if (isMounted) setItems(compressed);
+          if (isMounted) setItems(toMonochrome(compressed));
         }
       } catch (error) {
         console.error("Failed to load local grid", error);
@@ -376,21 +416,98 @@ export function DashboardClient() {
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded]);
 
-  // Mirror feed changes into the content planner database
+  // ---- Two-way sync with the content planner database ----
+
+  // Boxes deleted or brought back (undo) since the last successful sync. Tracked from user changes only — never
+  // inferred from a missing box — so a fresh browser with an empty feed can't wipe the database.
+  const prevSlotIdsRef = useRef<Set<string> | null>(null);
+  const pendingDeletesRef = useRef<Set<string>>(new Set());
+  const pendingRestoresRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isLoaded) return;
+    const ids = new Set(items.map((i) => i.id));
+    const prev = prevSlotIdsRef.current;
+    prevSlotIdsRef.current = ids;
+    if (!prev) return; // first loaded state is the baseline
+    for (const id of prev) {
+      if (!ids.has(id)) {
+        pendingDeletesRef.current.add(id);
+        pendingRestoresRef.current.delete(id);
+      }
+    }
+    for (const id of ids) {
+      if (!prev.has(id)) {
+        pendingRestoresRef.current.add(id);
+        pendingDeletesRef.current.delete(id);
+      }
+    }
+  }, [items, isLoaded]);
+
+  // Mirror feed changes into the database
   const lastFeedSyncRef = useRef<string>("");
+  const syncedTitlesRef = useRef<Map<string, string> | null>(null);
   useEffect(() => {
     if (!isLoaded || status !== "authenticated") return;
-    const payload = toFeedSync(items);
-    const key = JSON.stringify(payload);
-    if (key === lastFeedSyncRef.current) return;
+    const slots = toFeedSync(items);
+    const key = JSON.stringify(slots);
+    if (key === lastFeedSyncRef.current && pendingDeletesRef.current.size === 0) return;
 
     const timeoutId = setTimeout(async () => {
-      const res = await syncFeedToContent(payload);
-      if (res.success) lastFeedSyncRef.current = key;
-      else console.error("Planner sync failed:", res.error);
-    }, 1500);
+      const deletedSlotIds = [...pendingDeletesRef.current];
+      const restoredSlotIds = [...pendingRestoresRef.current];
+      // A box's text only overrides the planner title when it was edited in the feed since the last sync.
+      const synced = syncedTitlesRef.current;
+      const request = {
+        slots: slots.map((s) => ({ ...s, titleChanged: synced !== null && synced.has(s.slotId) && synced.get(s.slotId) !== s.title })),
+        deletedSlotIds,
+        restoredSlotIds,
+      };
+      const res = await syncFeedToContent(request);
+      if (res.success) {
+        lastFeedSyncRef.current = key;
+        syncedTitlesRef.current = new Map(slots.map((s) => [s.slotId, s.title]));
+        deletedSlotIds.forEach((id) => pendingDeletesRef.current.delete(id));
+        restoredSlotIds.forEach((id) => pendingRestoresRef.current.delete(id));
+        if (res.data.created + res.data.updated + res.data.deleted > 0) window.dispatchEvent(new Event(PLANNER_REFRESH_EVENT));
+      } else {
+        console.error("Planner sync failed:", res.error);
+        window.dispatchEvent(new CustomEvent(PLANNER_SYNC_ERROR_EVENT, { detail: res.error }));
+      }
+    }, 1200);
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded, status]);
+
+  // Database → feed: remove boxes deleted in the planner (or another browser), and follow planner renames.
+  const removeSlots = (slotIds: string[]) => {
+    if (!slotIds.length) return;
+    const gone = new Set(slotIds);
+    setItems((curr) => (curr.some((i) => gone.has(i.id)) ? curr.filter((i) => !gone.has(i.id)) : curr));
+    if (activeSlotId && gone.has(activeSlotId)) setActiveSlotId(null);
+    if (previewSlotId && gone.has(previewSlotId)) setPreviewSlotId(null);
+  };
+  const removeSlotsRef = useRef(removeSlots);
+  removeSlotsRef.current = removeSlots;
+
+  useEffect(() => {
+    const onDeleted = (e: Event) => removeSlotsRef.current((e as CustomEvent<string[]>).detail ?? []);
+    const onTitle = (e: Event) => {
+      const { slotId, title } = (e as CustomEvent<{ slotId: string; title: string }>).detail;
+      setItems((curr) => curr.map((i) => (i.id === slotId && i.text !== title ? { ...i, text: title } : i)));
+    };
+    window.addEventListener(PLANNER_DELETED_EVENT, onDeleted);
+    window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
+    return () => {
+      window.removeEventListener(PLANNER_DELETED_EVENT, onDeleted);
+      window.removeEventListener(PLANNER_TITLE_EVENT, onTitle);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded || status !== "authenticated") return;
+    listDeletedFeedSlots().then((res) => {
+      if (res.success) removeSlotsRef.current(res.data);
+    });
+  }, [isLoaded, status]);
 
   // Synchronous fail-safe save when user forcefully refreshes/closes the tab before debounce completes
   useEffect(() => {
@@ -459,17 +576,11 @@ export function DashboardClient() {
       const el = document.getElementById(`grid-slot-${activeSlotId}`);
       if (el) {
         const rect = el.getBoundingClientRect();
-        const container = document.getElementById("grid-workspace") || document.body;
-        if (container) {
-          const containerRect = container.getBoundingClientRect();
-          const targetY = rect.top - containerRect.top;
-          const baselineTop = window.innerWidth >= 1024 ? 32 : 0; // matches lg:top-8 on the editor panel
-          const topOffset = Math.max(
-            -20,
-            Math.min(600, targetY - baselineTop - 20) // -20 to align roughly with the top of the modal
-          );
-          setModalPos({ x: 0, y: topOffset });
-        }
+        // The desktop panel is fixed at lg:top-24 (96px); shift it to line up with the clicked slot, staying on screen
+        const baselineTop = 96;
+        const maxOffset = Math.max(0, window.innerHeight - baselineTop - 560);
+        const topOffset = Math.max(-40, Math.min(maxOffset, rect.top - baselineTop - 20));
+        setModalPos({ x: 0, y: topOffset });
       }
     }, 10);
     return () => clearTimeout(timer);
@@ -527,7 +638,7 @@ export function DashboardClient() {
       type: "placeholder",
       urls: coverUrl ? [coverUrl] : [],
       currentUrlIndex: 0,
-      hexColor: hexColor || "#E5D3C8",
+      hexColor: hexColor || "#E4E4E7",
       text: title,
       contentType: "InspoFolder",
     };
@@ -562,7 +673,7 @@ export function DashboardClient() {
       type: "image",
       urls: [...(inspoItem.urls || [])],
       currentUrlIndex: 0,
-      hexColor: inspoItem.hexColor || "#E5D3C8",
+      hexColor: inspoItem.hexColor || "#E4E4E7",
       text: inspoItem.text || "",
       contentType: targetType,
     };
@@ -595,7 +706,7 @@ export function DashboardClient() {
           }}
         >
           <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full text-center animate-in fade-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 bg-gradient-to-tr from-pastel-100 to-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gradient-to-tr from-pastel-100 to-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <FolderHeart size={30} className="text-pastel-600" />
             </div>
             <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 mb-2">Reconnect to Mac</h2>
@@ -613,7 +724,7 @@ export function DashboardClient() {
         {/* Main Planner Workspace */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 pt-3 sm:pt-5 pb-1 sm:pb-2 gap-2">
+          <div className="flex items-center justify-between px-3 sm:px-6 lg:px-5 pt-3 sm:pt-5 pb-1 sm:pb-2 gap-2">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={status === "authenticated" ? handleManualSync : undefined}
@@ -621,11 +732,11 @@ export function DashboardClient() {
                 title="Sync now"
                 className={`shrink-0 text-xs sm:text-sm font-medium h-9 px-3 sm:px-4 rounded-full border transition-all flex items-center gap-2 ${
                   syncStatus === "Saving..."
-                    ? "bg-amber-50 text-amber-600 border-amber-200 cursor-default"
+                    ? "bg-zinc-50 text-zinc-900 border-zinc-200 cursor-default"
                     : (syncStatus === "Saved" || syncStatus === "Saved Locally")
-                      ? "bg-green-50 text-green-600 border-green-200 cursor-default"
+                      ? "bg-zinc-50 text-zinc-900 border-zinc-200 cursor-default"
                       : syncStatus === "Error"
-                        ? "bg-red-50 text-red-600 border-red-200 cursor-pointer"
+                        ? "bg-zinc-50 text-zinc-900 border-zinc-200 cursor-pointer"
                         : "bg-white/80 backdrop-blur border-soft-200 text-zinc-600 hover:text-zinc-900 hover:border-soft-300 cursor-pointer"
                 } ${status !== "authenticated" ? "hidden" : ""}`}
               >
@@ -661,27 +772,10 @@ export function DashboardClient() {
               />
               </div>
             </div>
-
-            <div className="hidden sm:flex shrink-0 items-center bg-white/80 backdrop-blur rounded-full p-1 border border-soft-200">
-              <button
-                onClick={() => setDeviceView("phone")}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${deviceView === "phone" ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-900"}`}
-                title="Phone View"
-              >
-                <Smartphone size={16} />
-              </button>
-              <button
-                onClick={() => setDeviceView("desktop")}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${deviceView === "desktop" ? "bg-zinc-900 text-white shadow-sm" : "text-zinc-400 hover:text-zinc-900"}`}
-                title="Desktop View"
-              >
-                <Monitor size={16} />
-              </button>
-            </div>
           </div>
 
           {/* Grid Workspace */}
-          <div id="grid-workspace" className="flex-1 overflow-y-auto px-0 pt-2 sm:p-6 lg:p-8 relative flex justify-center">
+          <div id="grid-workspace" className="flex-1 overflow-y-auto px-0 pt-2 sm:p-6 lg:px-4 lg:py-4 relative flex justify-center">
               {/* Dynamic View Container (Phone or Desktop) */}
               <div
                 className={`
@@ -694,7 +788,7 @@ export function DashboardClient() {
               >
                 {deviceView === "phone" && (
                   <div className="hidden sm:flex absolute top-2 left-1/2 -translate-x-1/2 w-[96px] h-[26px] bg-black rounded-full z-50 items-center justify-end px-3 pointer-events-none">
-                    <div className="w-2 h-2 rounded-full bg-indigo-950 ring-1 ring-zinc-800"></div>
+                    <div className="w-2 h-2 rounded-full bg-zinc-950 ring-1 ring-zinc-800"></div>
                   </div>
                 )}
 
@@ -720,7 +814,7 @@ export function DashboardClient() {
                           type: "placeholder",
                           urls: [],
                           currentUrlIndex: 0,
-                          hexColor: "#E5D3C8",
+                          hexColor: "#E4E4E7",
                           text: "",
                           contentType: "Post",
                           folderId: "draft-pool",
@@ -735,7 +829,7 @@ export function DashboardClient() {
                           type: "placeholder",
                           urls: [],
                           currentUrlIndex: 0,
-                          hexColor: "#E5D3C8",
+                          hexColor: "#E4E4E7",
                           text: "New Folder",
                           contentType: "StoryFolder",
                         };
@@ -749,7 +843,7 @@ export function DashboardClient() {
                           type: "placeholder" as const,
                           urls: [],
                           currentUrlIndex: 0,
-                          hexColor: "#E5D3C8",
+                          hexColor: "#E4E4E7",
                           text: "",
                           contentType:
                             (gridFilter as string) === "All" ||
@@ -970,11 +1064,7 @@ export function DashboardClient() {
                 />
 
                 <div
-                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:absolute ${
-                    deviceView === "phone"
-                      ? "lg:right-6 xl:right-auto xl:left-[calc(50%+206px)] lg:top-8"
-                      : "lg:right-6 lg:top-8"
-                  } lg:w-80 lg:max-h-[calc(100%-4rem)] bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
+                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:fixed lg:left-[464px] xl:left-[504px] lg:top-24 lg:z-[65] lg:w-80 lg:max-h-[calc(100dvh-8rem)] bg-white/95 backdrop-blur-2xl shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
                   style={{
                     transform:
                       typeof window !== "undefined" && window.innerWidth >= 1024

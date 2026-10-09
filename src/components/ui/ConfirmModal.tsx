@@ -88,7 +88,7 @@ export function ConfirmModal({
             onClick={handleConfirm}
             className={`flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl transition-colors ${
               variant === "danger"
-                ? "bg-red-500 hover:bg-red-600 text-white"
+                ? "bg-zinc-800 hover:bg-zinc-900 text-white"
                 : "bg-slate-900 hover:bg-black text-white"
             }`}
           >

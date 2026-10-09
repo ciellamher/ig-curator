@@ -1,12 +1,14 @@
 "use client"
 
+import { Dropdown } from "@/components/ui/Dropdown"
 import { useEffect, useRef } from "react"
 import { CalendarClock, Check, CheckCheck, MapPin, Plus, Trash2, X } from "lucide-react"
 import { LocalMediaImage } from "@/components/grid/LocalMedia"
-import { RETURN_REMINDER_DAY, clothingAlert, clothingTimeline } from "@/lib/planner/clothing"
+import { RETURN_WINDOW_DAYS, clothingAlert, itemTimeline, orderAlert, orderFor } from "@/lib/planner/clothing"
 import { formatDate } from "@/lib/planner/dates"
 import { STATUS_STYLES } from "@/lib/planner/options"
-import { parentCandidates } from "@/lib/planner/views"
+import { batchOptionsFor } from "@/lib/planner/views"
+import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
 import { DATE_FIELDS, type ContentDTO, type Location } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
@@ -40,11 +42,12 @@ export function ItemDrawer({
   onOpen: (item: ContentDTO) => void
 }) {
   const { items, byId, update, create } = planner
-  const children = items.filter((i) => i.parentId === item.id)
-  const parent = item.parentId ? byId.get(item.parentId) : undefined
-  const candidates = parentCandidates(items, item.id)
-  const t = clothingTimeline(item, byId)
-  const alert = clothingAlert(item, byId)
+  const holdsPosts = items.filter((i) => i.parentId === item.id)
+  const batchOptions = batchOptionsFor(items, item.id)
+  const autoEdit = autoEditDate(item.post.start, item.categories)
+  const order = orderFor(item, byId, planner.ordersById)
+  const t = itemTimeline(item, byId, planner.ordersById, items)
+  const alert = order ? orderAlert(order, items) : clothingAlert(item, byId)
   const postRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLElement>(null)
 
@@ -76,14 +79,9 @@ export function ItemDrawer({
       >
         <div className="flex items-start gap-1 px-4 pt-4 pb-2 border-b border-soft-100">
           <div className="flex-1 min-w-0">
-            {parent && (
-              <button onClick={() => onOpen(parent)} className="text-xs text-zinc-400 hover:text-zinc-800 px-1.5 cursor-pointer">
-                ↑ {parent.title}
-              </button>
-            )}
             <CommitInput multiline label="Title" value={item.title} onCommit={(title) => update(item.id, { title })} className="w-full text-lg font-semibold text-zinc-900" />
           </div>
-          <button onClick={() => onDelete(item)} className="p-2 rounded-full text-zinc-400 hover:text-red-600 hover:bg-red-50 cursor-pointer" aria-label="Delete">
+          <button onClick={() => onDelete(item)} className="p-2 rounded-full text-zinc-400 hover:text-zinc-900 hover:bg-zinc-50 cursor-pointer" aria-label="Delete">
             <Trash2 size={16} />
           </button>
           <button onClick={onClose} className="p-2 rounded-full text-zinc-400 hover:text-zinc-900 hover:bg-soft-100 cursor-pointer" aria-label="Close">
@@ -134,7 +132,17 @@ export function ItemDrawer({
               <div key={field} ref={field === "post" ? postRef : undefined}>
                 <Row label={label}>
                   <ScheduleEditor label={label} value={item[field]} onChange={(s) => update(item.id, { [field]: s })} />
-                  {field === "shoot" && !item.shoot.start && t.shootDate && <p className="text-xs text-zinc-400 mt-1">Parent shoots {formatDate(t.shootDate)}</p>}
+                  {field === "shoot" && !item.shoot.start && t.shootDate && <p className="text-xs text-zinc-400 mt-1">Batch shoots {formatDate(t.shootDate)}</p>}
+                  {field === "edit" && autoEdit && (
+                    <p className="text-xs text-zinc-400 mt-1">
+                      {item.edit.start?.slice(0, 10) === autoEdit ? "Auto" : "Suggested"}: {editLeadDays(item.categories) === 3 ? "3 days" : "1 week"} before Post Now
+                      {item.edit.start?.slice(0, 10) !== autoEdit && (
+                        <button type="button" onClick={() => update(item.id, { edit: { start: autoEdit, end: null } })} className="ml-1.5 underline underline-offset-2 hover:text-zinc-950 cursor-pointer">
+                          use {formatDate(autoEdit)}
+                        </button>
+                      )}
+                    </p>
+                  )}
                 </Row>
               </div>
             ))}
@@ -171,56 +179,35 @@ export function ItemDrawer({
                 )}
               </div>
             </Row>
-            <Row label="Parent">
-              <select
-                aria-label="Parent"
-                value={item.parentId ?? ""}
-                disabled={children.length > 0}
-                onChange={(e) => update(item.id, { parentId: e.target.value || null })}
-                className="w-full text-sm text-zinc-700 bg-transparent rounded-md px-1 py-1 hover:bg-soft-100 disabled:opacity-60 cursor-pointer"
-              >
-                <option value="">{children.length > 0 ? "Has sub-items (can't be nested)" : "None"}</option>
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
+            <Row label="Batch">
+              {holdsPosts.length > 0 ? (
+                <span className="block text-sm text-zinc-500 pt-1 px-1">This is a batch · {holdsPosts.length} post{holdsPosts.length === 1 ? "" : "s"}</span>
+              ) : (
+                <Dropdown
+                  variant="ghost"
+                  label="Batch"
+                  options={[{ value: "", label: "No batch" }, ...batchOptions.map((b) => ({ value: b.id, label: b.title }))]}
+                  selected={[item.parentId ?? ""]}
+                  onSelect={(v) => update(item.id, { parentId: v || null })}
+                  placeholder="No batch"
+                  className="w-full max-w-72 text-sm"
+                />
+              )}
             </Row>
           </div>
 
           {item.clothingStatus && (
             <div className="rounded-xl bg-soft-50 border border-soft-200 p-3 flex flex-col gap-1 text-sm">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 mb-1">SHEIN timeline</div>
+              {order && <div className="flex justify-between gap-2"><span className="text-zinc-500">Order</span><span className="font-medium">{order.name}</span></div>}
               <div className="flex justify-between gap-2"><span className="text-zinc-500">Order by</span><span>{t.orderBy ? formatDate(t.orderBy, { weekday: true }) : "Needs a Shoot Date"}</span></div>
-              {item.orderedAt && <div className="flex justify-between gap-2"><span className="text-zinc-500">Ordered on</span><span>{formatDate(t.windowStart, { weekday: true })}</span></div>}
-              <div className="flex justify-between gap-2"><span className="text-zinc-500">Return by (day {RETURN_REMINDER_DAY})</span><span className="font-semibold">{t.returnBy ? formatDate(t.returnBy, { weekday: true }) : "—"}</span></div>
-              <div className="flex justify-between gap-2"><span className="text-zinc-500">Window closes</span><span>{t.windowEnd ? formatDate(t.windowEnd, { weekday: true }) : "—"}</span></div>
-              {alert && <div className={`mt-1 text-xs font-semibold ${alert.severity === "danger" ? "text-rose-700" : "text-amber-800"}`}>{alert.message}</div>}
-            </div>
-          )}
-
-          {!item.parentId && (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Sub-items</h3>
-                <button
-                  onClick={async () => {
-                    const child = await create({ title: "New sub-item", parentId: item.id })
-                    if (child) onOpen(child)
-                  }}
-                  className="ml-auto inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 px-2 py-1 rounded-md hover:bg-soft-100 cursor-pointer"
-                >
-                  <Plus size={12} /> Add sub-item
-                </button>
-              </div>
-              {children.map((c) => (
-                <button key={c.id} onClick={() => onOpen(c)} className="flex items-center gap-2 text-left text-sm rounded-lg px-2 py-1.5 hover:bg-soft-50 cursor-pointer">
-                  <span className="flex-1 min-w-0 break-words">{c.title}</span>
-                  <Badge value={c.status} styles={STATUS_STYLES} />
-                </button>
-              ))}
-              {children.length === 0 && <p className="text-xs text-zinc-300 px-2">None</p>}
+              {t.orderedOn && <div className="flex justify-between gap-2"><span className="text-zinc-500">Ordered</span><span>{formatDate(t.orderedOn, { weekday: true })}</span></div>}
+              <div className="flex justify-between gap-2"><span className="text-zinc-500">Delivered</span><span>{t.deliveredOn ? formatDate(t.deliveredOn, { weekday: true }) : "Not yet"}</span></div>
+              {t.daysSinceDelivery !== null && (
+                <div className="flex justify-between gap-2"><span className="text-zinc-500">Since delivery</span><span className="font-semibold">Day {t.daysSinceDelivery} of {RETURN_WINDOW_DAYS}</span></div>
+              )}
+              <div className="flex justify-between gap-2"><span className="text-zinc-500">Return by</span><span className="font-semibold">{t.windowEnd ? formatDate(t.windowEnd, { weekday: true }) : "14 days after delivery"}</span></div>
+              {alert && <div className={`mt-1 text-xs font-semibold ${alert.severity === "danger" ? "text-zinc-950 underline underline-offset-2" : "text-zinc-700"}`}>{alert.message}</div>}
             </div>
           )}
 

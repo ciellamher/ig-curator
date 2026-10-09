@@ -173,7 +173,7 @@ export function InspoFolderView({
         type: pf.isVideo ? "video" : "image",
         urls: [pf.url],
         currentUrlIndex: 0,
-        hexColor: "#E5D3C8",
+        hexColor: "#E4E4E7",
         text: "",
         folderId: targetFolderId || folder.id,
         contentType: "InspoPost",
@@ -216,7 +216,7 @@ export function InspoFolderView({
       type: "placeholder",
       urls: [],
       currentUrlIndex: 0,
-      hexColor: "#E5D3C8",
+      hexColor: "#E4E4E7",
       text: "New Sub-Folder",
       folderId: folder.id,
       contentType: "InspoFolder",
@@ -474,7 +474,7 @@ export function InspoFolderView({
                           message: `Delete folder "${item.text}" and its contents?`,
                         });
                       }}
-                      className="w-7 h-7 bg-white/90 rounded-full shadow-sm text-red-500 hover:text-red-700 flex items-center justify-center"
+                      className="w-7 h-7 bg-white/90 rounded-full shadow-sm text-zinc-800 hover:text-zinc-900 flex items-center justify-center"
                       title="Delete folder"
                     >
                       <Trash2 size={14} />
@@ -556,7 +556,7 @@ export function InspoFolderView({
               ) : (
                 <div
                   className="w-full aspect-square"
-                  style={{ backgroundColor: item.hexColor || "#E5D3C8" }}
+                  style={{ backgroundColor: item.hexColor || "#E4E4E7" }}
                 />
               )}
 
@@ -609,7 +609,7 @@ export function InspoFolderView({
                     e.stopPropagation();
                     setDeleteConfirm({ ids: [item.id], message: "Delete this media?" });
                   }}
-                  className="p-1.5 bg-white/80 hover:bg-red-50 text-slate-700 hover:text-red-600 rounded-lg shadow-sm backdrop-blur-sm transition-all"
+                  className="p-1.5 bg-white/80 hover:bg-zinc-50 text-slate-700 hover:text-zinc-900 rounded-lg shadow-sm backdrop-blur-sm transition-all"
                   title="Delete media"
                 >
                   <Trash2 size={13} />
@@ -721,7 +721,7 @@ export function InspoFolderView({
               ) : (
                 <div
                   className="w-full h-full"
-                  style={{ backgroundColor: previewItem.hexColor || "#E5D3C8" }}
+                  style={{ backgroundColor: previewItem.hexColor || "#E4E4E7" }}
                 />
               )}
             </div>
@@ -819,7 +819,7 @@ export function InspoFolderView({
                ids: Array.from(selectedItems),
                message: `Delete ${selectedItems.size} items?`,
              });
-          }} className="text-[13px] font-bold text-red-400 hover:text-red-300 transition-colors">Delete</button>
+          }} className="text-[13px] font-bold text-zinc-400 hover:text-zinc-300 transition-colors">Delete</button>
         </div>
       )}
 
@@ -900,7 +900,7 @@ export function InspoFolderView({
                   >
                     <div
                       className="w-8 h-8 rounded-lg flex items-center justify-center border border-soft-200"
-                      style={{ backgroundColor: f.hexColor || "#E5D3C8" }}
+                      style={{ backgroundColor: f.hexColor || "#E4E4E7" }}
                     >
                       <FolderPlus size={14} className="text-slate-900/50" />
                     </div>

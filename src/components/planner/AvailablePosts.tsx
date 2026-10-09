@@ -1,49 +1,49 @@
 "use client"
 
+import { GripVertical } from "lucide-react"
+import { formatDate } from "@/lib/planner/dates"
 import { availablePostsView, matchesSearch } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
 import { CategoryBadges, Thumb } from "./Fields"
 import { Section } from "./Section"
 import type { Planner } from "./usePlanner"
 
-function Card({ item, onOpen, muted }: { item: ContentDTO; onOpen: (i: ContentDTO) => void; muted?: boolean }) {
-  return (
-    <button onClick={() => onOpen(item)} className="w-full flex items-start gap-2 text-left rounded-lg p-1.5 -m-1.5 hover:bg-soft-50 cursor-pointer">
-      <Thumb item={item} size={32} />
-      <span className="min-w-0 flex flex-col gap-1">
-        <span className={`text-sm leading-snug break-words ${muted ? "text-zinc-400 italic" : "font-medium text-zinc-900"}`}>{item.title}</span>
-        {!muted && <CategoryBadges value={item.categories} />}
-      </span>
-    </button>
-  )
-}
+/** Data type set on drag so the calendar knows a card came from Ready to Post. */
+export const READY_DRAG_TYPE = "application/x-ig-curator-ready"
 
-/** "Available Posts": unscheduled In progress / Ready to Post content, grouped under parents. */
+/** Ready to Post: everything waiting to be scheduled. Drag a card onto a calendar day to schedule it (it becomes To Edit). */
 export function AvailablePosts({ planner, query, onOpen }: { planner: Planner; query: string; onOpen: (item: ContentDTO) => void }) {
-  const groups = availablePostsView(planner.items.filter((i) => matchesSearch(i, query)))
+  const posts = availablePostsView(planner.items.filter((i) => matchesSearch(i, query)))
 
   return (
-    <Section title="Ready to Post" subtitle="Available Posts">
-      {groups.length === 0 ? (
-        <p className="py-6 text-center text-sm text-zinc-400">No unscheduled posts in progress or ready.</p>
+    <Section title="Ready to Post" subtitle={posts.length ? "To Schedule · drag a card onto a calendar day" : "To Schedule"}>
+      {posts.length === 0 ? (
+        <p className="py-4 text-center text-sm text-zinc-400">Nothing waiting to be scheduled. Items with status To Schedule show up here.</p>
       ) : (
-        <div className="grid gap-2.5 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
-          {groups.map((g) => (
-            <article key={g.item.id} className="rounded-xl border border-soft-200 p-3 flex flex-col gap-2.5">
-              <Card item={g.item} onOpen={onOpen} muted={!g.matches} />
-              {g.children.length > 0 && (
-                <details open={!g.matches} className="group/sub">
-                  <summary className="text-xs text-zinc-500 cursor-pointer select-none hover:text-zinc-800">
-                    {g.children.length} sub-item{g.children.length === 1 ? "" : "s"}
-                  </summary>
-                  <div className="mt-2 pl-3 border-l border-soft-200 flex flex-col gap-2.5">
-                    {g.children.map((c) => (
-                      <Card key={c.id} item={c} onOpen={onOpen} />
-                    ))}
-                  </div>
-                </details>
-              )}
-            </article>
+        <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
+          {posts.map((item) => (
+            <button
+              key={item.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", item.id)
+                e.dataTransfer.setData(READY_DRAG_TYPE, item.id)
+                e.dataTransfer.effectAllowed = "move"
+              }}
+              onClick={() => onOpen(item)}
+              title="Drag onto the calendar to schedule"
+              className="group flex items-center gap-2.5 text-left rounded-xl border border-zinc-200 bg-white p-2.5 hover:border-zinc-950 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all"
+            >
+              <GripVertical size={14} className="shrink-0 text-zinc-300 group-hover:text-zinc-500" />
+              <Thumb item={item} size={36} />
+              <span className="min-w-0 flex-1 flex flex-col gap-1">
+                <span className="text-sm font-medium text-zinc-950 leading-snug break-words">{item.title}</span>
+                <span className="flex flex-wrap items-center gap-1">
+                  <CategoryBadges value={item.categories} />
+                  {item.shoot.start && <span className="text-[11px] text-zinc-400">shot {formatDate(item.shoot.start)}</span>}
+                </span>
+              </span>
+            </button>
           ))}
         </div>
       )}

@@ -50,6 +50,8 @@ model User {
   userGrid      UserGrid?
   contents      Content[]
   quickLinks    QuickLink[]
+  orders        ClothingOrder[]
+  deletedSlots  DeletedFeedSlot[]
 }
 
 model VerificationToken {
@@ -119,7 +121,12 @@ model Content {
   categories     String[] @default([])
   edited         Boolean  @default(false)
   clothingStatus String?
-  orderedAt      DateTime? // set when clothing moves to "Ordered"; starts the 14-day return window
+  orderedAt      DateTime? // set when clothing moves to "Ordered"
+  deliveredAt    DateTime? // set when clothing moves to "Delivered"; starts the 14-day return window
+
+  // SHEIN order this batch belongs to (one order covers two batches)
+  orderId String?
+  order   ClothingOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
 
   // Wall-clock values in Asia/Manila: "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm" (no timezone shifts)
   shootStart String?
@@ -165,4 +172,30 @@ model QuickLink {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+// One SHEIN order covers two batches; its 14-day return window starts on delivery.
+model ClothingOrder {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  orderedAt   DateTime?
+  deliveredAt DateTime?
+  returnedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  batches     Content[]
+
+  @@index([userId])
+}
+
+// Feed boxes deleted on either side, so every browser's feed and the database stay in step.
+model DeletedFeedSlot {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slotId    String
+  deletedAt DateTime @default(now())
+
+  @@unique([userId, slotId])
 }

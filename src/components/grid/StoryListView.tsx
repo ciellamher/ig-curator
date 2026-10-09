@@ -88,7 +88,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                     e.stopPropagation();
                     setDeleteTarget(folder.id);
                   }}
-                  className="p-2 text-foreground/30 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  className="p-2 text-foreground/30 hover:text-zinc-800 hover:bg-zinc-50 rounded-full transition-colors"
                   title="Delete Folder"
                 >
                   <Trash2 size={18} />

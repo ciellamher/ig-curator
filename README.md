@@ -35,16 +35,17 @@ Call the application locally in your browser to plan your content:
 - **True-to-Life Previews**: View your planned content exactly as it will appear on Instagram.
 - **Stories & Reels**: Plan beyond the grid with dedicated views for stories and reels.
 
-### 05 — CONTENT PLANNER (`/planner`)
+### 05 — CONTENT PLANNER
 
-A standalone recreation of the Notion content workflow. One `Content` table powers every view, so an edit shows up everywhere at once.
+Sits beside the feed on the home page (feed on the left, planner on the right). A standalone recreation of the Notion content workflow: one `Content` table powers every view, so an edit shows up everywhere at once.
 
-- **Content Calendar** — Shoot · Week, Shoot · Month, Edit (parent-focused), Post. Drag a card to another day to reschedule just that date.
-- **Content tables** — To Shoot (all To-do statuses), To Edit (In progress, not edited), To Post (Ready to Post, Edited filter Any/Yes/No).
-- **Ready to Post · Available Posts** — unscheduled In progress / Ready to Post items, grouped under their parent.
-- **Outfits to Prep** — items with Buy Clothes / Ordered / Delivered, with SHEIN deadlines: order 7 days before the shoot; return reminder on day 11 of the 14-day window (the window starts the day an item is marked Ordered).
-- **Quick Links** and configurable navigation (`src/config/dashboardNav.ts`).
-- **Feed sync** — new posts, reels, stories and drafts in the feed create planner rows automatically; uploading a photo attaches it and moves the row from To Board/To Shoot to To Edit.
+- **Content Calendar** — Shoot · Week, Shoot · Month, Edit, Post. Press + (or double-click a day) to add; drag cards between days to reschedule that date.
+- **Content tables** — To Shoot (all To-do statuses), To Edit (In progress, not edited), To Post (Ready to Post, Edited filter Any/Yes/No), and All. Select rows (or select all) to delete in bulk.
+- **Ready to Post** — everything in To Schedule. Drag a card onto the calendar to schedule it; it moves to To Edit.
+- **Automatic edit dates** — setting Post Now sets Edit Date 3 days before (stories) or 1 week before (posts, reels), and follows whenever Post Now or the category changes.
+- **Outfits to Prep** — one SHEIN order covers two batches. Order 7 days before the first shoot; the 14-day return window counts from delivery, with a reminder from day 11 and a black "over 14 days" flag once it has closed. The original outfits table sits underneath.
+- **Quick Links** gallery.
+- **Feed ↔ planner sync** — everything added in the feed (posts, reels, drafts, story folders and stories, inspo boards and photos) gets a planner row, and uploaded photos attach to it. Renaming or deleting on either side updates the other; deletions are recorded so every browser's feed follows.
 
 Dates are stored as Asia/Manila wall-clock strings (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`), so date-only values never shift a day.
 

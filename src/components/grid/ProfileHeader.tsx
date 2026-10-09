@@ -111,7 +111,7 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
       <div className="flex items-center justify-between px-1">
         <div className="relative shrink-0">
           <div 
-            className={`w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            className={`w-20 h-20 rounded-full p-[2px] bg-zinc-950 shadow-sm ${isEditing ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
             onClick={() => {
               if (isEditing) document.getElementById('profile-upload')?.click();
             }}

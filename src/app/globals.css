@@ -1,25 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf9f8;
-  --foreground: #3f3f46;
+  --background: #fafafa;
+  --foreground: #18181b;
 
-  /* Delicate pastel pinks */
-  --pastel-pink-50: #fff1f2;
-  --pastel-pink-100: #ffe4e6;
-  --pastel-pink-200: #fecdd3;
-  --pastel-pink-300: #fda4af;
-  --pastel-pink-400: #fb7185;
-  --pastel-pink-500: #f43f5e;
-  --pastel-pink-600: #e11d48;
-  --pastel-pink-700: #be123c;
+  /* Accent scale (black & white theme: neutral greys) */
+  --pastel-pink-50: #fafafa;
+  --pastel-pink-100: #f4f4f5;
+  --pastel-pink-200: #e4e4e7;
+  --pastel-pink-300: #d4d4d8;
+  --pastel-pink-400: #71717a;
+  --pastel-pink-500: #18181b;
+  --pastel-pink-600: #09090b;
+  --pastel-pink-700: #09090b;
 
   /* Soft greys */
-  --soft-grey-50: #f8f8f7;
-  --soft-grey-100: #f1f1ef;
-  --soft-grey-200: #e6e5e2;
-  --soft-grey-300: #d4d3cf;
-  --soft-grey-400: #a8a7a2;
+  --soft-grey-50: #fafafa;
+  --soft-grey-100: #f4f4f5;
+  --soft-grey-200: #e4e4e7;
+  --soft-grey-300: #d4d4d8;
+  --soft-grey-400: #a1a1aa;
 }
 
 @theme inline {
@@ -54,18 +54,14 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(1200px 600px at 10% -10%, var(--pastel-pink-50), transparent 60%),
-    radial-gradient(900px 500px at 110% 0%, #f5f3ff, transparent 55%),
-    var(--background);
-  background-attachment: fixed;
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), sans-serif;
 }
 
 ::selection {
-  background: var(--pastel-pink-200);
-  color: #18181b;
+  background: #18181b;
+  color: #fafafa;
 }
 
 :focus-visible {

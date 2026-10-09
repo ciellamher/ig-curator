@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Camera } from "lucide-react";
+import { AppLogo } from "@/components/ui/AppLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,15 +37,13 @@ export default function LoginPage() {
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:py-16">
       <div className="w-full max-w-sm bg-white/80 backdrop-blur-xl rounded-3xl shadow-float border border-white p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-gradient-to-tr from-amber-400 via-pink-500 to-violet-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-pink-500/25">
-            <Camera size={24} className="text-white" />
-          </div>
+          <AppLogo size={48} className="mb-4 rounded-2xl shadow-lg shadow-black/20" />
           <h1 className="text-2xl font-semibold text-zinc-900 tracking-tight">Welcome back</h1>
           <p className="text-sm text-foreground/60 mt-1">Log in to keep curating your feed</p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl text-center">
+          <div className="mb-4 p-3 bg-zinc-50 border border-zinc-100 text-zinc-900 text-sm rounded-xl text-center">
             {error}
           </div>
         )}

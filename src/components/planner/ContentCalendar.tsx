@@ -1,14 +1,17 @@
 "use client"
 
+import { Dropdown } from "@/components/ui/Dropdown"
 import { useMemo, useState } from "react"
-import { Check, ChevronLeft, ChevronRight } from "lucide-react"
-import { clothingTimeline, effectiveShootDate } from "@/lib/planner/clothing"
+import { Check, ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { itemTimeline, orderBatches, orderFor, orderStage, orderTimeline } from "@/lib/planner/clothing"
 import { addDaysISO, formatDate, formatSchedule, moveSchedule, scheduleCovers, todayISO, weekday, type DateField } from "@/lib/planner/dates"
-import { STATUS_NAMES, STATUS_STYLES } from "@/lib/planner/options"
-import { matchesSearch, parentFocused } from "@/lib/planner/views"
+import { GROUP_DOT, STATUS_OPTIONS, STATUS_STYLES, statusGroup } from "@/lib/planner/options"
+import { matchesSearch } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
 import { Badge, CategoryBadges } from "./Fields"
 import { Section, Tabs } from "./Section"
+import { READY_DRAG_TYPE } from "./AvailablePosts"
+import { QuickAdd } from "./QuickAdd"
 import type { Planner } from "./usePlanner"
 
 type Mode = "shoot-week" | "shoot-month" | "edit" | "post"
@@ -22,11 +25,12 @@ const MODES: { id: Mode; label: string }[] = [
 ]
 const FIELD: Record<Mode, DateField> = { "shoot-week": "shoot", "shoot-month": "shoot", edit: "edit", post: "post" }
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const FIELD_LABEL: Record<DateField, string> = { shoot: "Shoot Date", edit: "Edit Date", post: "Post Now" }
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
 const MARKER_STYLE = {
-  order: "bg-white text-rose-700 ring-1 ring-inset ring-rose-300 border-dashed",
-  return: "bg-white text-orange-700 ring-1 ring-inset ring-orange-300",
+  order: "bg-white text-zinc-950 border border-dashed border-zinc-950",
+  return: "bg-zinc-950 text-white",
 }
 
 function monthStart(date: string) {
@@ -41,6 +45,7 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
   const [selected, setSelected] = useState(today)
   const [statusFilter, setStatusFilter] = useState("All")
   const [dragOver, setDragOver] = useState<string | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
   const field = FIELD[mode]
   const isWeek = mode === "shoot-week"
 
@@ -57,21 +62,27 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
   }, [cursor, isWeek])
 
   const visible = useMemo(() => {
-    const filtered = items.filter((i) => matchesSearch(i, query) && (statusFilter === "All" || i.status === statusFilter))
-    // Edit is parent-focused; Shoot and Post show parents and sub-items as independent entries.
-    return field === "edit" ? parentFocused(filtered, (i) => !!i.edit.start) : filtered.filter((i) => i[field].start)
+    return items.filter((i) => i[field].start && matchesSearch(i, query) && (statusFilter === "All" || i.status === statusFilter))
   }, [items, query, statusFilter, field])
 
   const eventsOn = (day: string): CalEvent[] => {
     const out: CalEvent[] = visible.filter((i) => scheduleCovers(i[field], day)).map((item) => ({ key: `${item.id}-${field}`, item, kind: "date" }))
     if (field === "shoot") {
       // App addition: SHEIN order/return deadlines alongside shoots.
+      for (const order of planner.orders) {
+        const batches = orderBatches(order, items)
+        if (!batches.length || !batches.some((b) => matchesSearch(b, query))) continue
+        const t = orderTimeline(order, items)
+        const stage = orderStage(order)
+        const label = { ...batches[0], title: order.name }
+        if (stage === "Buy Clothes" && t.orderBy === day) out.push({ key: `${order.id}-order`, item: label, kind: "order", date: day })
+        if (stage === "Delivered" && t.windowEnd === day) out.push({ key: `${order.id}-return`, item: label, kind: "return", date: day })
+      }
       for (const item of items) {
-        if (!item.clothingStatus || !matchesSearch(item, query) || !effectiveShootDate(item, byId)) continue
-        const t = clothingTimeline(item, byId)
+        if (!item.clothingStatus || !matchesSearch(item, query) || orderFor(item, byId, planner.ordersById)) continue
+        const t = itemTimeline(item, byId)
         if (item.clothingStatus === "Buy Clothes" && t.orderBy === day) out.push({ key: `${item.id}-order`, item, kind: "order", date: day })
-        if ((item.clothingStatus === "Ordered" || item.clothingStatus === "Delivered") && t.returnBy === day)
-          out.push({ key: `${item.id}-return`, item, kind: "return", date: day })
+        if (item.clothingStatus === "Delivered" && t.windowEnd === day) out.push({ key: `${item.id}-return`, item, kind: "return", date: day })
       }
     }
     return out
@@ -80,8 +91,6 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
   const step = (dir: 1 | -1) => setCursor((c) => (isWeek ? addDaysISO(c, dir * 7) : monthStart(addDaysISO(monthStart(c), dir === 1 ? 32 : -1))))
   const [y, m] = cursor.split("-").map(Number)
   const heading = isWeek ? `${formatDate(days[0])} – ${formatDate(days[6])}` : `${MONTHS[m - 1]} ${y}`
-
-  const childCount = (id: string) => items.filter((i) => i.parentId === id).length
 
   const card = (e: CalEvent, compact: boolean) => {
     const { item } = e
@@ -113,23 +122,35 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
       >
         <span className={`text-xs font-medium text-zinc-900 leading-snug ${compact ? "truncate" : "break-words"}`}>{item.title}</span>
         {compact ? (
-          <span className={`h-1 w-6 rounded-full ${STATUS_STYLES[item.status]?.split(" ")[0] ?? "bg-zinc-200"}`} />
+          <span className={`h-1 w-6 rounded-full ${GROUP_DOT[statusGroup(item.status) ?? "To-do"]}`} />
         ) : (
           <span className="flex flex-wrap items-center gap-1">
             <Badge value={item.status} styles={STATUS_STYLES} />
             {field === "edit" && (
-              <span className={`inline-flex items-center gap-0.5 text-[11px] ${item.edited ? "text-emerald-700" : "text-zinc-400"}`}>
+              <span className={`inline-flex items-center gap-0.5 text-[11px] ${item.edited ? "text-zinc-900" : "text-zinc-400"}`}>
                 {item.edited && <Check size={11} />} {item.edited ? "Edited" : "Not edited"}
               </span>
             )}
             {field === "post" && <CategoryBadges value={item.categories} />}
             {field !== "edit" && <span className="text-[11px] text-zinc-500">{formatSchedule(sched)}</span>}
-            {field === "edit" && childCount(item.id) > 0 && <span className="text-[11px] text-zinc-400">{childCount(item.id)} sub-items</span>}
           </span>
         )}
       </button>
     )
   }
+
+  const AddButton = ({ day }: { day: string }) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation()
+        setAdding(day)
+      }}
+      aria-label={`Add on ${formatDate(day)}`}
+      className="ml-auto p-0.5 rounded text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+    >
+      <Plus size={13} />
+    </button>
+  )
 
   const dropProps = (day: string) => ({
     onDragOver: (e: React.DragEvent) => {
@@ -141,8 +162,11 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
       e.preventDefault()
       setDragOver(null)
       const item = byId.get(e.dataTransfer.getData("text/plain"))
-      // Only this calendar's date field changes; time of day and range length are preserved.
-      if (item) update(item.id, { [field]: moveSchedule(item[field], day) })
+      if (!item) return
+      // Only this calendar's date field changes (time of day and range length are kept). Scheduling something
+      // from Ready to Post moves it on to To Edit.
+      const fromReady = e.dataTransfer.types.includes(READY_DRAG_TYPE) || item.status === "To Schedule"
+      update(item.id, { [field]: moveSchedule(item[field], day), ...(fromReady ? { status: "To Edit" } : {}) })
     },
   })
 
@@ -150,17 +174,13 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
     <Section
       title="Content Calendar"
       actions={
-        <select
-          aria-label="Status filter"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-7 rounded-md border border-soft-200 bg-white px-1.5 text-xs text-zinc-700 cursor-pointer"
-        >
-          <option value="All">All statuses</option>
-          {STATUS_NAMES.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
+        <Dropdown
+          label="Status filter"
+          options={[{ value: "All", label: "All statuses" }, ...STATUS_OPTIONS.map((s) => ({ value: s.name, group: s.group }))]}
+          selected={[statusFilter]}
+          onSelect={setStatusFilter}
+          className="w-40"
+        />
       }
     >
       <Tabs tabs={MODES} value={mode} onChange={setMode} />
@@ -192,13 +212,15 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
               <div
                 key={day}
                 {...dropProps(day)}
-                className={`rounded-lg border p-1.5 md:min-h-[180px] flex flex-col gap-1 transition-colors ${
-                  dragOver === day ? "bg-sky-50 border-sky-300" : day === today ? "border-zinc-900" : "border-soft-200"
+                onDoubleClick={() => setAdding(day)}
+                className={`group rounded-lg border p-1.5 md:min-h-[180px] flex flex-col gap-1 transition-colors ${
+                  dragOver === day ? "bg-zinc-50 border-zinc-300" : day === today ? "border-zinc-900" : "border-soft-200"
                 }`}
               >
-                <div className="flex items-baseline gap-1 px-0.5">
+                <div className="group/day flex items-center gap-1 px-0.5">
                   <span className="text-[11px] text-zinc-500">{WEEKDAYS[weekday(day)]}</span>
-                  <span className={`text-sm font-semibold ${day === today ? "text-pastel-600" : "text-zinc-900"}`}>{Number(day.slice(8))}</span>
+                  <span className={`text-sm font-semibold ${day === today ? "underline underline-offset-4" : ""} text-zinc-950`}>{Number(day.slice(8))}</span>
+                  <AddButton day={day} />
                 </div>
                 {evs.map((e) => card(e, false))}
                 {evs.length === 0 && <span className="md:hidden text-xs text-zinc-300 px-0.5">Nothing scheduled</span>}
@@ -223,20 +245,24 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
                   key={day}
                   {...dropProps(day)}
                   onClick={() => setSelected(day)}
-                  className={`border-r border-b border-soft-200 min-h-[52px] sm:min-h-[104px] p-1 flex flex-col gap-1 min-w-0 transition-colors ${
-                    dragOver === day ? "bg-sky-50" : inMonth ? "bg-white" : "bg-soft-50/70"
+                  onDoubleClick={() => setAdding(day)}
+                  className={`group border-r border-b border-soft-200 min-h-[52px] sm:min-h-[104px] p-1 flex flex-col gap-1 min-w-0 transition-colors ${
+                    dragOver === day ? "bg-zinc-50" : inMonth ? "bg-white" : "bg-soft-50/70"
                   } ${selected === day ? "max-sm:bg-pastel-50" : ""}`}
                 >
-                  <span
-                    className={`self-start text-[11px] w-5 h-5 flex items-center justify-center rounded-full ${
-                      day === today ? "bg-zinc-900 text-white font-semibold" : inMonth ? "text-zinc-700" : "text-zinc-300"
-                    }`}
-                  >
-                    {Number(day.slice(8))}
-                  </span>
+                  <div className="flex items-center">
+                    <span
+                      className={`text-[11px] w-5 h-5 flex items-center justify-center rounded-full ${
+                        day === today ? "bg-zinc-900 text-white font-semibold" : inMonth ? "text-zinc-700" : "text-zinc-300"
+                      }`}
+                    >
+                      {Number(day.slice(8))}
+                    </span>
+                    <AddButton day={day} />
+                  </div>
                   <div className="flex sm:hidden flex-wrap gap-0.5">
                     {evs.slice(0, 4).map((e) => (
-                      <span key={e.key} className={`w-1.5 h-1.5 rounded-full ${e.kind === "date" ? "bg-zinc-700" : e.kind === "order" ? "bg-rose-400" : "bg-orange-400"}`} />
+                      <span key={e.key} className={`w-1.5 h-1.5 rounded-full ${e.kind === "date" ? "bg-zinc-400" : e.kind === "order" ? "ring-1 ring-zinc-950 bg-white" : "bg-zinc-950"}`} />
                     ))}
                   </div>
                   <div className="hidden sm:flex flex-col gap-1 min-w-0">
@@ -248,13 +274,33 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
             })}
           </div>
           <div className="sm:hidden flex flex-col gap-1.5">
-            <div className="text-xs font-semibold text-zinc-500">{formatDate(selected, { weekday: true })}</div>
+            <div className="flex items-center">
+              <span className="text-xs font-semibold text-zinc-500">{formatDate(selected, { weekday: true })}</span>
+              <button onClick={() => setAdding(selected)} className="ml-auto inline-flex items-center gap-1 px-2.5 h-7 rounded-full bg-zinc-950 text-white text-xs font-semibold cursor-pointer">
+                <Plus size={12} /> Add
+              </button>
+            </div>
             {eventsOn(selected).map((e) => card(e, false))}
             {eventsOn(selected).length === 0 && <div className="text-xs text-zinc-300">Nothing scheduled</div>}
           </div>
         </>
       )}
-      <p className="hidden sm:block text-[11px] text-zinc-400">Drag a card to another day to reschedule its {field === "post" ? "Post Now" : field === "edit" ? "Edit Date" : "Shoot Date"}.</p>
+      <p className="hidden sm:block text-[11px] text-zinc-400">
+        Press + or double-click a day to add · drag cards between days to reschedule their {FIELD_LABEL[field]} · drag from Ready to Post to schedule
+      </p>
+      {adding && (
+        <QuickAdd
+          day={adding}
+          field={field}
+          fieldLabel={FIELD_LABEL[field]}
+          onClose={() => setAdding(null)}
+          onCreate={async (patch, open) => {
+            const created = await planner.create(patch)
+            setAdding(null)
+            if (created && open) onOpen(created)
+          }}
+        />
+      )}
     </Section>
   )
 }

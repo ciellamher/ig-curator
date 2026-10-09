@@ -73,77 +73,50 @@ export function toPostView(items: ContentDTO[], edited: EditedFilter = "any"): C
   )
 }
 
-// ---- Ready to Post gallery ("Available Posts") ----
+// ---- Ready to Post gallery ----
 
-/** Unscheduled pool: (In progress OR Ready to Post) AND not a batch AND Post Now empty. */
+/** Ready to Post: content waiting to be scheduled ("To Schedule"). Drag a card onto the calendar to schedule it. */
 export function isAvailablePost(item: ContentDTO): boolean {
-  const inPool = statusGroup(item.status) === "In progress" || item.status === "Ready to Post"
-  return inPool && !isBatchTitle(item) && !item.post.start
+  return item.status === "To Schedule" && !isBatchTitle(item)
 }
 
-export type ParentGroup = { item: ContentDTO; matches: boolean; children: ContentDTO[] }
-
-/**
- * Parent-focused grouping: matching records grouped under their top-level parent. A parent that doesn't match
- * itself is still returned for context (matches = false) when at least one of its children does.
- */
-export function groupByParent(items: ContentDTO[], predicate: (i: ContentDTO) => boolean, sort: Comparator[]): ParentGroup[] {
-  const byId = new Map(items.map((i) => [i.id, i]))
-  const groups = new Map<string, ParentGroup>()
-
-  for (const item of items) {
-    if (!predicate(item)) continue
-    const parent = item.parentId ? byId.get(item.parentId) : undefined
-    if (!parent) {
-      const existing = groups.get(item.id)
-      if (existing) existing.matches = true
-      else groups.set(item.id, { item, matches: true, children: [] })
-      continue
-    }
-    const group = groups.get(parent.id) ?? { item: parent, matches: predicate(parent), children: [] }
-    group.children.push(item)
-    groups.set(parent.id, group)
-  }
-
-  const ordered = sortBy([...groups.values()].map((g) => g.item), ...sort)
-  return ordered.map((p) => {
-    const g = groups.get(p.id)!
-    return { ...g, children: sortBy(g.children, ...sort) }
-  })
-}
-
-export function availablePostsView(items: ContentDTO[]): ParentGroup[] {
-  return groupByParent(items, isAvailablePost, [byTitle, byShoot, byStatus])
+export function availablePostsView(items: ContentDTO[]): ContentDTO[] {
+  return sortBy(items.filter(isAvailablePost), byShoot, byTitle)
 }
 
 // ---- Outfits to Prep ----
 
-/** Clothing status set and not in the Complete group (Buy Clothes, Ordered, Delivered). */
+/** Clothing still in progress (Buy Clothes, Ordered, Delivered), or content whose status is "To Buy/Plan Clothes". */
 export function needsOutfitPrep(item: ContentDTO): boolean {
-  return !!item.clothingStatus && clothingGroup(item.clothingStatus) !== "Complete"
+  const clothingOpen = !!item.clothingStatus && clothingGroup(item.clothingStatus) !== "Complete"
+  return clothingOpen || item.status === "To Buy/Plan Clothes"
 }
 
-export function outfitsView(items: ContentDTO[]): ParentGroup[] {
-  return groupByParent(items, needsOutfitPrep, [byShoot])
+/** Shoot date, falling back to the batch's (an item's parent) when the item has none of its own. */
+export function shootDateOf(item: ContentDTO, byId: Map<string, ContentDTO>): string | null {
+  if (item.shoot.start) return item.shoot.start
+  const parent = item.parentId ? byId.get(item.parentId) : undefined
+  return parent?.shoot.start ?? null
 }
 
-// ---- Calendars ----
-
-/** Parent-focused calendar (Edit): top-level records, plus children whose parent isn't itself on the calendar. */
-export function parentFocused(items: ContentDTO[], hasDate: (i: ContentDTO) => boolean): ContentDTO[] {
-  const byId = new Map(items.map((i) => [i.id, i]))
-  return items.filter((i) => {
-    if (!hasDate(i)) return false
-    const parent = i.parentId ? byId.get(i.parentId) : undefined
-    return !parent || !hasDate(parent)
-  })
+export function outfitsView(items: ContentDTO[], all: ContentDTO[] = items): ContentDTO[] {
+  const byId = new Map(all.map((i) => [i.id, i]))
+  return sortBy(
+    items.filter(needsOutfitPrep),
+    (a, b) => compareNullsLast(shootDateOf(a, byId), shootDateOf(b, byId)),
+    byTitle,
+  )
 }
 
-// ---- Parent assignment ----
+// ---- Batches ----
 
-/** Valid parents for an item: not itself, not one of its descendants (prevents cycles), and one level deep. */
-export function parentCandidates(items: ContentDTO[], itemId: string): ContentDTO[] {
-  const hasChildren = items.some((i) => i.parentId === itemId)
-  if (hasChildren) return []
-  return items.filter((i) => i.id !== itemId && !i.parentId)
+/** Batches: top-level items titled "batch…", that already hold posts, or that belong to a SHEIN order. */
+export function batchCandidates(items: ContentDTO[]): ContentDTO[] {
+  return items.filter((i) => !i.parentId && (isBatchTitle(i) || !!i.orderId || items.some((c) => c.parentId === i.id)))
+}
+
+/** Batches an item can be put in: never itself, and an item that holds posts can't go inside another (no cycles). */
+export function batchOptionsFor(items: ContentDTO[], itemId: string): ContentDTO[] {
+  if (items.some((i) => i.parentId === itemId)) return []
+  return batchCandidates(items).filter((b) => b.id !== itemId)
 }

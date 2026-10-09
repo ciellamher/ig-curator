@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { Check, ExternalLink, Image as ImageIcon } from "lucide-react"
+import { useEffect, useState } from "react"
+import { ExternalLink, Image as ImageIcon } from "lucide-react"
+import { Dropdown, type DropdownOption } from "@/components/ui/Dropdown"
 import { LocalMediaImage } from "@/components/grid/LocalMedia"
 import {
   CATEGORY_OPTIONS,
@@ -29,17 +30,10 @@ export function Empty() {
   return <span className="text-zinc-300">—</span>
 }
 
-function grouped<T extends { name: string; group: StatusGroup }>(options: readonly T[]) {
-  const groups: [StatusGroup, T[]][] = []
-  for (const o of options) {
-    const last = groups[groups.length - 1]
-    if (last?.[0] === o.group) last[1].push(o)
-    else groups.push([o.group, [o]])
-  }
-  return groups
+function toOptions(options: readonly { name: string; group?: StatusGroup }[]): DropdownOption[] {
+  return options.map((o) => ({ value: o.name, group: o.group }))
 }
 
-/** Native select rendered as a badge, so it stays keyboard- and screen-reader-friendly. */
 function BadgeSelect({
   label,
   value,
@@ -55,27 +49,17 @@ function BadgeSelect({
   onChange: (v: string | null) => void
   allowEmpty?: boolean
 }) {
+  const opts = [...(allowEmpty ? [{ value: "", label: "None" }] : []), ...toOptions(options)]
   return (
-    <div className={`relative inline-flex p-0.5 ${FIELD} focus-within:ring-2 focus-within:ring-zinc-900/15`}>
-      {value ? <Badge value={value} styles={styles} /> : <Empty />}
-      <select
-        aria-label={label}
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full"
-      >
-        {allowEmpty && <option value="">Empty</option>}
-        {grouped(options).map(([group, opts]) => (
-          <optgroup key={group} label={group}>
-            {opts.map((o) => (
-              <option key={o.name} value={o.name}>
-                {o.name}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
-    </div>
+    <Dropdown
+      variant="ghost"
+      label={label}
+      options={opts}
+      selected={[value ?? ""]}
+      onSelect={(v) => onChange(v || null)}
+      trigger={value ? <Badge value={value} styles={styles} /> : <Empty />}
+      renderOption={(o) => (o.value ? <Badge value={o.value} styles={styles} /> : <span className="text-zinc-400 text-xs">None</span>)}
+    />
   )
 }
 
@@ -98,63 +82,39 @@ export function CategoryBadges({ value }: { value: string[] }) {
   )
 }
 
-/** Multi-select popover for categories. */
+/** Multi-select dropdown for categories. */
 export function CategorySelect({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && setOpen(false)
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
-    document.addEventListener("pointerdown", onDown)
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("pointerdown", onDown)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open])
-
-  const toggle = (c: string) => onChange(value.includes(c) ? value.filter((v) => v !== c) : [...value, c])
-
   return (
-    <div ref={ref} className="relative">
-      <button type="button" aria-label="Category" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={`text-left p-0.5 min-h-6 cursor-pointer ${FIELD}`}>
-        <CategoryBadges value={value} />
-      </button>
-      {open && (
-        <div role="group" aria-label="Categories" className="absolute z-30 mt-1 left-0 w-44 bg-white border border-soft-200 rounded-xl shadow-lg p-1 animate-in fade-in zoom-in-95 duration-150">
-          {CATEGORY_OPTIONS.map((c) => {
-            const on = value.includes(c)
-            return (
-              <button
-                key={c}
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                onClick={() => toggle(c)}
-                className="w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-soft-100 cursor-pointer"
-              >
-                <Badge value={c} styles={CATEGORY_STYLES} />
-                {on && <Check size={14} className="text-zinc-700" />}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
+    <Dropdown
+      variant="ghost"
+      multiple
+      label="Category"
+      options={CATEGORY_OPTIONS.map((c) => ({ value: c }))}
+      selected={value}
+      onSelect={(c) => onChange(value.includes(c) ? value.filter((v) => v !== c) : [...value, c])}
+      trigger={<CategoryBadges value={value} />}
+      renderOption={(o) => <Badge value={o.value} styles={CATEGORY_STYLES} />}
+      className="whitespace-normal"
+    />
   )
 }
 
+/** Edited on/off switch (a switch, so it doesn't read as another row-selection checkbox). */
 export function EditedCheckbox({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <input
-      type="checkbox"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
       aria-label="Edited"
-      checked={value}
-      onChange={(e) => onChange(e.target.checked)}
-      className="w-4 h-4 accent-zinc-900 cursor-pointer align-middle"
-    />
+      title={value ? "Edited" : "Not edited yet"}
+      onClick={() => onChange(!value)}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950/30 ${
+        value ? "bg-zinc-950" : "bg-zinc-200 hover:bg-zinc-300"
+      }`}
+    >
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${value ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+    </button>
   )
 }
 

@@ -27,7 +27,7 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
       type: "placeholder",
       urls: [],
       currentUrlIndex: 0,
-      hexColor: "#E5D3C8",
+      hexColor: "#E4E4E7",
       text: "",
       contentType: "Story",
       folderId: folder.id, // Linking to the current folder

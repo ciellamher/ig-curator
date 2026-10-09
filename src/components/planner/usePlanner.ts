@@ -1,40 +1,71 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { createContent, deleteContent, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
+import { createOrder, deleteOrder, listOrders, renameOrder, setOrderBatches, setOrderDate, setOrderStage } from "@/app/actions/orders"
 import { clothingAlerts } from "@/lib/planner/clothing"
-import type { ContentDTO, ContentPatch, QuickLinkDTO, QuickLinkInput } from "@/lib/planner/types"
+import {
+  PLANNER_DELETED_EVENT,
+  PLANNER_REFRESH_EVENT,
+  PLANNER_SYNC_ERROR_EVENT,
+  PLANNER_TITLE_EVENT,
+  type ContentDTO,
+  type ContentPatch,
+  type OrderDTO,
+  type OrderStage,
+  type QuickLinkDTO,
+  type QuickLinkInput,
+} from "@/lib/planner/types"
 
 const byName = (a: QuickLinkDTO, b: QuickLinkDTO) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
 
 export function usePlanner(enabled: boolean) {
   const [items, setItems] = useState<ContentDTO[]>([])
   const [links, setLinks] = useState<QuickLinkDTO[]>([])
+  const [orders, setOrders] = useState<OrderDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const itemsRef = useRef(items)
   itemsRef.current = items
 
   const reload = useCallback(async () => {
-    const [content, quick] = await Promise.all([listContent(), listQuickLinks()])
+    const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
     if (content.success) setItems(content.data)
     if (quick.success) setLinks([...quick.data].sort(byName))
-    setError(!content.success ? content.error : !quick.success ? quick.error : null)
+    if (orderList.success) setOrders(orderList.data)
+    const failed = [content, quick, orderList].find((r) => !r.success)
+    setError(failed && !failed.success ? failed.error : null)
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    if (enabled) reload()
+    if (!enabled) return
+    reload()
+    // Feed changes (new posts, uploaded photos) land in the database; pull them in.
+    const onSyncError = (e: Event) => setError(`Couldn't save your feed to the planner: ${(e as CustomEvent<string>).detail}`)
+    window.addEventListener(PLANNER_REFRESH_EVENT, reload)
+    window.addEventListener(PLANNER_SYNC_ERROR_EVENT, onSyncError)
+    return () => {
+      window.removeEventListener(PLANNER_REFRESH_EVENT, reload)
+      window.removeEventListener(PLANNER_SYNC_ERROR_EVENT, onSyncError)
+    }
   }, [enabled, reload])
 
   /** Optimistic update: every view re-renders from the same list immediately, then reconciles with the server. */
   const update = useCallback(async (id: string, patch: ContentPatch) => {
     const previous = itemsRef.current.find((i) => i.id === id)
-    setItems((curr) => curr.map((i) => (i.id === id ? { ...i, ...patch } : i)))
+    // Show the automatic edit-date / status changes immediately; the server applies the same rules.
+    const optimistic = previous ? withScheduleRules(previous, patch) : patch
+    setItems((curr) => curr.map((i) => (i.id === id ? { ...i, ...optimistic } : i)))
     const res = await updateContent(id, patch)
     if (res.success) {
       setItems((curr) => curr.map((i) => (i.id === id ? res.data : i)))
+      // Renaming a feed-linked record renames its box in the feed.
+      if (res.data.slotId && "title" in patch && previous?.title !== res.data.title) {
+        window.dispatchEvent(new CustomEvent(PLANNER_TITLE_EVENT, { detail: { slotId: res.data.slotId, title: res.data.title } }))
+      }
     } else {
       if (previous) setItems((curr) => curr.map((i) => (i.id === id ? previous : i)))
       setError(res.error)
@@ -51,16 +82,46 @@ export function usePlanner(enabled: boolean) {
     return null
   }, [])
 
-  /** Deleting a parent keeps its sub-items; they become top-level records. */
-  const remove = useCallback(async (id: string) => {
+  /** Deletes one or many records; deleted feed boxes leave the feed too. */
+  const removeMany = useCallback(async (ids: string[]) => {
+    if (!ids.length) return
     const snapshot = itemsRef.current
-    setItems((curr) => curr.filter((i) => i.id !== id).map((i) => (i.parentId === id ? { ...i, parentId: null } : i)))
-    const res = await deleteContent(id)
+    const doomed = new Set(ids)
+    setItems((curr) => curr.filter((i) => !doomed.has(i.id)).map((i) => (i.parentId && doomed.has(i.parentId) ? { ...i, parentId: null } : i)))
+    const res = await deleteContents(ids)
     if (!res.success) {
       setItems(snapshot)
       setError(res.error)
+      return
+    }
+    const gone = new Set(res.data.deletedIds)
+    setItems((curr) => curr.filter((i) => !gone.has(i.id)))
+    if (res.data.deletedSlotIds.length) {
+      window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: res.data.deletedSlotIds }))
     }
   }, [])
+  const remove = useCallback((id: string) => removeMany([id]), [removeMany])
+
+  /** Runs an order change, then refreshes (order changes also update batches' Clothing status). */
+  const orderAction = useCallback(
+    async (action: () => Promise<{ success: boolean; error?: string }>) => {
+      const res = await action()
+      if (!res.success) setError(res.error ?? "Something went wrong")
+      await reload()
+    },
+    [reload],
+  )
+  const orderActions = useMemo(
+    () => ({
+      create: (batchIds: string[] = []) => orderAction(() => createOrder(batchIds)),
+      rename: (id: string, name: string) => orderAction(() => renameOrder(id, name)),
+      setBatches: (id: string, batchIds: string[]) => orderAction(() => setOrderBatches(id, batchIds)),
+      setStage: (id: string, stage: OrderStage, date?: string) => orderAction(() => setOrderStage(id, stage, date)),
+      setDate: (id: string, field: "orderedAt" | "deliveredAt", date: string | null) => orderAction(() => setOrderDate(id, field, date)),
+      remove: (id: string) => orderAction(() => deleteOrder(id)),
+    }),
+    [orderAction],
+  )
 
   const loadSamples = useCallback(async () => {
     setLoading(true)
@@ -83,9 +144,10 @@ export function usePlanner(enabled: boolean) {
   }, [])
 
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
-  const alerts = useMemo(() => clothingAlerts(items), [items])
+  const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
+  const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, links, alerts, loading, error, setError, update, create, remove, loadSamples, saveLink, removeLink }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

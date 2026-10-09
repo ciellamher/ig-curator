@@ -1,14 +1,6 @@
-import type { Metadata } from "next"
-import { PlannerClient } from "@/components/planner/PlannerClient"
+import { redirect } from "next/navigation"
 
-export const metadata: Metadata = {
-  title: "Planner · IG Curator",
-}
-
+// The planner now lives beside the feed on the home page.
 export default function PlannerPage() {
-  return (
-    <main className="flex-1 flex flex-col">
-      <PlannerClient />
-    </main>
-  )
+  redirect("/")
 }

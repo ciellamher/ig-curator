@@ -182,7 +182,7 @@ export function EditorPanel({
           {/* Single Photo / Slot Trash Button */}
           <button
             onClick={handleDelete}
-            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-zinc-900 hover:bg-zinc-50 hover:border-zinc-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
             title={
               activeSlot.urls && activeSlot.urls.length > 0
                 ? "Delete Current Photo"
@@ -303,12 +303,12 @@ export function EditorPanel({
                   onBlur={() =>
                     updateSlot(activeSlot.id, { hexColor: localHex })
                   }
-                  placeholder="#E5D3C8"
+                  placeholder="#E4E4E7"
                   className="flex-1 p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all uppercase font-mono font-bold text-slate-800"
                 />
                 <input
                   type="color"
-                  value={localHex || "#E5D3C8"}
+                  value={localHex || "#E4E4E7"}
                   onChange={(e) => {
                     setLocalHex(e.target.value);
                     updateSlot(activeSlot.id, { hexColor: e.target.value });

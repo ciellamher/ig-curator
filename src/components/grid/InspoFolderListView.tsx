@@ -291,7 +291,7 @@ export function InspoFolderListView({
                 >
                   <div
                     className="w-full aspect-square rounded-xl overflow-hidden relative shadow-sm border border-soft-200/50"
-                    style={{ backgroundColor: folder.hexColor || "#E5D3C8" }}
+                    style={{ backgroundColor: folder.hexColor || "#E4E4E7" }}
                   >
                     {!customCover &&
                     hasSubFolders &&
@@ -355,7 +355,7 @@ export function InspoFolderListView({
                           e.stopPropagation();
                           setDeleteFolderId(folder.id);
                         }}
-                        className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-red-600 rounded-lg shadow-sm"
+                        className="p-1.5 bg-white/80 backdrop-blur-sm text-slate-700 hover:text-zinc-900 rounded-lg shadow-sm"
                         title="Delete folder"
                       >
                         <Trash2 size={13} />
