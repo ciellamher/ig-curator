@@ -8,6 +8,7 @@ import { isValidScheduleValue, type Schedule } from "@/lib/planner/dates"
 import { AUTO_STATUSES, categoryForFeedSlot, defaultFeedTitle, statusForFeedSlot } from "@/lib/planner/feed"
 import { SAMPLE_ORDERS, SAMPLE_QUICK_LINKS, sampleContent } from "@/lib/planner/sample"
 import { withScheduleRules } from "@/lib/planner/rules"
+import { SHEIN_ENABLED } from "@/lib/features"
 import type { ContentDTO, ContentPatch, FeedBox, FeedSlotSync, FeedSyncRequest, Location } from "@/lib/planner/types"
 
 const MAX_SYNC_SLOTS = 10000
@@ -242,14 +243,15 @@ export async function loadSampleData(): Promise<Result<{ created: number }>> {
     await prisma.$transaction(async (tx) => {
       const daysAgo = (n: number | undefined) => (n === undefined ? null : new Date(Date.now() - n * 86_400_000))
       const orderIds = new Map<string, string>()
-      for (const o of SAMPLE_ORDERS) {
+      for (const o of SHEIN_ENABLED ? SAMPLE_ORDERS : []) {
         const order = await tx.clothingOrder.create({
           data: { userId, name: o.name, orderedAt: daysAgo(o.orderedDaysAgo), deliveredAt: daysAgo(o.deliveredDaysAgo) },
         })
         orderIds.set(o.key, order.id)
       }
       const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null } }
-      for (const { key, parentKey, orderKey, orderedDaysAgo, deliveredDaysAgo, ...patch } of samples) {
+      for (const { key, parentKey, orderKey, orderedDaysAgo, deliveredDaysAgo, ...sample } of samples) {
+        const patch = SHEIN_ENABLED ? sample : { ...sample, clothingStatus: null }
         const data = patchToData(withScheduleRules(blank, patch)) as Prisma.ContentUncheckedCreateInput
         const row = await tx.content.create({
           data: {

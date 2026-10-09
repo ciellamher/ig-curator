@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { allowedUsers } from "@/lib/features";
 import bcrypt from "bcryptjs";
 import { Client } from "@notionhq/client";
 
@@ -9,6 +10,9 @@ const notion = new Client({
 });
 
 export async function POST(req: Request) {
+  if (allowedUsers()) {
+    return NextResponse.json({ message: "Sign-ups are closed on this site" }, { status: 403 });
+  }
   try {
     const { username, password } = await req.json();
 

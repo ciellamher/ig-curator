@@ -1,5 +1,6 @@
 "use client"
 
+import { SHEIN_ENABLED } from "@/lib/features"
 import { Dropdown } from "@/components/ui/Dropdown"
 import { useEffect, useRef } from "react"
 import { CalendarClock, Check, CheckCheck, MapPin, Plus, Trash2, X } from "lucide-react"
@@ -149,9 +150,11 @@ export function ItemDrawer({
                 </Row>
               </div>
             ))}
-            <Row label="Clothing">
-              <ClothingSelect value={item.clothingStatus} onChange={(clothingStatus) => update(item.id, { clothingStatus })} />
-            </Row>
+            {SHEIN_ENABLED && (
+              <Row label="Clothing">
+                <ClothingSelect value={item.clothingStatus} onChange={(clothingStatus) => update(item.id, { clothingStatus })} />
+              </Row>
+            )}
             <Row label="Pinterest">
               <div className="flex items-center gap-1">
                 <CommitInput label="Pinterest URL" type="url" value={item.pinterestUrl ?? ""} placeholder="https://pinterest.com/…" onCommit={(v) => update(item.id, { pinterestUrl: v || null })} className="flex-1 text-sm text-zinc-700" />
@@ -199,7 +202,7 @@ export function ItemDrawer({
             </Row>
           </div>
 
-          {item.clothingStatus && (
+          {SHEIN_ENABLED && item.clothingStatus && (
             <div className="rounded-xl bg-soft-50 border border-soft-200 p-3 flex flex-col gap-1 text-sm">
               <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400 mb-1">SHEIN timeline</div>
               {order && <div className="flex justify-between gap-2"><span className="text-zinc-500">Order</span><span className="font-medium">{order.name}</span></div>}

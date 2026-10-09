@@ -5,6 +5,7 @@ import EmailProvider from "next-auth/providers/email"
 import InstagramProvider from "next-auth/providers/instagram"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
+import { allowedUsers } from "./features"
 
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET || "fallback_secret_ig_curator_12345",
@@ -67,6 +68,12 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   callbacks: {
+    signIn: async ({ user }) => {
+      const allowed = allowedUsers()
+      if (!allowed) return true
+      const name = String(user?.email ?? user?.name ?? "").toLowerCase()
+      return allowed.includes(name)
+    },
     session: async ({ session, token }) => {
       if (session?.user && token.sub) {
         // @ts-ignore

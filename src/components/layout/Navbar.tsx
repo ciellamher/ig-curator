@@ -4,6 +4,7 @@ import { signOut, useSession } from "next-auth/react"
 import { LogOut } from "lucide-react"
 import Link from "next/link"
 import { AppLogo } from "@/components/ui/AppLogo"
+import { PRIVATE_SITE } from "@/lib/features"
 
 export function Navbar() {
   const { data: session } = useSession()
@@ -42,9 +43,11 @@ export function Navbar() {
           <Link href="/login" className="text-sm font-medium text-zinc-700 px-3 sm:px-4 py-2 rounded-full hover:bg-zinc-100 transition-colors">
             Log in
           </Link>
-          <Link href="/register" className="text-sm font-medium bg-zinc-950 text-white px-4 sm:px-5 py-2 rounded-full hover:bg-black transition-colors shadow-sm">
-            Sign up
-          </Link>
+          {!PRIVATE_SITE && (
+            <Link href="/register" className="text-sm font-medium bg-zinc-950 text-white px-4 sm:px-5 py-2 rounded-full hover:bg-black transition-colors shadow-sm">
+              Sign up
+            </Link>
+          )}
         </div>
       )}
     </nav>

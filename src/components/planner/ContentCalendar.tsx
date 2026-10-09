@@ -1,5 +1,6 @@
 "use client"
 
+import { SHEIN_ENABLED } from "@/lib/features"
 import { Dropdown } from "@/components/ui/Dropdown"
 import { useMemo, useState } from "react"
 import { Check, ChevronLeft, ChevronRight, Plus } from "lucide-react"
@@ -67,7 +68,7 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
 
   const eventsOn = (day: string): CalEvent[] => {
     const out: CalEvent[] = visible.filter((i) => scheduleCovers(i[field], day)).map((item) => ({ key: `${item.id}-${field}`, item, kind: "date" }))
-    if (field === "shoot") {
+    if (field === "shoot" && SHEIN_ENABLED) {
       // App addition: SHEIN order/return deadlines alongside shoots.
       for (const order of planner.orders) {
         const batches = orderBatches(order, items)

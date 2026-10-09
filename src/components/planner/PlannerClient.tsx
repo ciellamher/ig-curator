@@ -1,5 +1,6 @@
 "use client"
 
+import { SHEIN_ENABLED } from "@/lib/features"
 import { useEffect, useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -167,7 +168,7 @@ export function PlannerClient() {
         </div>
       )}
 
-      {planner.alerts.length > 0 && (
+      {SHEIN_ENABLED && planner.alerts.length > 0 && (
         <a
           href="#outfits"
           className={`flex items-center gap-2 rounded-xl px-4 py-2.5 border text-sm ${
@@ -203,7 +204,9 @@ export function PlannerClient() {
           <ContentCalendar planner={planner} query={query} onOpen={open} />
           <AvailablePosts planner={planner} query={query} onOpen={open} />
           <ContentTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focus={focus} onFocusItem={focusItem} />
-          <OutfitsTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focusId={focus?.id ?? null} onFocusItem={focusItem} />
+          {SHEIN_ENABLED && (
+            <OutfitsTable planner={planner} query={query} onOpen={open} onDeleteMany={deleteMany} focusId={focus?.id ?? null} onFocusItem={focusItem} />
+          )}
           <QuickLinks planner={planner} onDelete={deleteLink} />
         </>
       )}

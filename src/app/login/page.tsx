@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppLogo } from "@/components/ui/AppLogo";
+import { PRIVATE_SITE } from "@/lib/features";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,12 +82,14 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {!PRIVATE_SITE && (
         <div className="mt-8 text-center text-sm text-foreground/60">
           Don't have an account?{" "}
           <Link href="/register" className="text-foreground font-semibold hover:underline">
             Sign up
           </Link>
         </div>
+        )}
       </div>
     </div>
   );

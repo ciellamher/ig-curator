@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppLogo } from "@/components/ui/AppLogo";
+import { PRIVATE_SITE } from "@/lib/features";
 import { signIn } from "next-auth/react";
 
 export default function RegisterPage() {
@@ -64,6 +65,16 @@ export default function RegisterPage() {
     }
   };
 
+  if (PRIVATE_SITE) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-16 text-center gap-3">
+        <AppLogo size={48} className="rounded-2xl" />
+        <h1 className="text-xl font-semibold text-zinc-950">Sign-ups are closed</h1>
+        <p className="text-sm text-zinc-500">This is a private workspace.</p>
+        <Link href="/login" className="mt-2 px-5 h-10 inline-flex items-center rounded-full bg-zinc-950 text-white text-sm font-semibold">Log in</Link>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:py-16">
       <div className="w-full max-w-sm bg-white/80 backdrop-blur-xl rounded-3xl shadow-float border border-white p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
