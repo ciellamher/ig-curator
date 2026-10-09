@@ -134,6 +134,28 @@ export function InspoFolderView({
       i.contentType === "Post",
   );
 
+  // Photos keep their own shape (masonry). They're dealt across the columns in turn, so the order still reads
+  // along the rows (newest first) rather than down each column.
+  const masonryRef = useRef<HTMLDivElement>(null);
+  const [masonryCols, setMasonryCols] = useState(3);
+  useEffect(() => {
+    const el = masonryRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.getBoundingClientRect().width;
+      setMasonryCols(w >= 896 ? 6 : w >= 576 ? 5 : 3);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [postItems.length > 0]);
+  const masonryColumns = useMemo(() => {
+    const cols: SlotItem[][] = Array.from({ length: masonryCols }, () => []);
+    postItems.forEach((item, i) => cols[i % masonryCols].push(item));
+    return cols;
+  }, [postItems, masonryCols]);
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -487,12 +509,14 @@ export function InspoFolderView({
           <p className="text-xs">Use “Add photos” above, or drag photos here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-1 px-1 pb-6 bg-white mt-1">
-          {postItems.map((item) => (
+        <div ref={masonryRef} className="flex items-start gap-1 px-1 pb-6 bg-white mt-1">
+          {masonryColumns.map((column, c) => (
+          <div key={c} className="flex-1 min-w-0 flex flex-col gap-1">
+          {column.map((item) => (
             <div
               key={item.id}
               data-slot-id={item.id}
-              className={`relative aspect-[4/5] cursor-pointer group bg-zinc-100 overflow-hidden rounded-md transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
+              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-md transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {
                   setSelectedItems(prev => {
@@ -525,7 +549,7 @@ export function InspoFolderView({
                 item.urls[item.currentUrlIndex || 0]?.startsWith("data:video") || item.urls[item.currentUrlIndex || 0]?.includes("-video-") ? (
                   <LocalMediaVideo
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                    className="block w-full h-auto group-hover:scale-[1.03] transition-transform duration-300"
                     muted
                     loop
                     autoPlay
@@ -534,7 +558,7 @@ export function InspoFolderView({
                 ) : (
                   <LocalMediaImage
                     src={item.urls[item.currentUrlIndex || 0]}
-                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
+                    className="block w-full h-auto group-hover:scale-[1.03] transition-transform duration-300"
                   />
                 )
               ) : (
@@ -600,6 +624,8 @@ export function InspoFolderView({
                 </button>
               </div>
             </div>
+          ))}
+          </div>
           ))}
         </div>
       )}
