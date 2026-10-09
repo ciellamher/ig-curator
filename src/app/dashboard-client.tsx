@@ -40,9 +40,6 @@ import { setItem, getItem, removeItem } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
-import { deleteCloudMedia } from "@/app/actions/media";
-import { useCloudMedia } from "@/hooks/useCloudMedia";
-import { isCloudMediaUrl } from "@/lib/media/compress";
 import {
   PLANNER_DELETED_EVENT,
   PLANNER_REFRESH_EVENT,
@@ -435,10 +432,7 @@ export function DashboardClient() {
     return () => window.removeEventListener("ig-curator:profile-saved", onSaved);
   }, [userId]);
 
-  // ---- Photos: upload to cloud storage, and clean up ones no longer used ----
-  const cloudMedia = useCloudMedia(items, setItems, userId, isLoaded);
-  const referencedCloudRef = useRef<Set<string> | null>(null);
-  const pendingMediaDeletes = useRef<Set<string>>(new Set());
+
 
 
   // Removed cloud sync effect
@@ -480,24 +474,7 @@ export function DashboardClient() {
 
   const activeSlot = items.find((item) => item.id === activeSlotId) || null;
 
-  // A cloud photo is deleted once neither the feed nor the undo history uses it any more.
-  useEffect(() => {
-    if (!isLoaded || !userId) return;
-    const referenced = new Set<string>();
-    for (const state of [items, ...history]) for (const i of state) for (const u of i.urls ?? []) if (isCloudMediaUrl(u)) referenced.add(u);
-    const prev = referencedCloudRef.current;
-    referencedCloudRef.current = referenced;
-    if (!prev) return;
-    for (const u of prev) if (!referenced.has(u)) pendingMediaDeletes.current.add(u);
-    for (const u of referenced) pendingMediaDeletes.current.delete(u);
-    if (!pendingMediaDeletes.current.size) return;
-    const timeoutId = setTimeout(async () => {
-      const urls = [...pendingMediaDeletes.current];
-      const res = await deleteCloudMedia(urls);
-      if (res.success) urls.forEach((u) => pendingMediaDeletes.current.delete(u));
-    }, 10_000);
-    return () => clearTimeout(timeoutId);
-  }, [items, history, isLoaded, userId]);
+
 
   const lastSavedItemsRef = useRef<SlotItem[]>(items);
 
@@ -857,11 +834,7 @@ export function DashboardClient() {
               <button
                 onClick={status === "authenticated" ? handleManualSync : undefined}
                 disabled={syncStatus === "Saving..."}
-                title={
-                  cloudMedia.enabled === false
-                    ? "Your feed is backed up, but photos stay in this browser until cloud photo storage (Vercel Blob) is connected"
-                    : "Back up now"
-                }
+                title="Photos are saved in this browser. Your feed layout is also backed up to your account."
                 className={`shrink-0 text-xs sm:text-sm font-medium h-9 px-3 sm:px-4 rounded-full border transition-all flex items-center gap-2 ${
                   syncStatus === "Saving..."
                     ? "bg-zinc-50 text-zinc-900 border-zinc-200 cursor-default"
@@ -884,13 +857,9 @@ export function DashboardClient() {
                     ? "Syncing..."
                     : syncStatus === "Error" || cloudState === "error"
                       ? "Backup failed — retry"
-                      : cloudMedia.enabled && cloudMedia.pending > 0
-                        ? `Uploading ${cloudMedia.pending} photo${cloudMedia.pending === 1 ? "" : "s"}…`
-                        : cloudState === "saving"
-                          ? "Backing up…"
-                          : cloudMedia.enabled === false
-                            ? "Photos on this device"
-                            : "Backed up"}
+                      : cloudState === "saving"
+                        ? "Backing up…"
+                        : "Saved"}
                 </span>
               </button>
 

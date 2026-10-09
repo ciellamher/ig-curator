@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
@@ -16,7 +16,18 @@ import { ItemDrawer } from "./ItemDrawer"
 
 export function PlannerClient() {
   const { status } = useSession()
-  const planner = usePlanner(status === "authenticated")
+  const allPlanner = usePlanner(status === "authenticated")
+  const [showPosted, setShowPosted] = useState(false)
+  // Posted content stays in the feed but drops out of the planner (unless "Show posted" is on).
+  const postedCount = allPlanner.items.filter((i) => i.status === "Posted").length
+  const planner = useMemo(() => {
+    if (showPosted) return allPlanner
+    return {
+      ...allPlanner,
+      items: allPlanner.items.filter((i) => i.status !== "Posted"),
+      alerts: allPlanner.alerts.filter((a) => a.item?.status !== "Posted"),
+    }
+  }, [allPlanner, showPosted])
   const [openId, setOpenId] = useState<string | null>(null)
   const [query, setQuery] = useState("")
   const { confirm, modalProps } = useConfirmModal()
@@ -76,9 +87,23 @@ export function PlannerClient() {
       <header className="flex flex-col md:flex-row md:items-center gap-3">
         <div className="mr-auto">
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-950">Content Planner</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">New posts in your feed show up here automatically.</p>
+          <p className="text-sm text-zinc-500 mt-0.5">New posts in your feed show up here automatically. Posted content is hidden here but stays in your feed.</p>
         </div>
         <div className="flex items-center gap-2">
+          {postedCount > 0 && (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={showPosted}
+              onClick={() => setShowPosted((v) => !v)}
+              className="shrink-0 inline-flex items-center gap-2 h-10 px-3 rounded-full border border-zinc-200 bg-white text-xs font-medium text-zinc-700 hover:border-zinc-400 cursor-pointer"
+            >
+              <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${showPosted ? "bg-zinc-950" : "bg-zinc-300"}`}>
+                <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${showPosted ? "translate-x-3.5" : "translate-x-0.5"}`} />
+              </span>
+              <span className="whitespace-nowrap">Show posted ({postedCount})</span>
+            </button>
+          )}
           <div className="flex-1 md:w-64 flex items-center gap-2 h-10 bg-white border border-soft-200 rounded-full px-3 focus-within:border-zinc-900">
             <Search size={15} className="text-zinc-400 shrink-0" />
             <input

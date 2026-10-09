@@ -58,7 +58,7 @@ npx prisma db push
 
 No local Postgres? `npx prisma dev` starts a temporary one; point both variables at the URL it prints.
 
-**Cloud backup** — the feed (boxes, folders, profile) is saved to the database a few seconds after each change, so it appears on every device. Photos upload to Vercel Blob in the background, resized to 1440px (Instagram's maximum) to save space; videos upload as-is. To turn photo upload on, create a Blob store in Vercel (Storage → Create → Blob) and connect it to the project — that adds `BLOB_READ_WRITE_TOKEN`. Until then, photos stay in the browser they were added from.
+**Storage** — photos and videos are stored in your browser (IndexedDB) on the device you added them from: free, limited only by disk space, but cleared if you clear the site's data. The feed layout (boxes, folders, captions, profile) is also backed up to your account, so it appears on other devices (photos show there as placeholders).
 
 **Sample data** — on an empty planner, click **Load sample data** for fictional records (titles end in "(sample)").
 
