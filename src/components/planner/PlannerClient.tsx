@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
+import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, PLANNER_FACEBOOK_EVENT, type FacebookPage, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -58,7 +58,7 @@ export function PlannerClient() {
     const onSelect = (e: Event) => {
       // Found even when Posted (hidden from the lists), so its page always opens
       const slotId = (e as CustomEvent<string>).detail
-      const item = allPlanner.items.find((i) => i.slotId === slotId || Object.values(i.extraSlots ?? {}).includes(slotId))
+      const item = allPlanner.items.find((i) => i.slotId === slotId || i.id === slotId || Object.values(i.extraSlots ?? {}).includes(slotId))
       if (!item) return
       // The feed echoing a page opened here (e.g. from the calendar): stay where you are
       if (openIdRef.current === item.id) return
@@ -75,6 +75,13 @@ export function PlannerClient() {
     const ids = allPlanner.items.flatMap((i) => [i.slotId, ...Object.values(i.extraSlots ?? {})]).filter((s): s is string => !!s)
     ;(window as Window & { __plannerSlots?: string[] }).__plannerSlots = ids // for a feed that mounts later
     window.dispatchEvent(new CustomEvent(PLANNER_SLOTS_EVENT, { detail: ids }))
+    // Facebook pages for the phone's Facebook tab (newest post date first, unscheduled last)
+    const facebook: FacebookPage[] = allPlanner.items
+      .filter((i) => i.categories.includes("Facebook"))
+      .map((i) => ({ id: i.id, title: i.title, status: i.status, post: i.post.start, urls: i.media.map((m) => m.url) }))
+      .sort((a, b) => (b.post ?? "").localeCompare(a.post ?? ""))
+    ;(window as Window & { __plannerFacebook?: FacebookPage[] }).__plannerFacebook = facebook
+    window.dispatchEvent(new CustomEvent(PLANNER_FACEBOOK_EVENT, { detail: facebook }))
   }, [allPlanner.items])
   const dangerCount = planner.alerts.filter((a) => a.alert.severity === "danger").length
 

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { SlotItem } from "@/types";
+import { PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import {
   ChevronLeft,
   Plus,
@@ -542,11 +543,15 @@ export function InspoFolderView({
               }}
               draggable
               onDragStart={(e) => {
+                const dragged = isSelectionMode && selectedItems.has(item.id) ? postItems.filter((p) => selectedItems.has(p.id)) : [item];
                 if (isSelectionMode && selectedItems.has(item.id)) {
                   e.dataTransfer.setData("application/folder-ids", JSON.stringify(Array.from(selectedItems)));
                 } else {
                   e.dataTransfer.setData("application/folder-id", item.id);
                 }
+                // The photos themselves, so they can be dropped onto the phone (posts, reels, story folders)
+                e.dataTransfer.setData(PHOTO_DRAG_TYPE, JSON.stringify(dragged.flatMap((d) => d.urls ?? [])));
+                e.dataTransfer.effectAllowed = "copyMove";
               }}
             >
               {isSelectionMode && (

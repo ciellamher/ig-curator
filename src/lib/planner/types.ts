@@ -148,6 +148,10 @@ export type FeedAttach = {
 export const FEED_REMOVE_PHOTOS_EVENT = "feed:remove-photos"
 export type FeedRemovePhotos = { folderId: string; urls: string[] }
 
+/** Fired by the planner with the pages that have the Facebook category, for the phone's Facebook tab. */
+export const PLANNER_FACEBOOK_EVENT = "planner:facebook"
+export type FacebookPage = { id: string; title: string; status: string; post: string | null; urls: string[] }
+
 /** Fired by the planner with every feed box that belongs to a page (those are edited in their page). */
 export const PLANNER_SLOTS_EVENT = "planner:slots"
 

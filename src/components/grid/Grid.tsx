@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { dropModeAt, droppedPhotos, isPhotoDrag, type PhotoDropMode } from "@/lib/photoDrag"
 import {
   DndContext,
   closestCenter,
@@ -31,9 +32,36 @@ interface GridProps {
   isSearchActive?: boolean;
   searchResults?: string[];
   focusedMatchId?: string | null;
+  /** Inspo photos dropped on a box (into it) or beside it (new boxes there); targetId null = the end */
+  onDropPhotos?: (targetId: string | null, mode: PhotoDropMode, urls: string[]) => void;
 }
 
-export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId }: GridProps) {
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId, onDropPhotos }: GridProps) {
+  const [dropAt, setDropAt] = useState<{ id: string; mode: PhotoDropMode } | null>(null)
+  const dropProps = (id: string) =>
+    onDropPhotos
+      ? {
+          onDragOver: (e: React.DragEvent<HTMLDivElement>) => {
+            if (!isPhotoDrag(e)) return
+            e.preventDefault()
+            e.stopPropagation()
+            e.dataTransfer.dropEffect = "copy"
+            const mode = dropModeAt(e, e.currentTarget)
+            setDropAt((d) => (d?.id === id && d.mode === mode ? d : { id, mode }))
+          },
+          onDragLeave: (e: React.DragEvent<HTMLDivElement>) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropAt((d) => (d?.id === id ? null : d))
+          },
+          onDrop: (e: React.DragEvent<HTMLDivElement>) => {
+            if (!isPhotoDrag(e)) return
+            e.preventDefault()
+            e.stopPropagation()
+            const urls = droppedPhotos(e)
+            setDropAt(null)
+            if (urls.length) onDropPhotos(id, dropModeAt(e, e.currentTarget), urls)
+          },
+        }
+      : {}
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -59,7 +87,22 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
   }
 
   return (
-    <div className="w-full h-full pb-20">
+    <div
+      className="w-full h-full pb-20"
+      // Dropped below the boxes: new boxes at the end
+      onDragOver={(e) => {
+        if (!onDropPhotos || !isPhotoDrag(e)) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = "copy"
+      }}
+      onDrop={(e) => {
+        if (!onDropPhotos || !isPhotoDrag(e)) return
+        e.preventDefault()
+        setDropAt(null)
+        const urls = droppedPhotos(e)
+        if (urls.length) onDropPhotos(null, "after", urls)
+      }}
+    >
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -68,6 +111,7 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
         <div className="grid grid-cols-3 gap-[1px] bg-white">
           <SortableContext items={items} strategy={rectSortingStrategy}>
             {items.map((item) => (
+              <div key={item.id} className="relative" {...dropProps(item.id)}>
               <GridItem 
                 key={item.id} 
                 item={item} 
@@ -81,6 +125,16 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
                 onDoubleClick={() => onDoubleClickItem?.(item.id)}
                 onDelete={onDeleteItem ? () => onDeleteItem(item.id) : undefined}
               />
+              {dropAt?.id === item.id && (
+                dropAt.mode === "into" ? (
+                  <div className="pointer-events-none absolute inset-0 z-30 ring-4 ring-inset ring-zinc-950 bg-white/25 flex items-center justify-center">
+                    <span className="rounded-full bg-zinc-950 text-white text-[10px] font-semibold px-2 py-0.5">Add photos</span>
+                  </div>
+                ) : (
+                  <div className={`pointer-events-none absolute inset-y-0 z-30 w-1 bg-zinc-950 rounded-full ${dropAt.mode === "before" ? "-left-0.5" : "-right-0.5"}`} />
+                )
+              )}
+              </div>
             ))}
           </SortableContext>
         </div>

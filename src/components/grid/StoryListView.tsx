@@ -3,6 +3,7 @@ import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage } from "./LocalMedia";
+import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
 
 interface StoryListViewProps {
   folders: SlotItem[];
@@ -11,9 +12,12 @@ interface StoryListViewProps {
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   onDeleteFolder?: (folderId: string) => void;
   onAddFolder?: () => void;
+  /** Inspo photos dropped on a folder become its stories */
+  onDropPhotos?: (folderId: string, urls: string[]) => void;
 }
 
-export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder }: StoryListViewProps) {
+export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder, onDropPhotos }: StoryListViewProps) {
+  const [dropFolder, setDropFolder] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const header = (
@@ -72,10 +76,26 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               key={folder.id}
               data-slot-id={folder.id}
               data-no-outline
+              onDragOver={(e) => {
+                if (!onDropPhotos || !isPhotoDrag(e)) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+                setDropFolder(folder.id);
+              }}
+              onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropFolder((f) => (f === folder.id ? null : f));
+              }}
+              onDrop={(e) => {
+                if (!onDropPhotos || !isPhotoDrag(e)) return;
+                e.preventDefault();
+                setDropFolder(null);
+                const urls = droppedPhotos(e);
+                if (urls.length) onDropPhotos(folder.id, urls);
+              }}
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"
             >
-              <div className="w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm">
+              <div className={`w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm ${dropFolder === folder.id ? "ring-4 ring-zinc-950" : ""}`}>
                 {previewImages.length > 0 ? (
                   <>
                     <div className="flex-1 h-full overflow-hidden">

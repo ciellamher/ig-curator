@@ -5,6 +5,7 @@ import { GridItem } from "./GridItem";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { StoryPreviewModal } from "./StoryPreviewModal";
+import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
 
 interface StoryFolderViewProps {
   folder: SlotItem;
@@ -14,9 +15,12 @@ interface StoryFolderViewProps {
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
   activeSlotId: string | null;
   setActiveSlotId: (id: string | null) => void;
+  /** Inspo photos dropped in the folder become stories */
+  onDropPhotos?: (folderId: string, urls: string[]) => void;
 }
 
-export function StoryFolderView({ folder, stories, onBack, updateItems, updateItem, activeSlotId, setActiveSlotId }: StoryFolderViewProps) {
+export function StoryFolderView({ folder, stories, onBack, updateItems, updateItem, activeSlotId, setActiveSlotId, onDropPhotos }: StoryFolderViewProps) {
+  const [dropping, setDropping] = useState(false);
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   // A tap opens the story's editor (to add its photo); dragging starts only after moving a few pixels
@@ -68,7 +72,25 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-y-auto pb-20 p-0.5">
+      <div
+        className={`flex-1 overflow-y-auto pb-20 p-0.5 ${dropping ? "ring-4 ring-inset ring-zinc-950" : ""}`}
+        onDragOver={(e) => {
+          if (!onDropPhotos || !isPhotoDrag(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          setDropping(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
+        }}
+        onDrop={(e) => {
+          if (!onDropPhotos || !isPhotoDrag(e)) return;
+          e.preventDefault();
+          setDropping(false);
+          const urls = droppedPhotos(e);
+          if (urls.length) onDropPhotos(folder.id, urls);
+        }}
+      >
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-3 gap-[1px] bg-white">
             <SortableContext items={stories} strategy={rectSortingStrategy}>

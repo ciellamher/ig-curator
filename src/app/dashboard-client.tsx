@@ -7,6 +7,8 @@ import { Grid } from "@/components/grid/Grid";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { SlotItem } from "@/types";
 import { removeRepeatedPhotos } from "@/lib/feedRepair";
+import { type PhotoDropMode } from "@/lib/photoDrag";
+import { FacebookFeedView } from "@/components/grid/FacebookFeedView";
 import { getLiveGrid } from "@/app/actions/instagram";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { ProfileHeader } from "@/components/grid/ProfileHeader";
@@ -40,6 +42,7 @@ import {
   PlusCircle,
   Check,
   Archive,
+  Newspaper,
 } from "lucide-react";
 import { setItem, getItem, removeItem, saveFeedBackup, deleteMediaBlob } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -54,6 +57,8 @@ import {
   PLANNER_OPEN_EVENT,
   PAGE_EDITOR_EVENT,
   PLANNER_SLOTS_EVENT,
+  PLANNER_FACEBOOK_EVENT,
+  type FacebookPage,
   FEED_REMOVE_PHOTOS_EVENT,
   type FeedRemovePhotos,
   type PageEditorHost,
@@ -157,6 +162,15 @@ export function DashboardClient() {
   const [pageEditor, setPageEditor] = useState<PageEditorHost>(null);
   // Boxes that belong to a planner page: they're edited in the page, never in the floating panel
   const [pageSlotIds, setPageSlotIds] = useState<Set<string>>(new Set());
+  // Pages with the Facebook category, for the Facebook tab
+  const [facebookPages, setFacebookPages] = useState<FacebookPage[]>([]);
+  useEffect(() => {
+    const initial = (window as Window & { __plannerFacebook?: FacebookPage[] }).__plannerFacebook;
+    if (initial) setFacebookPages(initial);
+    const onPages = (e: Event) => setFacebookPages((e as CustomEvent<FacebookPage[]>).detail);
+    window.addEventListener(PLANNER_FACEBOOK_EVENT, onPages);
+    return () => window.removeEventListener(PLANNER_FACEBOOK_EVENT, onPages);
+  }, []);
   useEffect(() => {
     const initial = (window as Window & { __plannerSlots?: string[] }).__plannerSlots;
     if (initial) setPageSlotIds(new Set(initial));
@@ -178,7 +192,7 @@ export function DashboardClient() {
     return () => window.removeEventListener(PAGE_EDITOR_EVENT, onHost);
   }, []);
   const [gridFilter, setGridFilter] = useState<
-    "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
+    "All" | "Reel" | "Story" | "Facebook" | "Placeholders" | "Inspo"
   >("All");
   const deviceView = "phone" as const;
   const { confirm, modalProps } = useConfirmModal();
@@ -1049,6 +1063,52 @@ export function DashboardClient() {
     }
   };
 
+  // ---- Inspo photos dropped onto the phone ----
+  const photoBox = (url: string, contentType: "Post" | "Reel"): SlotItem => ({
+    id: `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    type: url.includes("-video-") ? "video" : "image",
+    urls: [url],
+    currentUrlIndex: 0,
+    hexColor: "#E4E4E7",
+    text: "",
+    contentType,
+  });
+  /** Onto a post or reel: added to its photos. Beside one: a new post (or reel) per photo, right there. */
+  const dropPhotosOnGrid = (targetId: string | null, mode: PhotoDropMode, urls: string[]) => {
+    const kind = gridFilter === "Reel" ? "Reel" : "Post";
+    updateItems((curr) => {
+      if (targetId && mode === "into") {
+        return curr.map((i) => {
+          if (i.id !== targetId) return i;
+          const have = i.urls ?? [];
+          const fresh = urls.filter((u) => !have.includes(u));
+          return fresh.length ? { ...i, type: "image", urls: [...have, ...fresh], currentUrlIndex: have.length } : i;
+        });
+      }
+      const boxes = urls.map((u) => photoBox(u, kind));
+      const at = targetId ? curr.findIndex((i) => i.id === targetId) : -1;
+      if (at === -1) return [...curr, ...boxes];
+      const index = mode === "before" ? at : at + 1;
+      return [...curr.slice(0, index), ...boxes, ...curr.slice(index)];
+    });
+  };
+  /** Into a story folder: each photo becomes a story at the end. */
+  const dropPhotosInFolder = (folderId: string, urls: string[]) => {
+    updateItems((curr) => [
+      ...curr,
+      ...urls.map((u, n) => ({
+        id: `story-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+        type: (u.includes("-video-") ? "video" : "image") as SlotItem["type"],
+        urls: [u],
+        currentUrlIndex: 0,
+        hexColor: "#E4E4E7",
+        text: "",
+        contentType: "Story" as const,
+        folderId,
+      })),
+    ]);
+  };
+
   const handleCopyInspoToGrid = (
     inspoItem: SlotItem,
     targetType: "Post" | "Story",
@@ -1235,6 +1295,7 @@ export function DashboardClient() {
                           ["All", "Posts", Grid3X3],
                           ["Reel", "Reels", Clapperboard],
                           ["Story", "Stories", Circle],
+                          ["Facebook", "Facebook", Newspaper],
                         ] as const
                       ).map(([value, label, Icon]) => {
                         const isActive = gridFilter === value;
@@ -1271,6 +1332,11 @@ export function DashboardClient() {
                           photos.
                         </p>
                       </div>
+                    ) : gridFilter === "Facebook" ? (
+                      <FacebookFeedView
+                        pages={facebookPages}
+                        onOpen={(id) => window.dispatchEvent(new CustomEvent(FEED_SELECT_EVENT, { detail: id }))}
+                      />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId && items.find((i) => i.id === activeStoryFolderId) ? (
                         <StoryFolderView
@@ -1281,6 +1347,7 @@ export function DashboardClient() {
                             (i) => i.folderId === activeStoryFolderId,
                           )}
                           onBack={() => setActiveStoryFolderId(null)}
+                          onDropPhotos={dropPhotosInFolder}
                           updateItems={updateItems}
                           updateItem={updateItem}
                           activeSlotId={activeSlotId}
@@ -1293,6 +1360,7 @@ export function DashboardClient() {
                           )}
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
+                          onDropPhotos={dropPhotosInFolder}
                           onAddFolder={() => {
                             const folder: SlotItem = {
                               id: `folder-${Math.floor(Math.random() * 1000000000)}`,
@@ -1352,6 +1420,7 @@ export function DashboardClient() {
                         isSearchActive={searchQuery.trim() !== ""}
                         searchResults={searchMatches}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
+                        onDropPhotos={dropPhotosOnGrid}
                         onDeleteItem={async (id) => {
                           const ok = await confirm({
                             title: "Delete Post",
