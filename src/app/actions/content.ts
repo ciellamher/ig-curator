@@ -35,12 +35,49 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
     location: (c.location as Location | null) ?? null,
     body: c.body,
     slotId: c.slotId,
-    contentType: (c.contentType?.startsWith('{"primary"') ? JSON.parse(c.contentType).primary : c.contentType),
-    extraSlots: c.contentType?.startsWith('{"primary"') ? JSON.parse(c.contentType).extra : null,
+    ...feedPlacement(c),
     media: [...c.media].sort((a, b) => a.position - b.position).map((m) => ({ id: m.id, url: m.url, position: m.position })),
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
   }
+}
+
+const FEED_TYPES = ["Post", "Reel", "StoryFolder"]
+
+/** For a while extra feed boxes were stored as JSON inside contentType ({"primary":…,"extra":…}); read both forms. */
+function feedPlacement(c: Pick<Content, "contentType" | "extraSlots">): { contentType: string | null; extraSlots: Record<string, string> | null } {
+  if (c.contentType?.startsWith('{"primary"')) {
+    try {
+      const legacy = JSON.parse(c.contentType)
+      return { contentType: legacy.primary ?? null, extraSlots: cleanExtraSlots(legacy.extra) }
+    } catch {
+      return { contentType: null, extraSlots: null }
+    }
+  }
+  return { contentType: c.contentType, extraSlots: cleanExtraSlots(c.extraSlots) }
+}
+
+function cleanExtraSlots(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  const out: Record<string, string> = {}
+  for (const [type, slotId] of Object.entries(value)) {
+    if (FEED_TYPES.includes(type) && typeof slotId === "string" && /^slot-[\w-]{3,100}$/.test(slotId)) out[type] = slotId
+  }
+  return Object.keys(out).length ? out : null
+}
+
+/** Every extra feed box the user's pages have: box id → page. */
+async function extraSlotOwners(userId: string): Promise<Map<string, { id: string; type: string; extraSlots: Record<string, string> }>> {
+  const rows = await prisma.content.findMany({
+    where: { userId, OR: [{ extraSlots: { not: Prisma.DbNull } }, { contentType: { startsWith: '{"primary"' } }] },
+    select: { id: true, contentType: true, extraSlots: true },
+  })
+  const owners = new Map<string, { id: string; type: string; extraSlots: Record<string, string> }>()
+  for (const r of rows) {
+    const extra = feedPlacement(r).extraSlots ?? {}
+    for (const [type, slotId] of Object.entries(extra)) owners.set(slotId, { id: r.id, type, extraSlots: extra })
+  }
+  return owners
 }
 
 // ---- Validation ----
@@ -143,15 +180,8 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
   if ("body" in patch) data.body = String(patch.body ?? "").slice(0, 50_000)
   if ("slotId" in patch) data.slotId = patch.slotId
   
-  if ("contentType" in patch || "extraSlots" in patch) {
-    const ct = "contentType" in patch ? patch.contentType : undefined
-    const es = "extraSlots" in patch ? patch.extraSlots : undefined
-    if (es && Object.keys(es).length > 0) {
-      data.contentType = JSON.stringify({ primary: ct !== undefined ? ct : undefined, extra: es })
-    } else if (ct !== undefined) {
-      data.contentType = ct
-    }
-  }
+  if ("contentType" in patch) data.contentType = patch.contentType && FEED_TYPES.includes(patch.contentType) ? patch.contentType : null
+  if ("extraSlots" in patch) data.extraSlots = cleanExtraSlots(patch.extraSlots) ?? Prisma.DbNull
 
   return data
 }
@@ -162,6 +192,11 @@ export async function listContent(): Promise<Result<ContentDTO[]>> {
   return run(async () => {
     const userId = await requireUserId()
     const rows = await prisma.content.findMany({ where: { userId }, include: { media: true }, orderBy: { createdAt: "desc" } })
+    // Move extra feed boxes kept in the old JSON form into their own column
+    for (const r of rows.filter((r) => r.contentType?.startsWith('{"primary"'))) {
+      const { contentType, extraSlots } = feedPlacement(r)
+      await prisma.content.update({ where: { id: r.id }, data: { contentType, extraSlots: extraSlots ?? Prisma.DbNull } })
+    }
     return rows.map(toDTO)
   })
 }
@@ -194,6 +229,7 @@ export async function updateContent(id: string, patch: ContentPatch): Promise<Re
     const current = {
       status: existing.status,
       categories: existing.categories,
+      edited: existing.edited,
       post: { start: existing.postStart, end: existing.postEnd },
       edit: { start: existing.editStart, end: existing.editEnd },
     }
@@ -220,7 +256,7 @@ export async function deleteContents(ids: string[]): Promise<Result<{ deletedIds
     const userId = await requireUserId()
     scheduleCalendarSync(userId) // runs after this change is saved
     const wanted = Array.isArray(ids) ? ids.filter((i) => typeof i === "string").slice(0, 1000) : []
-    const records = await prisma.content.findMany({ where: { userId, id: { in: wanted } }, select: { id: true, slotId: true, contentType: true } })
+    const records = await prisma.content.findMany({ where: { userId, id: { in: wanted } }, select: { id: true, slotId: true, contentType: true, extraSlots: true } })
     if (records.length === 0) throw new Error("These items no longer exist")
 
     const feedFolderIds = records.filter((r) => r.slotId && FEED_FOLDER_TYPES.includes(r.contentType ?? "")).map((r) => r.id)
@@ -228,7 +264,8 @@ export async function deleteContents(ids: string[]): Promise<Result<{ deletedIds
       ? await prisma.content.findMany({ where: { userId, parentId: { in: feedFolderIds }, slotId: { not: null } }, select: { id: true, slotId: true } })
       : []
     const doomed = new Map([...records, ...feedChildren].map((d) => [d.id, d.slotId]))
-    const deletedSlotIds = [...doomed.values()].filter((s): s is string => !!s)
+    const extraSlotIds = records.flatMap((r) => Object.values(feedPlacement(r).extraSlots ?? {}))
+    const deletedSlotIds = [...[...doomed.values()].filter((s): s is string => !!s), ...extraSlotIds]
 
     await prisma.$transaction([
       prisma.content.deleteMany({ where: { userId, id: { in: [...doomed.keys()] } } }),
@@ -343,6 +380,24 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       deleted = res.count
     }
 
+    // A page's extra boxes (e.g. its story folder when it's also a post) belong to that page: they never make
+    // pages of their own, and deleting one in the feed only takes that placement off the page.
+    const extraOwners = await extraSlotOwners(userId)
+    const PLACEMENT_CATEGORY: Record<string, string> = { Post: "Post", Reel: "Reels", StoryFolder: "Story" }
+    for (const slotId of deletedSlotIds) {
+      const owner = extraOwners.get(slotId)
+      if (!owner) continue
+      const { [owner.type]: _gone, ...rest } = owner.extraSlots
+      const page = await prisma.content.findFirst({ where: { id: owner.id, userId }, select: { categories: true } })
+      if (page) {
+        await prisma.content.update({
+          where: { id: owner.id },
+          data: { extraSlots: Object.keys(rest).length ? rest : Prisma.DbNull, categories: page.categories.filter((c) => c !== PLACEMENT_CATEGORY[owner.type]) },
+        })
+      }
+      owner.extraSlots = rest
+    }
+
     await prisma.content.deleteMany({ where: { userId, contentType: { startsWith: "Inspo" } } })
 
     // Only Posts-tab boxes belong in the planner: drop rows for drafts/stories that are in the feed
@@ -356,7 +411,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
     )
     const clean: FeedSlotSync[] = slots.slice(0, MAX_SYNC_SLOTS).flatMap((s) => {
       const slotId = cleanText(s?.slotId, 120)
-      if (!slotId || tombstoned.has(slotId) || s.location === "inspo" || String(s.contentType ?? "").startsWith("Inspo")) return []
+      if (!slotId || tombstoned.has(slotId) || extraOwners.has(slotId) || s.location === "inspo" || String(s.contentType ?? "").startsWith("Inspo")) return []
       return [{
         slotId,
         contentType: cleanText(s.contentType, 20) ?? "Post",

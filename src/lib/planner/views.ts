@@ -77,7 +77,7 @@ export function toPostView(items: ContentDTO[], edited: EditedFilter = "any"): C
 
 /** Ready to Post: content waiting to be scheduled ("To Schedule"). Drag a card onto the calendar to schedule it. */
 export function isAvailablePost(item: ContentDTO): boolean {
-  return item.status === "To Schedule" && !isBatchTitle(item)
+  return (item.status === "To Schedule" || (item.status === "Ready to Post" && !item.post.start)) && !isBatchTitle(item)
 }
 
 export function availablePostsView(items: ContentDTO[]): ContentDTO[] {

@@ -146,6 +146,8 @@ model Content {
   // Link back to the feed slot that created this entry
   slotId      String?
   contentType String?
+  // More feed boxes for the same page when it's in several places, e.g. { "StoryFolder": "slot-…" }
+  extraSlots  Json?
   media       ContentMedia[]
 
   createdAt DateTime @default(now())
@@ -213,6 +215,7 @@ model GoogleCalendarLink {
   calendarId   String?
   lastSyncedAt DateTime?
   lastError    String?
+  syncToken    String? // to ask Google only for events changed since the last sync
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -224,6 +227,8 @@ model CalendarEvent {
   key           String // "<content or order id>:<shoot|edit|post|order|return>"
   googleEventId String
   hash          String // what was last sent, to skip unchanged events
+  start         String? // the time last sent (Asia/Manila "YYYY-MM-DDTHH:mm"), to notice events moved in Google
+  end           String?
 
   @@unique([userId, key])
 }

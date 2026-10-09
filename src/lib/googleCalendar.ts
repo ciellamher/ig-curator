@@ -3,10 +3,21 @@
 
 import { after } from "next/server"
 import crypto from "node:crypto"
-import type { Content, ClothingOrder } from "@prisma/client"
+import type { CalendarEvent, Content, ClothingOrder } from "@prisma/client"
 import { prisma } from "@/lib/prisma"
 import { SHEIN_ENABLED } from "@/lib/features"
-import { CALENDAR_TIMEZONE, desiredCalendarEvents, type CalendarEventBody } from "@/lib/planner/calendarEvents"
+import {
+  CALENDAR_TIMEZONE,
+  desiredCalendarEvents,
+  googleWindow,
+  scheduleFromGoogle,
+  sentWindow,
+  type CalendarEventBody,
+  type DesiredEvent,
+  type GoogleEventTime,
+} from "@/lib/planner/calendarEvents"
+import { isValidScheduleValue, type Schedule } from "@/lib/planner/dates"
+import { withScheduleRules } from "@/lib/planner/rules"
 import type { ContentDTO, OrderDTO } from "@/lib/planner/types"
 
 export const GOOGLE_SCOPE = "https://www.googleapis.com/auth/calendar.app.created"
@@ -109,7 +120,7 @@ function toItem(c: Content): ContentDTO {
     clothingStatus: c.clothingStatus, orderedAt: c.orderedAt?.toISOString() ?? null, deliveredAt: c.deliveredAt?.toISOString() ?? null,
     orderId: c.orderId, shoot: { start: c.shootStart, end: c.shootEnd }, edit: { start: c.editStart, end: c.editEnd },
     post: { start: c.postStart, end: c.postEnd }, pinterestUrl: null, location: null, body: "", slotId: c.slotId,
-    contentType: c.contentType, media: [], createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
+    contentType: c.contentType, extraSlots: null, media: [], createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
   }
 }
 function toOrder(o: ClothingOrder): OrderDTO {
@@ -121,30 +132,106 @@ function toOrder(o: ClothingOrder): OrderDTO {
 
 const hashOf = (b: CalendarEventBody) => crypto.createHash("sha1").update(JSON.stringify(b)).digest("hex")
 
+// ---- Google → planner ----
+
+type GoogleEvent = { id: string; status?: string; start?: GoogleEventTime; end?: GoogleEventTime }
+
+/** Events changed since the last sync (all of them the first time, or when Google says the token is too old). */
+async function changedEvents(token: string, cal: string, syncToken: string | null): Promise<{ events: GoogleEvent[]; nextSyncToken: string | null }> {
+  const events: GoogleEvent[] = []
+  let pageToken: string | undefined
+  for (;;) {
+    const q = new URLSearchParams({ timeZone: CALENDAR_TIMEZONE, maxResults: "250", showDeleted: "true" })
+    if (syncToken) q.set("syncToken", syncToken)
+    if (pageToken) q.set("pageToken", pageToken)
+    let page
+    try {
+      page = await google(token, "GET", `/calendars/${cal}/events?${q}`)
+    } catch (e) {
+      if ((e as { status?: number }).status === 410 && syncToken) return changedEvents(token, cal, null)
+      throw e
+    }
+    events.push(...((page.items ?? []) as GoogleEvent[]))
+    if (page.nextPageToken) pageToken = page.nextPageToken
+    else return { events, nextSyncToken: page.nextSyncToken ?? null }
+  }
+}
+
+const FIELDS = { shoot: ["shootStart", "shootEnd"], edit: ["editStart", "editEnd"], post: ["postStart", "postEnd"] } as const
+type Field = keyof typeof FIELDS
+
+/** Shoot / edit / post events moved in Google Calendar move the planner dates too. Returns how many pages changed. */
+async function pullMovedEvents(userId: string, events: GoogleEvent[], existing: CalendarEvent[], rows: Content[], desired: DesiredEvent[]): Promise<number> {
+  const byGoogleId = new Map(existing.map((e) => [e.googleEventId, e]))
+  const desiredByKey = new Map(desired.map((d) => [d.key, d]))
+  const pages = new Map(rows.map((r) => [r.id, r]))
+  let changed = 0
+  for (const ev of events) {
+    if (ev.status === "cancelled") continue // deleted in Google: it's put back on the next push
+    const row = byGoogleId.get(ev.id)
+    if (!row) continue
+    const [contentId, field] = row.key.split(":") as [string, Field]
+    const page = pages.get(contentId)
+    const win = googleWindow(ev)
+    if (!(field in FIELDS) || !page || !win) continue
+    const wanted = desiredByKey.get(row.key)
+    const sent = row.start && row.end ? { start: row.start, end: row.end } : wanted ? sentWindow(wanted.body) : null
+    if (!sent || (sent.start === win.start && sent.end === win.end)) continue
+
+    const [startCol, endCol] = FIELDS[field]
+    const previous: Schedule = { start: page[startCol], end: page[endCol] }
+    const next = scheduleFromGoogle(win, previous)
+    await prisma.calendarEvent.update({ where: { id: row.id }, data: { start: win.start, end: win.end } })
+    if (!next.start || !isValidScheduleValue(next.start) || (next.end && !isValidScheduleValue(next.end))) continue
+    if (next.start === previous.start && next.end === previous.end) continue
+
+    // Same automatic rules as the planner (moving Post Now moves the edit date, etc.)
+    const item = toItem(page)
+    const patch = withScheduleRules(item, { [field]: next })
+    const data: Record<string, unknown> = {}
+    for (const f of Object.keys(FIELDS) as Field[]) {
+      const value = patch[f]
+      if (value) {
+        data[FIELDS[f][0]] = value.start
+        data[FIELDS[f][1]] = value.end
+      }
+    }
+    if (patch.status) data.status = patch.status
+    if (typeof patch.edited === "boolean") data.edited = patch.edited
+    await prisma.content.update({ where: { id: page.id }, data })
+    changed++
+  }
+  return changed
+}
+
 // ---- sync ----
 
-const running = new Map<string, Promise<void>>()
+const running = new Map<string, Promise<number>>()
 
-/** Brings the user's "IG Curator" calendar in line with their planner. Safe to call often: only changes are sent. */
-export async function syncUserCalendar(userId: string): Promise<void> {
-  if (!googleCalendarConfigured()) return
+/**
+ * Two-way sync with the user's "IG Curator" calendar: first takes in events moved in Google, then sends the planner's
+ * dates (only what changed). Returns how many planner pages changed because of Google.
+ */
+export async function syncUserCalendar(userId: string): Promise<number> {
+  if (!googleCalendarConfigured()) return 0
   // One sync at a time per user (in this server instance)
-  const prev = running.get(userId) ?? Promise.resolve()
-  const next = prev.catch(() => {}).then(() => doSync(userId))
+  const prev = running.get(userId) ?? Promise.resolve(0)
+  const next = prev.catch(() => 0).then(() => doSync(userId))
   running.set(userId, next)
   try {
-    await next
+    return await next
   } finally {
     if (running.get(userId) === next) running.delete(userId)
   }
 }
 
-async function doSync(userId: string) {
+async function doSync(userId: string): Promise<number> {
   const link = await prisma.googleCalendarLink.findUnique({ where: { userId } })
-  if (!link) return
+  if (!link) return 0
   try {
     const token = await accessToken(link.refreshToken)
     let calendarId = link.calendarId
+    let syncToken = link.syncToken
     if (calendarId) {
       // The calendar may have been deleted in Google: recreate it (and its events) if so
       try {
@@ -157,28 +244,42 @@ async function doSync(userId: string) {
     if (!calendarId) {
       const cal = await google(token, "POST", "/calendars", { summary: "IG Curator", description: "Shoot, edit and post reminders from IG Curator", timeZone: CALENDAR_TIMEZONE })
       calendarId = cal.id as string
+      syncToken = null
       await prisma.calendarEvent.deleteMany({ where: { userId } })
-      await prisma.googleCalendarLink.update({ where: { userId }, data: { calendarId } })
+      await prisma.googleCalendarLink.update({ where: { userId }, data: { calendarId, syncToken: null } })
     }
     const cal = encodeURIComponent(calendarId)
 
-    const [rows, orders, existing] = await Promise.all([
-      prisma.content.findMany({ where: { userId } }),
-      prisma.clothingOrder.findMany({ where: { userId } }),
-      prisma.calendarEvent.findMany({ where: { userId } }),
-    ])
-    const desired = desiredCalendarEvents(rows.map(toItem), orders.map(toOrder), { shein: SHEIN_ENABLED, appUrl: appUrl() })
+    const load = () =>
+      Promise.all([
+        prisma.content.findMany({ where: { userId } }),
+        prisma.clothingOrder.findMany({ where: { userId } }),
+        prisma.calendarEvent.findMany({ where: { userId } }),
+      ])
+    const wantedNow = (rows: Content[], orders: ClothingOrder[]) =>
+      desiredCalendarEvents(rows.map(toItem), orders.map(toOrder), { shein: SHEIN_ENABLED, appUrl: appUrl() })
+
+    // 1. Google → planner
+    let [rows, orders, existing] = await load()
+    const { events, nextSyncToken } = await changedEvents(token, cal, syncToken)
+    const pulled = await pullMovedEvents(userId, events, existing, rows, wantedNow(rows, orders))
+    if (pulled) [rows, orders, existing] = await load()
+    else existing = await prisma.calendarEvent.findMany({ where: { userId } })
+
+    // 2. Planner → Google
+    const desired = wantedNow(rows, orders)
     const byKey = new Map(existing.map((e) => [e.key, e]))
     const wanted = new Set(desired.map((d) => d.key))
 
     for (const d of desired) {
       const hash = hashOf(d.body)
+      const sent = sentWindow(d.body)
       const have = byKey.get(d.key)
       if (have && have.hash === hash) continue
       if (have) {
         try {
           await google(token, "PUT", `/calendars/${cal}/events/${encodeURIComponent(have.googleEventId)}`, d.body)
-          await prisma.calendarEvent.update({ where: { id: have.id }, data: { hash } })
+          await prisma.calendarEvent.update({ where: { id: have.id }, data: { hash, ...sent } })
           continue
         } catch (e) {
           if ((e as { status?: number }).status !== 404 && (e as { status?: number }).status !== 410) throw e
@@ -187,7 +288,7 @@ async function doSync(userId: string) {
       }
       const ev = await google(token, "POST", `/calendars/${cal}/events`, d.body)
       try {
-        await prisma.calendarEvent.create({ data: { userId, key: d.key, googleEventId: ev.id, hash } })
+        await prisma.calendarEvent.create({ data: { userId, key: d.key, googleEventId: ev.id, hash, ...sent } })
       } catch {
         await google(token, "DELETE", `/calendars/${cal}/events/${encodeURIComponent(ev.id)}`).catch(() => {}) // a parallel sync won
       }
@@ -199,10 +300,12 @@ async function doSync(userId: string) {
       })
       await prisma.calendarEvent.delete({ where: { id: e.id } }).catch(() => {})
     }
-    await prisma.googleCalendarLink.update({ where: { userId }, data: { lastSyncedAt: new Date(), lastError: null } })
+    await prisma.googleCalendarLink.update({ where: { userId }, data: { lastSyncedAt: new Date(), lastError: null, syncToken: nextSyncToken } })
+    return pulled
   } catch (e) {
     console.error("Google Calendar sync failed:", e)
     await prisma.googleCalendarLink.update({ where: { userId }, data: { lastError: String((e as Error).message).slice(0, 300) } }).catch(() => {})
+    return 0
   }
 }
 

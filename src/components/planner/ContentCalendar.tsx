@@ -168,8 +168,8 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
       const item = byId.get(e.dataTransfer.getData("text/plain"))
       if (!item) return
       // Only this calendar's date field changes (time of day and range length are kept). Scheduling something
-      // from Ready to Post moves it on to To Edit.
-      const fromReady = e.dataTransfer.types.includes(READY_DRAG_TYPE) || item.status === "To Schedule"
+      // from To Schedule moves it on to To Edit.
+      const fromReady = item.status === "To Schedule"
       update(item.id, { [field]: moveSchedule(item[field], day), ...(fromReady ? { status: "To Edit" } : {}) })
     },
   })

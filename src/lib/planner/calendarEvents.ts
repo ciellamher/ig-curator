@@ -84,3 +84,40 @@ export function desiredCalendarEvents(items: ContentDTO[], orders: OrderDTO[], o
   }
   return out
 }
+
+// ---- Google → planner ----
+
+/** Start/end as sent, in Manila wall-clock time ("YYYY-MM-DDTHH:mm"). */
+export function sentWindow(b: CalendarEventBody): { start: string; end: string } {
+  return { start: b.start.dateTime.slice(0, 16), end: b.end.dateTime.slice(0, 16) }
+}
+
+export type GoogleEventTime = { date?: string; dateTime?: string }
+
+/** An event's start/end as Manila wall-clock time. Google is asked for times in Asia/Manila, so the clock part is local. */
+export function googleWindow(ev: { start?: GoogleEventTime; end?: GoogleEventTime }): { start: string; end: string } | null {
+  if (ev.start?.dateTime && ev.end?.dateTime) return { start: ev.start.dateTime.slice(0, 16), end: ev.end.dateTime.slice(0, 16) }
+  // All-day event (Google's end date is the day after)
+  if (ev.start?.date && ev.end?.date) return { start: ev.start.date, end: ev.end.date }
+  return null
+}
+
+const isDateOnly = (v: string) => v.length === 10
+
+/**
+ * The planner dates for an event moved in Google Calendar. Keeps the planner's style: a date-only item dragged to
+ * another day (still 9–10am, or all-day) stays date-only; a one-hour slot keeps no end, as when it was added.
+ */
+export function scheduleFromGoogle(win: { start: string; end: string }, previous: Schedule): Schedule {
+  if (isDateOnly(win.start)) {
+    const lastDay = addDaysISO(win.end, -1)
+    return { start: win.start, end: lastDay > win.start ? lastDay : null }
+  }
+  const date = datePart(win.start)
+  const time = timePart(win.start)!
+  const oneHour = addHour(date, time)
+  const isDefaultLength = `${oneHour.date}T${oneHour.time}` === win.end
+  const wasDateOnly = !!previous.start && isDateOnly(previous.start)
+  if (isDefaultLength && wasDateOnly && time === DEFAULT_START) return { start: date, end: null }
+  return { start: win.start, end: isDefaultLength ? null : win.end }
+}

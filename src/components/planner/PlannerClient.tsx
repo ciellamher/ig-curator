@@ -52,7 +52,8 @@ export function PlannerClient() {
   useEffect(() => {
     const onSelect = (e: Event) => {
       // Found even when Posted (hidden from the lists), so its page always opens
-      const item = allPlanner.items.find((i) => i.slotId === (e as CustomEvent<string>).detail)
+      const slotId = (e as CustomEvent<string>).detail
+      const item = allPlanner.items.find((i) => i.slotId === slotId || Object.values(i.extraSlots ?? {}).includes(slotId))
       if (!item) return
       setFocus({ id: item.id, reveal: Date.now() })
       // Side by side: open its page next to the feed without covering it. Phones: the feed's own editor is open.

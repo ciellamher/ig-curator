@@ -26,6 +26,15 @@ export async function syncCalendarNow(): Promise<Result<CalendarStatus>> {
   })
 }
 
+/** Runs the two-way sync while the app is open; `changed` = planner pages updated from Google Calendar. */
+export async function pullCalendar(): Promise<Result<{ changed: number }>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    if (!googleCalendarConfigured()) return { changed: 0 }
+    return { changed: await syncUserCalendar(userId) }
+  })
+}
+
 /** Stops syncing, removes the "IG Curator" calendar (so no stale reminders keep firing) and revokes access. */
 export async function disconnectCalendar(): Promise<Result<{ ok: true }>> {
   return run(async () => {

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { CalendarCheck, CalendarPlus, RefreshCw } from "lucide-react"
-import { disconnectCalendar, getCalendarStatus, syncCalendarNow, type CalendarStatus } from "@/app/actions/googleCalendar"
+import { disconnectCalendar, getCalendarStatus, pullCalendar, syncCalendarNow, type CalendarStatus } from "@/app/actions/googleCalendar"
+import { PLANNER_REFRESH_EVENT } from "@/lib/planner/types"
 
 /** Connect / status button for the Google Calendar sync. Hidden where the sync isn't set up. */
 export function CalendarConnect() {
@@ -32,6 +33,29 @@ export function CalendarConnect() {
       window.history.replaceState(null, "", window.location.pathname)
     }
   }, [load])
+
+  // Auto sync: dates moved in Google Calendar come in every minute while the app is open, and when you come back to it
+  const connected = !!status?.connected
+  useEffect(() => {
+    if (!connected) return
+    let busy = false
+    const pull = async () => {
+      if (busy || document.visibilityState !== "visible") return
+      busy = true
+      const res = await pullCalendar()
+      busy = false
+      if (res.success && res.data.changed > 0) window.dispatchEvent(new Event(PLANNER_REFRESH_EVENT))
+    }
+    pull()
+    const timer = window.setInterval(pull, 60_000)
+    window.addEventListener("focus", pull)
+    document.addEventListener("visibilitychange", pull)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener("focus", pull)
+      document.removeEventListener("visibilitychange", pull)
+    }
+  }, [connected])
 
   useEffect(() => {
     if (!open) return
@@ -75,7 +99,7 @@ export function CalendarConnect() {
             {status.events} event{status.events === 1 ? "" : "s"} in your “IG Curator” calendar
             {status.lastSyncedAt ? ` · synced ${new Date(status.lastSyncedAt).toLocaleString()}` : ""}
           </p>
-          <p className="text-xs text-zinc-500">Reminders: shoots and edits the night before (8pm) and on the day; posts on the day.</p>
+          <p className="text-xs text-zinc-500">Reminders: shoots and edits the night before (8pm) and on the day; posts on the day. Moving an event in Google Calendar moves it here too.</p>
           {status.error && <p className="text-xs font-semibold text-zinc-950">{status.error}</p>}
           <div className="flex gap-2">
             <button
