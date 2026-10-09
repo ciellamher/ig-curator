@@ -24,6 +24,8 @@ export type ClothingTimeline = {
   windowEnd: string | null
   /** Days since delivery (delivery day = day 0), or null before delivery. */
   daysSinceDelivery: number | null
+  /** The latest date you can do a shoot in this batch and still return it on time. */
+  cutoffDate: string | null
 }
 
 export type ClothingAlert = {
@@ -54,15 +56,19 @@ export function batchShootDate(batch: ContentDTO, items: ContentDTO[]): string |
 export function timeline(input: { shootDate: string | null; orderedAt: string | null; deliveredAt: string | null }, today = todayISO()): ClothingTimeline {
   const deliveredOn = manilaDate(input.deliveredAt)
   const orderedOn = manilaDate(input.orderedAt)
+  const expectedDelivery = orderedOn ? addDaysISO(orderedOn, 5) : input.shootDate ? addDaysISO(input.shootDate, -ORDER_LEAD_DAYS + 5) : null
+  const windowEnd = deliveredOn ? addDaysISO(deliveredOn, RETURN_WINDOW_DAYS) : null
+  
   return {
     shootDate: input.shootDate,
     orderBy: input.shootDate ? addDaysISO(input.shootDate, -ORDER_LEAD_DAYS) : null,
     orderedOn,
-    expectedDelivery: orderedOn ? addDaysISO(orderedOn, 5) : null, // 5 days after order
+    expectedDelivery,
     deliveredOn,
     returnBy: deliveredOn ? addDaysISO(deliveredOn, RETURN_REMINDER_DAY) : null,
-    windowEnd: deliveredOn ? addDaysISO(deliveredOn, RETURN_WINDOW_DAYS) : null,
+    windowEnd,
     daysSinceDelivery: deliveredOn ? diffDays(deliveredOn, today) : null,
+    cutoffDate: windowEnd ? addDaysISO(windowEnd, -1) : expectedDelivery ? addDaysISO(expectedDelivery, RETURN_WINDOW_DAYS - 1) : null,
   }
 }
 

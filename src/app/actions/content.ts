@@ -35,8 +35,8 @@ function toDTO(c: Content & { media: ContentMedia[] }): ContentDTO {
     location: (c.location as Location | null) ?? null,
     body: c.body,
     slotId: c.slotId,
-    contentType: c.contentType,
-    extraSlots: c.extraSlots ? (c.extraSlots as Record<string, string>) : null,
+    contentType: (c.contentType?.startsWith('{"primary"') ? JSON.parse(c.contentType).primary : c.contentType),
+    extraSlots: c.contentType?.startsWith('{"primary"') ? JSON.parse(c.contentType).extra : null,
     media: [...c.media].sort((a, b) => a.position - b.position).map((m) => ({ id: m.id, url: m.url, position: m.position })),
     createdAt: c.createdAt.toISOString(),
     updatedAt: c.updatedAt.toISOString(),
@@ -142,8 +142,17 @@ function patchToData(patch: ContentPatch, existing?: Content): Prisma.ContentUnc
   if ("location" in patch) data.location = cleanLocation(patch.location) ?? Prisma.DbNull
   if ("body" in patch) data.body = String(patch.body ?? "").slice(0, 50_000)
   if ("slotId" in patch) data.slotId = patch.slotId
-  if ("contentType" in patch) data.contentType = patch.contentType
-  if ("extraSlots" in patch) data.extraSlots = patch.extraSlots ? patch.extraSlots : Prisma.DbNull
+  
+  if ("contentType" in patch || "extraSlots" in patch) {
+    const ct = "contentType" in patch ? patch.contentType : undefined
+    const es = "extraSlots" in patch ? patch.extraSlots : undefined
+    if (es && Object.keys(es).length > 0) {
+      data.contentType = JSON.stringify({ primary: ct !== undefined ? ct : undefined, extra: es })
+    } else if (ct !== undefined) {
+      data.contentType = ct
+    }
+  }
+
   return data
 }
 

@@ -73,24 +73,6 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
             className="w-full flex items-center justify-between p-4 border-b border-soft-100 cursor-pointer hover:bg-soft-50 transition-colors"
           >
             <div className="flex items-center gap-4">
-              <div className="relative w-[100px] h-[90px] flex-shrink-0 flex items-center">
-                {previewImages.length > 0 ? (
-                  previewImages.map((url, idx) => (
-                    <div 
-                      key={idx}
-                      className="absolute top-0 bottom-0 my-auto w-[60px] h-[80px] rounded-md border-[2px] border-white overflow-hidden shadow-sm bg-pastel-100"
-                      style={{ left: `${idx * 20}px`, zIndex: 10 - idx }}
-                    >
-                      <img src={url} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))
-                ) : (
-                  <div className="absolute left-0 top-0 bottom-0 my-auto w-[60px] h-[80px] rounded-md border-[2px] border-white overflow-hidden shadow-sm bg-pastel-50 flex items-center justify-center">
-                    <div className="w-1/2 h-1/2 bg-white/50 rounded-full" />
-                  </div>
-                )}
-              </div>
-              
               <div className="flex flex-col">
                 <input 
                   value={folder.text || folder.caption || ""}
@@ -99,11 +81,11 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                   placeholder="New Folder"
                   className="font-bold text-foreground text-[18px] tracking-tight mb-0.5 bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-1 -ml-1 w-full"
                 />
-                <span className="text-foreground/80 font-medium text-[15px]">
+                <span className="text-foreground/80 font-medium text-[15px] px-1">
                   {storiesInFolder.length} items
                 </span>
                 {folder.scheduledTime && (
-                  <span className="text-foreground font-medium text-[14px] mt-0.5">
+                  <span className="text-foreground font-medium text-[14px] mt-0.5 px-1">
                     Scheduled: {folder.scheduledTime}
                   </span>
                 )}

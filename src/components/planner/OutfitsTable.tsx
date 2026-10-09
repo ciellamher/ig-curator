@@ -106,16 +106,23 @@ function OrderCard({ order, planner, onOpen }: { order: OrderDTO; planner: Plann
           )}
         </div>
       ) : (
-        <p className="text-sm opacity-80">
+        <div className="text-sm opacity-80 flex flex-col gap-0.5">
           {stage === "Refunded"
-            ? `Returned ${formatDate(order.returnedAt, { weekday: true })}`
+            ? <p>Returned {formatDate(order.returnedAt, { weekday: true })}</p>
             : stage === "Ordered"
-              ? `Ordered ${formatDate(t.orderedOn)} — waiting for delivery`
+              ? <p>Ordered {formatDate(t.orderedOn)} — waiting for delivery</p>
               : t.orderBy
-                ? `Order by ${formatDate(t.orderBy, { weekday: true })} (${ORDER_LEAD_DAYS} days before the first shoot)`
-                : "Add posts with shoot dates to get an order-by date"}
+                ? <p>Order by {formatDate(t.orderBy, { weekday: true })} ({ORDER_LEAD_DAYS} days before the first shoot)</p>
+                : <p>Add posts with shoot dates to get an order-by date</p>}
+          
+          {t.cutoffDate && stage !== "Refunded" && (
+            <p className="text-xs font-medium text-inherit opacity-70">
+              You can add shoots up to {formatDate(t.cutoffDate, { weekday: true })} for this batch
+            </p>
+          )}
+
           {alert && stage === "Buy Clothes" && <span className="block mt-1 text-xs font-semibold">{alert.message}</span>}
-        </p>
+        </div>
       )}
 
       {/* The posts this order covers, grouped by batch */}
