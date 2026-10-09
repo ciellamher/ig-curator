@@ -168,7 +168,7 @@ function OrderCard({ order, planner, onOpen }: { order: OrderDTO; planner: Plann
         {posts.length === 0 && !picking && <p className="text-xs opacity-60 px-1">No posts yet — click Add posts.</p>}
         {[...groups.entries()].map(([batch, list]) => (
           <div key={batch} className="flex flex-col gap-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wider opacity-60 px-1">{batch}</span>
+            {batch !== "No batch" && <span className="text-[10px] font-semibold uppercase tracking-wider opacity-60 px-1">{batch}</span>}
             {list.map((c) => (
               <div key={c.id} className={`flex items-center gap-2 rounded-lg px-1 py-1 ${dark ? "hover:bg-white/10" : "hover:bg-white"}`}>
                 <button onClick={() => onOpen(c)} className="flex-1 min-w-0 flex items-center gap-2 text-left cursor-pointer">
@@ -317,7 +317,7 @@ export function OutfitsTable({
         selection={selection}
         focusId={focusId}
         onFocusItem={onFocusItem}
-        empty="No outfits to prep. Set a Clothing status, or the status To Buy/Plan Clothes, to track an item here."
+        empty="No outfits to prep. Set a Clothing status to Buy Clothes, or the status To Buy/Plan Clothes, to track an item here."
       />
     </Section>
   )

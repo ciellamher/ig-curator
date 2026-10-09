@@ -108,18 +108,18 @@ describe("Ready to Post", () => {
 })
 
 describe("Outfits to Prep", () => {
-  it("includes Buy Clothes, Ordered, Delivered and To Buy/Plan Clothes; excludes Refunded and empty", () => {
+  it("includes Buy Clothes and To Buy/Plan Clothes; excludes Ordered, Delivered, Refunded and empty", () => {
     const rows = ["Buy Clothes", "Ordered", "Delivered", "Refunded", null].map((clothingStatus, i) =>
       item({ id: `o${i}`, clothingStatus, shoot: { start: `2026-02-0${i + 1}`, end: null } }),
     )
     const planning = item({ id: "plan", status: "To Buy/Plan Clothes", shoot: { start: "2026-02-09", end: null } })
-    expect(ids(outfitsView([...rows, planning]))).toEqual(["o0", "o1", "o2", "plan"])
+    expect(ids(outfitsView([...rows, planning]))).toEqual(["o0", "plan"])
   })
 
   it("sorts by shoot date, using the batch's when a post has none", () => {
     const batch = item({ id: "b", shoot: { start: "2026-02-01", end: null } })
-    const post = item({ id: "p", parentId: "b", clothingStatus: "Ordered" })
-    const later = item({ id: "l", clothingStatus: "Ordered", shoot: { start: "2026-02-05", end: null } })
+    const post = item({ id: "p", parentId: "b", clothingStatus: "Buy Clothes" })
+    const later = item({ id: "l", clothingStatus: "Buy Clothes", shoot: { start: "2026-02-05", end: null } })
     expect(ids(outfitsView([later, post], [batch, post, later]))).toEqual(["p", "l"])
     expect(shootDateOf(post, new Map([[batch.id, batch]]))).toBe("2026-02-01")
   })
@@ -299,7 +299,7 @@ describe("feed sync mapping", () => {
 
 describe("one dataset, many views", () => {
   it("an edit to one record shows up in every view it qualifies for", () => {
-    const x = item({ id: "x", status: "To Edit", clothingStatus: "Ordered", shoot: { start: "2026-04-20", end: null } })
+    const x = item({ id: "x", status: "To Edit", clothingStatus: "Buy Clothes", shoot: { start: "2026-04-20", end: null } })
     const items = [x]
     expect(ids(toEditView(items))).toEqual(["x"])
     expect(outfitsView(items)).toHaveLength(1)
@@ -343,8 +343,8 @@ describe("Google Calendar events", () => {
 })
 
 describe("feed placement", () => {
-  it("Post, Reels and Story replace each other; other categories combine", () => {
-    expect(toggleCategory(["Post", "Facebook"], "Story")).toEqual(["Facebook", "Story"])
+  it("all categories combine", () => {
+    expect(toggleCategory(["Post", "Facebook"], "Story")).toEqual(["Post", "Facebook", "Story"])
     expect(toggleCategory(["Story"], "Locket")).toEqual(["Story", "Locket"])
     expect(toggleCategory(["Story", "Locket"], "Story")).toEqual(["Locket"])
     expect(feedKindFor(["Post", "Story"])).toBe("StoryFolder")
