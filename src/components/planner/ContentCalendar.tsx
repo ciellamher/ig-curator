@@ -16,7 +16,7 @@ import { QuickAdd } from "./QuickAdd"
 import type { Planner } from "./usePlanner"
 
 type Mode = "shoot-week" | "shoot-month" | "edit" | "post"
-type CalEvent = { key: string; item: ContentDTO; kind: "date" | "order" | "return"; date?: string }
+type CalEvent = { key: string; item: ContentDTO; kind: "date" | "order" | "return" | "delivery"; date?: string }
 
 const MODES: { id: Mode; label: string }[] = [
   { id: "shoot-week", label: "Shoot · Week" },
@@ -31,6 +31,7 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 
 const MARKER_STYLE = {
   order: "bg-white text-zinc-950 border border-dashed border-zinc-950",
+  delivery: "bg-zinc-100 text-zinc-900 border border-zinc-300",
   return: "bg-zinc-950 text-white",
 }
 
@@ -77,13 +78,15 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
         const stage = orderStage(order)
         const label = { ...batches[0], title: order.name }
         if (stage === "Buy Clothes" && t.orderBy === day) out.push({ key: `${order.id}-order`, item: label, kind: "order", date: day })
-        if (stage === "Delivered" && t.windowEnd === day) out.push({ key: `${order.id}-return`, item: label, kind: "return", date: day })
+        if (stage === "Ordered" && t.expectedDelivery === day) out.push({ key: `${order.id}-delivery`, item: label, kind: "delivery", date: day })
+        if (stage === "Delivered" && t.returnBy === day) out.push({ key: `${order.id}-return`, item: label, kind: "return", date: day })
       }
       for (const item of items) {
         if (!item.clothingStatus || !matchesSearch(item, query) || orderFor(item, byId, planner.ordersById)) continue
         const t = itemTimeline(item, byId)
         if (item.clothingStatus === "Buy Clothes" && t.orderBy === day) out.push({ key: `${item.id}-order`, item, kind: "order", date: day })
-        if (item.clothingStatus === "Delivered" && t.windowEnd === day) out.push({ key: `${item.id}-return`, item, kind: "return", date: day })
+        if (item.clothingStatus === "Ordered" && t.expectedDelivery === day) out.push({ key: `${item.id}-delivery`, item, kind: "delivery", date: day })
+        if (item.clothingStatus === "Delivered" && t.returnBy === day) out.push({ key: `${item.id}-return`, item, kind: "return", date: day })
       }
     }
     return out
@@ -101,9 +104,9 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
           key={e.key}
           onClick={() => onOpen(item)}
           className={`w-full text-left rounded-md px-1.5 py-0.5 text-[11px] font-medium truncate cursor-pointer ${MARKER_STYLE[e.kind]}`}
-          title={`${e.kind === "order" ? "Order clothes" : "Return clothes"}: ${item.title}`}
+          title={`${e.kind === "order" ? "Order clothes" : e.kind === "delivery" ? "Expected delivery" : "Return clothes"}: ${item.title}`}
         >
-          {e.kind === "order" ? "Order · " : "Return · "}
+          {e.kind === "order" ? "Order · " : e.kind === "delivery" ? "Delivers · " : "Return · "}
           {item.title}
         </button>
       )
@@ -263,7 +266,7 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
                   </div>
                   <div className="flex sm:hidden flex-wrap gap-0.5">
                     {evs.slice(0, 4).map((e) => (
-                      <span key={e.key} className={`w-1.5 h-1.5 rounded-full ${e.kind === "date" ? "bg-zinc-400" : e.kind === "order" ? "ring-1 ring-zinc-950 bg-white" : "bg-zinc-950"}`} />
+                      <span key={e.key} className={`w-1.5 h-1.5 rounded-full ${e.kind === "date" ? "bg-zinc-400" : e.kind === "order" ? "ring-1 ring-zinc-950 bg-white" : e.kind === "delivery" ? "bg-zinc-300" : "bg-zinc-950"}`} />
                     ))}
                   </div>
                   <div className="hidden sm:flex flex-col gap-1 min-w-0">

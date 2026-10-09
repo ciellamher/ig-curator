@@ -16,6 +16,7 @@ export type ClothingTimeline = {
   shootDate: string | null
   orderBy: string | null
   orderedOn: string | null
+  expectedDelivery: string | null
   deliveredOn: string | null
   /** Day 11 after delivery. */
   returnBy: string | null
@@ -52,10 +53,12 @@ export function batchShootDate(batch: ContentDTO, items: ContentDTO[]): string |
 
 export function timeline(input: { shootDate: string | null; orderedAt: string | null; deliveredAt: string | null }, today = todayISO()): ClothingTimeline {
   const deliveredOn = manilaDate(input.deliveredAt)
+  const orderedOn = manilaDate(input.orderedAt)
   return {
     shootDate: input.shootDate,
     orderBy: input.shootDate ? addDaysISO(input.shootDate, -ORDER_LEAD_DAYS) : null,
-    orderedOn: manilaDate(input.orderedAt),
+    orderedOn,
+    expectedDelivery: orderedOn ? addDaysISO(orderedOn, 5) : null, // 5 days after order
     deliveredOn,
     returnBy: deliveredOn ? addDaysISO(deliveredOn, RETURN_REMINDER_DAY) : null,
     windowEnd: deliveredOn ? addDaysISO(deliveredOn, RETURN_WINDOW_DAYS) : null,

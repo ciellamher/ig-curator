@@ -213,6 +213,7 @@ export function ItemDrawer({
               {order && <div className="flex justify-between gap-2"><span className="text-zinc-500">Order</span><span className="font-medium">{order.name}</span></div>}
               <div className="flex justify-between gap-2"><span className="text-zinc-500">Order by</span><span>{t.orderBy ? formatDate(t.orderBy, { weekday: true }) : "Needs a Shoot Date"}</span></div>
               {t.orderedOn && <div className="flex justify-between gap-2"><span className="text-zinc-500">Ordered</span><span>{formatDate(t.orderedOn, { weekday: true })}</span></div>}
+              {t.expectedDelivery && !t.deliveredOn && <div className="flex justify-between gap-2"><span className="text-zinc-500">Expected Delivery</span><span>{formatDate(t.expectedDelivery, { weekday: true })}</span></div>}
               <div className="flex justify-between gap-2"><span className="text-zinc-500">Delivered</span><span>{t.deliveredOn ? formatDate(t.deliveredOn, { weekday: true }) : "Not yet"}</span></div>
               {t.daysSinceDelivery !== null && (
                 <div className="flex justify-between gap-2"><span className="text-zinc-500">Since delivery</span><span className="font-semibold">Day {t.daysSinceDelivery} of {RETURN_WINDOW_DAYS}</span></div>
