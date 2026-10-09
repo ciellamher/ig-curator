@@ -1,6 +1,6 @@
 "use client"
 
-import { GripVertical } from "lucide-react"
+import { GripVertical, Plus } from "lucide-react"
 import { formatDate } from "@/lib/planner/dates"
 import { availablePostsView, matchesSearch } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
@@ -16,7 +16,21 @@ export function AvailablePosts({ planner, query, onOpen }: { planner: Planner; q
   const posts = availablePostsView(planner.items.filter((i) => matchesSearch(i, query)))
 
   return (
-    <Section title="Ready to Post" subtitle={posts.length ? "To Schedule · drag a card onto a calendar day" : "To Schedule"}>
+    <Section 
+      title="Ready to Post" 
+      subtitle={posts.length ? "To Schedule · drag a card onto a calendar day" : "To Schedule"}
+      actions={
+        <button
+          onClick={async () => {
+            const created = await planner.create({ status: "To Schedule" })
+            if (created) onOpen(created)
+          }}
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black transition-colors"
+        >
+          <Plus size={14} /> New post
+        </button>
+      }
+    >
       {posts.length === 0 ? (
         <p className="py-4 text-center text-sm text-zinc-400">Nothing waiting to be scheduled. Items with status To Schedule show up here.</p>
       ) : (
