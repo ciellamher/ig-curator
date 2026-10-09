@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import type { ClothingOrder } from "@prisma/client"
 import { requireUserId, run, type Result } from "@/lib/planner/server"
+import { scheduleCalendarSync } from "@/lib/googleCalendar"
 import { isValidScheduleValue } from "@/lib/planner/dates"
 import type { OrderDTO, OrderStage } from "@/lib/planner/types"
 
@@ -52,6 +53,7 @@ export async function listOrders(): Promise<Result<OrderDTO[]>> {
 export async function createOrder(batchIds: string[] = []): Promise<Result<OrderDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const count = await prisma.clothingOrder.count({ where: { userId } })
     const order = await prisma.clothingOrder.create({ data: { userId, name: `Order ${count + 1}` } })
     if (batchIds.length) await assignBatches(userId, order.id, batchIds)
@@ -62,6 +64,7 @@ export async function createOrder(batchIds: string[] = []): Promise<Result<Order
 export async function renameOrder(id: string, name: string): Promise<Result<OrderDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     await ownedOrder(userId, id)
     const clean = String(name ?? "").trim().slice(0, 120) || "Order"
     return toDTO(await prisma.clothingOrder.update({ where: { id }, data: { name: clean } }))
@@ -83,6 +86,7 @@ async function assignBatches(userId: string, orderId: string, postIds: string[])
 export async function setOrderBatches(id: string, batchIds: string[]): Promise<Result<{ id: string }>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     await ownedOrder(userId, id)
     await assignBatches(userId, id, Array.isArray(batchIds) ? batchIds.filter((b) => typeof b === "string") : [])
     return { id }
@@ -100,6 +104,7 @@ const STAGE_CLOTHING: Record<OrderStage, string> = {
 export async function setOrderStage(id: string, stage: OrderStage, date?: string): Promise<Result<OrderDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const order = await ownedOrder(userId, id)
     if (!(stage in STAGE_CLOTHING)) throw new Error("Invalid stage")
     const when = manilaDay(date) ?? new Date()
@@ -121,6 +126,7 @@ export async function setOrderStage(id: string, stage: OrderStage, date?: string
 export async function setOrderDate(id: string, field: "orderedAt" | "deliveredAt", date: string | null): Promise<Result<OrderDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     await ownedOrder(userId, id)
     if (field !== "orderedAt" && field !== "deliveredAt") throw new Error("Invalid field")
     return toDTO(await prisma.clothingOrder.update({ where: { id }, data: { [field]: manilaDay(date) } }))
@@ -131,6 +137,7 @@ export async function setOrderDate(id: string, field: "orderedAt" | "deliveredAt
 export async function deleteOrder(id: string): Promise<Result<{ id: string }>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     await ownedOrder(userId, id)
     await prisma.clothingOrder.delete({ where: { id } })
     return { id }

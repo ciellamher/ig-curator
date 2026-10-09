@@ -14,6 +14,7 @@ import { AvailablePosts } from "./AvailablePosts"
 import { OutfitsTable } from "./OutfitsTable"
 import { QuickLinks } from "./Sidebar"
 import { ItemDrawer } from "./ItemDrawer"
+import { CalendarConnect } from "./CalendarConnect"
 
 export function PlannerClient() {
   const { status } = useSession()
@@ -118,7 +119,8 @@ export function PlannerClient() {
           <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-950">Content Planner</h1>
           <p className="text-sm text-zinc-500 mt-0.5">New posts in your feed show up here automatically. Posted content is hidden here but stays in your feed.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 md:justify-end">
+          <CalendarConnect />
           {postedCount > 0 && (
             <button
               type="button"

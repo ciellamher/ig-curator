@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { requireUserId, run, type Result } from "@/lib/planner/server"
+import { scheduleCalendarSync } from "@/lib/googleCalendar"
 import { Prisma, type Content, type ContentMedia } from "@prisma/client"
 import { CATEGORY_OPTIONS, CLOTHING_NAMES, DEFAULT_STATUS, STATUS_NAMES } from "@/lib/planner/options"
 import { isValidScheduleValue, type Schedule } from "@/lib/planner/dates"
@@ -155,6 +156,7 @@ export async function listContent(): Promise<Result<ContentDTO[]>> {
 export async function createContent(input: ContentPatch = {}): Promise<Result<ContentDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const parentId = input.parentId || null
     await validateParent(userId, parentId)
     const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null } }
@@ -173,6 +175,7 @@ export async function createContent(input: ContentPatch = {}): Promise<Result<Co
 export async function updateContent(id: string, patch: ContentPatch): Promise<Result<ContentDTO>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const existing = await prisma.content.findFirst({ where: { id, userId } })
     if (!existing) throw new Error("This item no longer exists")
     const current = {
@@ -202,6 +205,7 @@ const FEED_FOLDER_TYPES = ["StoryFolder", "InspoFolder"]
 export async function deleteContents(ids: string[]): Promise<Result<{ deletedIds: string[]; deletedSlotIds: string[] }>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const wanted = Array.isArray(ids) ? ids.filter((i) => typeof i === "string").slice(0, 1000) : []
     const records = await prisma.content.findMany({ where: { userId, id: { in: wanted } }, select: { id: true, slotId: true, contentType: true } })
     if (records.length === 0) throw new Error("These items no longer exist")
@@ -256,6 +260,7 @@ export async function listDeletedFeedSlots(): Promise<Result<string[]>> {
 export async function loadSampleData(): Promise<Result<{ created: number }>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const samples = sampleContent()
     const ids = new Map<string, string>()
     await prisma.$transaction(async (tx) => {
@@ -308,6 +313,7 @@ function cleanMediaUrls(urls: unknown): string[] {
 export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[]; textForFeed: { slotId: string; title: string }[] }>> {
   return run(async () => {
     const userId = await requireUserId()
+    scheduleCalendarSync(userId) // runs after this change is saved
     const slots = Array.isArray(request?.slots) ? request.slots : []
     const ids = (v: unknown) => (Array.isArray(v) ? v.flatMap((x) => (typeof x === "string" && x.length <= 120 ? [x] : [])).slice(0, MAX_SYNC_SLOTS) : [])
     const deletedSlotIds = ids(request?.deletedSlotIds)

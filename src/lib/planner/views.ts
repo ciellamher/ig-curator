@@ -110,9 +110,9 @@ export function outfitsView(items: ContentDTO[], all: ContentDTO[] = items): Con
 
 // ---- Batches ----
 
-/** Batches: top-level items titled "batch…", that already hold posts, or that belong to a SHEIN order. */
+/** Batches: top-level items titled "batch…" or that already hold posts. (Posts in a SHEIN order aren't batches.) */
 export function batchCandidates(items: ContentDTO[]): ContentDTO[] {
-  return items.filter((i) => !i.parentId && (isBatchTitle(i) || !!i.orderId || items.some((c) => c.parentId === i.id)))
+  return items.filter((i) => !i.parentId && (isBatchTitle(i) || items.some((c) => c.parentId === i.id)))
 }
 
 /** Batches an item can be put in: never itself, and an item that holds posts can't go inside another (no cycles). */

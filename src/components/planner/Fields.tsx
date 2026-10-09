@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { ExternalLink, Image as ImageIcon } from "lucide-react"
 import { Dropdown, type DropdownOption } from "@/components/ui/Dropdown"
+import { toggleCategory } from "@/lib/planner/feed"
 import { LocalMediaImage } from "@/components/grid/LocalMedia"
 import {
   CATEGORY_OPTIONS,
@@ -91,7 +92,7 @@ export function CategorySelect({ value, onChange }: { value: string[]; onChange:
       label="Category"
       options={CATEGORY_OPTIONS.map((c) => ({ value: c }))}
       selected={value}
-      onSelect={(c) => onChange(value.includes(c) ? value.filter((v) => v !== c) : [...value, c])}
+      onSelect={(c) => onChange(toggleCategory(value, c))}
       trigger={<CategoryBadges value={value} />}
       renderOption={(o) => <Badge value={o.value} styles={CATEGORY_STYLES} />}
       className="whitespace-normal"

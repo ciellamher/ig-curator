@@ -52,6 +52,8 @@ model User {
   quickLinks    QuickLink[]
   orders        ClothingOrder[]
   deletedSlots  DeletedFeedSlot[]
+  googleCalendar GoogleCalendarLink?
+  calendarEvents CalendarEvent[]
 }
 
 model VerificationToken {
@@ -199,4 +201,29 @@ model DeletedFeedSlot {
   deletedAt DateTime @default(now())
 
   @@unique([userId, slotId])
+}
+
+// Google Calendar connection: shoot/edit/post dates (and SHEIN deadlines) mirrored as events with reminders,
+// in a calendar the app creates ("IG Curator"). The refresh token is stored encrypted.
+model GoogleCalendarLink {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String // encrypted
+  calendarId   String?
+  lastSyncedAt DateTime?
+  lastError    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id            String @id @default(cuid())
+  userId        String
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key           String // "<content or order id>:<shoot|edit|post|order|return>"
+  googleEventId String
+  hash          String // what was last sent, to skip unchanged events
+
+  @@unique([userId, key])
 }

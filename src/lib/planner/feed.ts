@@ -29,8 +29,17 @@ export function defaultFeedTitle(slot: Pick<FeedSlotSync, "location" | "contentT
 
 /** Where a planner page shows in the feed, from its categories: Post → grid, Reels → reel, Story → story folder. */
 export function feedKindFor(categories: string[]): "Post" | "Reel" | "StoryFolder" | null {
-  if (categories.includes("Post")) return "Post"
-  if (categories.includes("Reels")) return "Reel"
   if (categories.includes("Story")) return "StoryFolder"
+  if (categories.includes("Reels")) return "Reel"
+  if (categories.includes("Post")) return "Post"
   return null
+}
+
+/** Post, Reels and Story decide where a page goes in the feed, so picking one replaces the others. */
+export const FEED_PLACEMENTS = ["Post", "Reels", "Story"]
+
+export function toggleCategory(current: string[], category: string): string[] {
+  if (current.includes(category)) return current.filter((c) => c !== category)
+  const kept = FEED_PLACEMENTS.includes(category) ? current.filter((c) => !FEED_PLACEMENTS.includes(c)) : current
+  return [...kept, category]
 }

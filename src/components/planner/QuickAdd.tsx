@@ -6,6 +6,7 @@ import { Dropdown } from "@/components/ui/Dropdown"
 import { formatDate, type DateField } from "@/lib/planner/dates"
 import { DEFAULT_STATUS, STATUS_OPTIONS, STATUS_STYLES } from "@/lib/planner/options"
 import { autoEditDate } from "@/lib/planner/rules"
+import { toggleCategory } from "@/lib/planner/feed"
 import type { ContentPatch } from "@/lib/planner/types"
 import { Badge } from "./Fields"
 
@@ -86,7 +87,7 @@ export function QuickAdd({
                   key={c}
                   type="button"
                   aria-pressed={on}
-                  onClick={() => setCategories(on ? categories.filter((x) => x !== c) : [...categories, c])}
+                  onClick={() => setCategories(toggleCategory(categories, c))}
                   className={`px-3 h-8 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
                     on ? "bg-zinc-950 text-white border-zinc-950" : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
                   }`}
@@ -111,7 +112,7 @@ export function QuickAdd({
         {autoEdit && (
           <p className="text-xs text-zinc-500">
             Edit date set automatically to <span className="font-semibold text-zinc-800">{formatDate(autoEdit, { weekday: true })}</span> (
-            {categories.includes("Story") && !categories.includes("Post") && !categories.includes("Reels") ? "3 days" : "1 week"} before posting)
+            {categories.includes("Story") ? "3 days" : "1 week"} before posting)
           </p>
         )}
 

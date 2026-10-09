@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { batchShootDate, clothingAlert, clothingAlerts, itemTimeline, orderAlert, orderStage, orderTimeline } from "./clothing"
 import { addDaysISO, formatDate, moveSchedule, scheduleCovers, todayISO } from "./dates"
-import { categoryForFeedSlot, statusForFeedSlot } from "./feed"
+import { categoryForFeedSlot, feedKindFor, statusForFeedSlot, toggleCategory } from "./feed"
 import { STATUS_NAMES } from "./options"
 import type { ContentDTO, OrderDTO } from "./types"
 import { editLeadDays, withScheduleRules } from "./rules"
+import { desiredCalendarEvents } from "./calendarEvents"
 import {
   availablePostsView,
   isAvailablePost,
@@ -197,6 +198,8 @@ describe("status ordering and parents", () => {
     const other = item({ id: "o", title: "Morning routine" })
     expect(ids(batchOptionsFor([batch, post, other], "o"))).toEqual(["b"])
     expect(batchOptionsFor([batch, post, other], "b")).toEqual([])
+    // a post that's in a SHEIN order is not a batch
+    expect(ids(batchOptionsFor([batch, post, item({ id: "ordered", orderId: "ord" })], "o"))).toEqual(["b"])
   })
 })
 
@@ -304,5 +307,47 @@ describe("one dataset, many views", () => {
     const edited = [{ ...x, title: "Renamed", edited: true }]
     expect(toEditView(edited)).toHaveLength(0)
     expect(outfitsView(edited)[0].title).toBe("Renamed")
+  })
+})
+
+describe("Google Calendar events", () => {
+  const opts = { shein: true, appUrl: "https://example.test" }
+  it("puts date-only shoots at 9am with reminders at 8pm the night before and at 9am", () => {
+    const [e] = desiredCalendarEvents([item({ id: "s", title: "Beach", shoot: { start: "2026-05-10", end: null } })], [], opts)
+    expect(e.key).toBe("s:shoot")
+    expect(e.body.summary).toBe("Shoot — Beach")
+    expect(e.body.start).toEqual({ dateTime: "2026-05-10T09:00:00", timeZone: "Asia/Manila" })
+    expect(e.body.end.dateTime).toBe("2026-05-10T10:00:00")
+    expect(e.body.reminders.overrides.map((o) => o.minutes)).toEqual([780, 0]) // 13h before = 8pm, and at 9am
+  })
+  it("uses the scheduled time, reminds posts only at the time, and skips edited/posted items", () => {
+    const events = desiredCalendarEvents(
+      [
+        item({ id: "p", post: { start: "2026-05-10T19:30", end: null } }),
+        item({ id: "e", edited: true, edit: { start: "2026-05-09", end: null } }),
+        item({ id: "done", status: "Posted", shoot: { start: "2026-05-01", end: null } }),
+      ],
+      [],
+      opts,
+    )
+    expect(events.map((e) => e.key)).toEqual(["p:post"])
+    expect(events[0].body.start.dateTime).toBe("2026-05-10T19:30:00")
+    expect(events[0].body.reminders.overrides).toEqual([{ method: "popup", minutes: 0 }])
+  })
+  it("adds SHEIN order and return reminders only when SHEIN is on", () => {
+    const post = item({ id: "x", orderId: "ord", shoot: { start: "2026-05-20", end: null } })
+    const o = order({ id: "ord", name: "Order 1" })
+    expect(desiredCalendarEvents([post], [o], opts).map((e) => e.key)).toEqual(["x:shoot", "ord:order"])
+    expect(desiredCalendarEvents([post], [o], { ...opts, shein: false }).map((e) => e.key)).toEqual(["x:shoot"])
+  })
+})
+
+describe("feed placement", () => {
+  it("Post, Reels and Story replace each other; other categories combine", () => {
+    expect(toggleCategory(["Post", "Facebook"], "Story")).toEqual(["Facebook", "Story"])
+    expect(toggleCategory(["Story"], "Locket")).toEqual(["Story", "Locket"])
+    expect(toggleCategory(["Story", "Locket"], "Story")).toEqual(["Locket"])
+    expect(feedKindFor(["Post", "Story"])).toBe("StoryFolder")
+    expect(feedKindFor(["Facebook"])).toBeNull()
   })
 })

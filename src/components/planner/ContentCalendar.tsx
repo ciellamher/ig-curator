@@ -247,7 +247,7 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
                   {...dropProps(day)}
                   onClick={() => setSelected(day)}
                   onDoubleClick={() => setAdding(day)}
-                  className={`group border-r border-b border-soft-200 min-h-[52px] sm:min-h-[104px] p-1 flex flex-col gap-1 min-w-0 transition-colors ${
+                  className={`group border-r border-b border-soft-200 min-h-[52px] sm:min-h-[136px] p-1 flex flex-col gap-1 min-w-0 transition-colors ${
                     dragOver === day ? "bg-zinc-50" : inMonth ? "bg-white" : "bg-soft-50/70"
                   } ${selected === day ? "max-sm:bg-pastel-50" : ""}`}
                 >
@@ -267,8 +267,8 @@ export function ContentCalendar({ planner, query, onOpen }: { planner: Planner; 
                     ))}
                   </div>
                   <div className="hidden sm:flex flex-col gap-1 min-w-0">
-                    {evs.slice(0, 3).map((e) => card(e, true))}
-                    {evs.length > 3 && <span className="text-[11px] text-zinc-400 px-1">+{evs.length - 3} more</span>}
+                    {evs.slice(0, 4).map((e) => card(e, true))}
+                    {evs.length > 4 && <span className="text-[11px] text-zinc-400 px-1">+{evs.length - 4} more</span>}
                   </div>
                 </div>
               )
