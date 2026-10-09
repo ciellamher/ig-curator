@@ -110,17 +110,6 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
         </DndContext>
       </div>
 
-      {/* Footer */}
-      <div 
-        className="w-full p-4 border-t border-soft-100 bg-white flex items-center justify-between sticky bottom-0 z-20 cursor-pointer hover:bg-soft-50 transition-colors"
-        onClick={() => setActiveSlotId(folder.id)}
-      >
-        <span className="font-semibold text-[15px] text-foreground">Scheduled</span>
-        <span className="font-medium text-[15px] text-foreground/60">
-          {folder.scheduledTime || "Not scheduled yet"}
-        </span>
-      </div>
-
       {isPreviewOpen && (
         <StoryPreviewModal 
           stories={stories}

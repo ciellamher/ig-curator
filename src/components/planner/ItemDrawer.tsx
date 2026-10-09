@@ -10,7 +10,7 @@ import { STATUS_STYLES } from "@/lib/planner/options"
 import { batchOptionsFor } from "@/lib/planner/views"
 import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
 import { feedKindsFor } from "@/lib/planner/feed"
-import { DATE_FIELDS, PAGE_EDITOR_EVENT, type ContentDTO, type Location, type PageEditorHost } from "@/lib/planner/types"
+import { DATE_FIELDS, FEED_ATTACH_EVENT, PAGE_EDITOR_EVENT, type ContentDTO, type FeedAttach, type Location, type PageEditorHost } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
 import { EditorPanel } from "@/components/editor/EditorPanel"
@@ -58,7 +58,14 @@ export function ItemDrawer({
   const feedKind = feedKindsFor(item.categories)
   const panelRef = useRef<HTMLElement>(null)
   // The page's grid box (post or reel): its Edit Slot tools show inside the page
-  const gridSlotId = item.contentType && item.contentType !== "StoryFolder" ? item.slotId : (item.extraSlots?.Post ?? item.extraSlots?.Reel ?? null)
+  const gridSlotId = item.contentType && item.contentType !== "StoryFolder" ? item.slotId : (item.extraSlots?.Post ?? item.extraSlots?.Carousel ?? item.extraSlots?.Reel ?? null)
+  const gridType = gridSlotId === item.slotId ? item.contentType : Object.entries(item.extraSlots ?? {}).find(([, id]) => id === gridSlotId)?.[0]
+  // Its box missing from this browser's feed (e.g. set up elsewhere): put it back, with the page's photos
+  useEffect(() => {
+    if (!gridSlotId) return
+    const detail: FeedAttach = { slotId: gridSlotId, contentType: gridType ?? "Post", urls: item.media.map((m) => m.url), title: item.title, ensure: true, hidden: item.hiddenFromFeed }
+    window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+  }, [gridSlotId]) // eslint-disable-line react-hooks/exhaustive-deps
   const slotHostRef = useRef<HTMLDivElement>(null)
   const storyFolderSlotId = item.contentType === "StoryFolder" ? item.slotId : (item.extraSlots?.StoryFolder ?? null)
   // A page without a post/reel box is edited as a "slot" of its own: its photos, title and post time

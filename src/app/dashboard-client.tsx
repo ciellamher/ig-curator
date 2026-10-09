@@ -827,7 +827,7 @@ export function DashboardClient() {
           return fresh.length ? curr.map((i) => (i.id === slotId ? { ...i, type: "image", urls: [...(i.urls ?? []), ...fresh] } : i)) : curr;
         }
         return [
-          { id: slotId, type: urls.length ? "image" : "placeholder", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : "Post", ...(hidden ? { isHiddenFromGrid: true } : {}) },
+          { id: slotId, type: urls.length ? "image" : "placeholder", urls, currentUrlIndex: 0, hexColor: "#E4E4E7", text, contentType: contentType === "Reel" ? "Reel" : contentType === "Carousel" ? "Carousel" : "Post", ...(hidden ? { isHiddenFromGrid: true } : {}) },
           ...curr,
         ];
       });
@@ -1462,7 +1462,10 @@ export function DashboardClient() {
                       />,
                       pageEditor.el,
                     )
-                  : null;
+                  : createPortal(
+                      <p className="p-4 text-xs text-zinc-500">Adding this post&apos;s box to the feed…</p>,
+                      pageEditor.el,
+                    );
               })()}
 
             {/* Instagram Feed / Reel Preview Modal */}
