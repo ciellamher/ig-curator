@@ -20,12 +20,13 @@ export function PlannerClient() {
   const [showPosted, setShowPosted] = useState(false)
   // Posted content stays in the feed but drops out of the planner (unless "Show posted" is on).
   const postedCount = allPlanner.items.filter((i) => i.status === "Posted").length
+  // Inspo stays in the feed only; Posted content is hidden unless "Show posted" is on
   const planner = useMemo(() => {
-    if (showPosted) return allPlanner
+    const visible = (i: { status: string; contentType: string | null }) => !i.contentType?.startsWith("Inspo") && (showPosted || i.status !== "Posted")
     return {
       ...allPlanner,
-      items: allPlanner.items.filter((i) => i.status !== "Posted"),
-      alerts: allPlanner.alerts.filter((a) => a.item?.status !== "Posted"),
+      items: allPlanner.items.filter(visible),
+      alerts: allPlanner.alerts.filter((a) => !a.item || visible(a.item)),
     }
   }, [allPlanner, showPosted])
   const [openId, setOpenId] = useState<string | null>(null)

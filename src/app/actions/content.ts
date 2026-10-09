@@ -301,13 +301,15 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       deleted = res.count
     }
 
-    const LOCATIONS = ["grid", "drafts", "story", "inspo"] as const
+    await prisma.content.deleteMany({ where: { userId, contentType: { startsWith: "Inspo" } } })
+
+    const LOCATIONS = ["grid", "drafts", "story"] as const
     const tombstoned = new Set(
       (await prisma.deletedFeedSlot.findMany({ where: { userId, slotId: { in: slots.map((s) => String(s?.slotId)) } }, select: { slotId: true } })).map((t) => t.slotId),
     )
     const clean: FeedSlotSync[] = slots.slice(0, MAX_SYNC_SLOTS).flatMap((s) => {
       const slotId = cleanText(s?.slotId, 120)
-      if (!slotId || tombstoned.has(slotId)) return []
+      if (!slotId || tombstoned.has(slotId) || s.location === "inspo" || String(s.contentType ?? "").startsWith("Inspo")) return []
       return [{
         slotId,
         contentType: cleanText(s.contentType, 20) ?? "Post",

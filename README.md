@@ -45,7 +45,7 @@ Sits beside the feed on the home page (feed on the left, planner on the right). 
 - **Automatic edit dates** — setting Post Now sets Edit Date 3 days before (stories) or 1 week before (posts, reels), and follows whenever Post Now or the category changes.
 - **Outfits to Prep** — one SHEIN order covers two batches. Order 7 days before the first shoot; the 14-day return window counts from delivery, with a reminder from day 11 and a black "over 14 days" flag once it has closed. The original outfits table sits underneath.
 - **Quick Links** gallery.
-- **Feed ↔ planner sync** — everything added in the feed (posts, reels, drafts, story folders and stories, inspo boards and photos) gets a planner row, and uploaded photos attach to it. Renaming or deleting on either side updates the other; deletions are recorded so every browser's feed follows.
+- **Feed ↔ planner sync** — everything planned in the feed (posts, reels, drafts, story folders and stories) gets a planner row — inspo boards and photos stay in the feed only, and uploaded photos attach to it. Renaming or deleting on either side updates the other; deletions are recorded so every browser's feed follows.
 
 Dates are stored as Asia/Manila wall-clock strings (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`), so date-only values never shift a day.
 

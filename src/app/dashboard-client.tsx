@@ -89,8 +89,8 @@ function writeCloudMeta(userId: string, patch: Partial<CloudMeta>) {
 }
 
 /**
- * Projects everything added in the feed (posts, reels, drafts, story folders and stories, inspo boards and photos)
- * into the shape the content database syncs from.
+ * Projects planned content in the feed (posts, reels, drafts, story folders and stories) into the shape the content
+ * database syncs from. Inspo boards and photos are not included.
  */
 function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
   const byId = new Map(items.map((i) => [i.id, i]));
@@ -117,9 +117,11 @@ function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
     const parent = topFolder(item.folderId);
     const parentSlotId = parent && parent.id !== item.id ? parent.id : null;
 
+    // Inspo boards and photos are reference material: they stay in the feed only, not in the planner
+    if (contentType.startsWith("Inspo") || parent?.contentType === "InspoFolder") return [];
+
     let location: FeedSlotSync["location"];
     if (item.folderId === "draft-pool") location = "drafts";
-    else if (contentType.startsWith("Inspo") || parent?.contentType === "InspoFolder") location = "inspo";
     else if (contentType === "Story" || contentType === "StoryFolder" || parent?.contentType === "StoryFolder") location = "story";
     else location = "grid";
 
