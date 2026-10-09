@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
+import { addContentMedia, createContent, deleteContents, listContent, loadSampleData, updateContent } from "@/app/actions/content"
 import { feedKindsFor } from "@/lib/planner/feed"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } from "@/app/actions/quickLinks"
@@ -232,11 +232,28 @@ export function usePlanner(enabled: boolean) {
     else setError(res.error)
   }, [])
 
+  /**
+   * Photos added from a page without a post/reel box: into its story folder (as stories), or kept on the page
+   * itself until it gets a feed placement.
+   */
+  const addPhotos = useCallback(async (page: ContentDTO, urls: string[]) => {
+    if (!urls.length) return
+    const folder = page.contentType === "StoryFolder" ? page.slotId : page.extraSlots?.StoryFolder
+    if (folder) {
+      const detail: FeedAttach = { slotId: folder, contentType: "StoryFolder", urls, title: page.title }
+      window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+      return
+    }
+    const res = await addContentMedia(page.id, urls)
+    if (res.success) setItems((curr) => curr.map((i) => (i.id === page.id ? res.data : i)))
+    else setError(res.error)
+  }, [])
+
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink, addPhotos }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

@@ -144,6 +144,9 @@ export type FeedAttach = {
   hidden?: boolean
 }
 
+/** Fired by the planner with every feed box that belongs to a page (those are edited in their page). */
+export const PLANNER_SLOTS_EVENT = "planner:slots"
+
 /** Fired by an open planner page with the spot where its feed box's editor goes (null when the page closes). */
 export const PAGE_EDITOR_EVENT = "planner:page-editor"
 export type PageEditorHost = { slotId: string; el: HTMLElement } | null

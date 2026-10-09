@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
+import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -59,14 +59,18 @@ export function PlannerClient() {
       const item = allPlanner.items.find((i) => i.slotId === slotId || Object.values(i.extraSlots ?? {}).includes(slotId))
       if (!item) return
       setFocus({ id: item.id, reveal: Date.now() })
-      // Side by side: open its page next to the feed without covering it. Phones: the feed's own editor is open.
-      if (window.matchMedia("(min-width: 1024px)").matches) {
-        setOpenId(item.id)
-        setDrawerFromFeed(true)
-      }
+      // A box that belongs to a page is edited in that page (next to the feed on wide screens)
+      setOpenId(item.id)
+      setDrawerFromFeed(true)
     }
     window.addEventListener(FEED_SELECT_EVENT, onSelect)
     return () => window.removeEventListener(FEED_SELECT_EVENT, onSelect)
+  }, [allPlanner.items])
+  // Tell the feed which boxes belong to pages, so it opens the page for them instead of its own editor
+  useEffect(() => {
+    const ids = allPlanner.items.flatMap((i) => [i.slotId, ...Object.values(i.extraSlots ?? {})]).filter((s): s is string => !!s)
+    ;(window as Window & { __plannerSlots?: string[] }).__plannerSlots = ids // for a feed that mounts later
+    window.dispatchEvent(new CustomEvent(PLANNER_SLOTS_EVENT, { detail: ids }))
   }, [allPlanner.items])
   const dangerCount = planner.alerts.filter((a) => a.alert.severity === "danger").length
 

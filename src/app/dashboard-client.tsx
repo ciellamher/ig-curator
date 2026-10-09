@@ -53,6 +53,7 @@ import {
   PLANNER_FOCUS_EVENT,
   PLANNER_OPEN_EVENT,
   PAGE_EDITOR_EVENT,
+  PLANNER_SLOTS_EVENT,
   type PageEditorHost,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
@@ -152,6 +153,15 @@ export function DashboardClient() {
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
   // An open planner page shows its box's Edit Slot tools inside the page instead of the floating panel
   const [pageEditor, setPageEditor] = useState<PageEditorHost>(null);
+  // Boxes that belong to a planner page: they're edited in the page, never in the floating panel
+  const [pageSlotIds, setPageSlotIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const initial = (window as Window & { __plannerSlots?: string[] }).__plannerSlots;
+    if (initial) setPageSlotIds(new Set(initial));
+    const onSlots = (e: Event) => setPageSlotIds(new Set((e as CustomEvent<string[]>).detail));
+    window.addEventListener(PLANNER_SLOTS_EVENT, onSlots);
+    return () => window.removeEventListener(PLANNER_SLOTS_EVENT, onSlots);
+  }, []);
   const pageEditorRef = useRef<PageEditorHost>(null);
   useEffect(() => {
     const onHost = (e: Event) => {
@@ -1351,7 +1361,7 @@ export function DashboardClient() {
                 </div>
               </div>
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
-            {activeSlotId && activeSlot && pageEditor?.slotId !== activeSlotId && (
+            {activeSlotId && activeSlot && !pageSlotIds.has(activeSlotId) && (
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
                 <div

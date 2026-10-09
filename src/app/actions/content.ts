@@ -313,6 +313,20 @@ export async function setContentFeedLink(id: string, link: { slotId: string; con
   })
 }
 
+/** Photos added to a page that isn't in the feed (yet); they go to the feed when it gets a placement. */
+export async function addContentMedia(id: string, urls: string[]): Promise<Result<ContentDTO>> {
+  return run(async () => {
+    const userId = await requireUserId()
+    const row = await prisma.content.findFirst({ where: { id, userId }, include: { media: true } })
+    if (!row) throw new Error("This item no longer exists")
+    const fresh = cleanMediaUrls(urls).filter((u) => !row.media.some((m) => m.url === u))
+    const start = row.media.length ? Math.max(...row.media.map((m) => m.position)) + 1 : 0
+    if (fresh.length) await prisma.contentMedia.createMany({ data: fresh.map((url, i) => ({ contentId: id, url, position: start + i })) })
+    const updated = await prisma.content.findFirst({ where: { id, userId }, include: { media: true } })
+    return toDTO(updated!)
+  })
+}
+
 /** Feed boxes deleted from the database (or another browser's feed), so this feed can remove them too. */
 export async function listDeletedFeedSlots(): Promise<Result<string[]>> {
   return run(async () => {
