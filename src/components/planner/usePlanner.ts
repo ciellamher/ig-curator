@@ -7,6 +7,7 @@ import { createQuickLink, deleteQuickLink, listQuickLinks, updateQuickLink } fro
 import { createOrder, deleteOrder, listOrders, renameOrder, setOrderBatches, setOrderDate, setOrderStage } from "@/app/actions/orders"
 import { clothingAlerts } from "@/lib/planner/clothing"
 import {
+  FEED_ADD_EVENT,
   PLANNER_DELETED_EVENT,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
@@ -73,9 +74,15 @@ export function usePlanner(enabled: boolean) {
   }, [])
 
   const create = useCallback(async (input: ContentPatch = {}) => {
-    const res = await createContent(input)
+    // Top-level items are posts, so they get a box in the Posts grid with the same id
+    const slotId = input.parentId ? undefined : `slot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+    const contentType = input.categories?.includes("Reels") && !input.categories.includes("Post") ? "Reel" : "Post"
+    const res = await createContent({ ...input, ...(slotId ? { slotId, contentType } : {}) })
     if (res.success) {
       setItems((curr) => [res.data, ...curr])
+      if (res.data.slotId) {
+        window.dispatchEvent(new CustomEvent(FEED_ADD_EVENT, { detail: [{ slotId: res.data.slotId, title: res.data.title, contentType: res.data.contentType ?? "Post" }] }))
+      }
       return res.data
     }
     setError(res.error)

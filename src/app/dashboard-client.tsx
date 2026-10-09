@@ -44,12 +44,14 @@ import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
 import {
+  FEED_ADD_EVENT,
   FEED_SELECT_EVENT,
   PLANNER_DELETED_EVENT,
   PLANNER_FOCUS_EVENT,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
+  type FeedBox,
   type FeedSlotSync,
 } from "@/lib/planner/types";
 
@@ -89,51 +91,27 @@ function writeCloudMeta(userId: string, patch: Partial<CloudMeta>) {
   } catch {}
 }
 
-/**
- * Projects planned content in the feed (posts, reels, drafts, story folders and stories) into the shape the content
- * database syncs from. Inspo boards and photos are not included.
- */
+const GRID_TYPES = new Set(["Post", "Reel", "Carousel"]);
+
+/** Boxes shown in the Posts tab (the main grid) — the only feed content that goes to the planner. */
+function isPlannerBox(item: SlotItem): boolean {
+  return !item.folderId && !item.isLocked && !item.isHiddenFromGrid && GRID_TYPES.has(item.contentType ?? "Post");
+}
+
+/** Projects the Posts-tab boxes into the shape the content database syncs from. */
 function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
-  const byId = new Map(items.map((i) => [i.id, i]));
-
-  // Story folders and inspo boards become parent records. The database nests one level deep,
-  // so anything inside a nested inspo board hangs off its top-level board.
-  const topFolder = (folderId: string | undefined): SlotItem | undefined => {
-    let folder = folderId ? byId.get(folderId) : undefined;
-    const seen = new Set<string>();
-    while (folder?.folderId && byId.get(folder.folderId)?.contentType?.endsWith("Folder") && !seen.has(folder.id)) {
-      seen.add(folder.id);
-      folder = byId.get(folder.folderId);
-    }
-    return folder?.contentType?.endsWith("Folder") ? folder : undefined;
-  };
-
   return items.flatMap((item) => {
-    const contentType = item.contentType ?? "Post";
-    if (item.isLocked || contentType === "PlaceholderFolder") return [];
+    if (!isPlannerBox(item)) return [];
     // The starter grid's blank placeholders only count once they get a photo or text
     if (STARTER_SLOT_IDS.has(item.id) && item.urls.length === 0 && !item.text?.trim()) return [];
-
-    const isFolder = contentType === "StoryFolder" || contentType === "InspoFolder";
-    const parent = topFolder(item.folderId);
-    const parentSlotId = parent && parent.id !== item.id ? parent.id : null;
-
-    // Inspo boards and photos are reference material: they stay in the feed only, not in the planner
-    if (contentType.startsWith("Inspo") || parent?.contentType === "InspoFolder") return [];
-
-    let location: FeedSlotSync["location"];
-    if (item.folderId === "draft-pool") location = "drafts";
-    else if (contentType === "Story" || contentType === "StoryFolder" || parent?.contentType === "StoryFolder") location = "story";
-    else location = "grid";
-
     return [{
       slotId: item.id,
-      contentType: location === "story" && !isFolder ? "Story" : contentType,
-      location,
+      contentType: item.contentType ?? "Post",
+      location: "grid" as const,
       title: (item.text?.trim() || item.caption?.split("\n")[0]?.trim() || "").slice(0, 200),
       mediaUrls: item.urls ?? [],
-      parentSlotId,
-      isFolder,
+      parentSlotId: null,
+      isFolder: false,
     }];
   });
 }
@@ -680,6 +658,8 @@ export function DashboardClient() {
         slots: slots.map((s) => ({ ...s, titleChanged: synced !== null && synced.has(s.slotId) && synced.get(s.slotId) !== s.title })),
         deletedSlotIds,
         restoredSlotIds,
+        excludedSlotIds: items.filter((i) => !isPlannerBox(i)).map((i) => i.id),
+        presentSlotIds: items.map((i) => i.id),
       };
       const res = await syncFeedToContent(request);
       if (res.success) {
@@ -687,7 +667,8 @@ export function DashboardClient() {
         syncedTitlesRef.current = new Map(slots.map((s) => [s.slotId, s.title]));
         deletedSlotIds.forEach((id) => pendingDeletesRef.current.delete(id));
         restoredSlotIds.forEach((id) => pendingRestoresRef.current.delete(id));
-        if (res.data.created + res.data.updated + res.data.deleted > 0) window.dispatchEvent(new Event(PLANNER_REFRESH_EVENT));
+        if (res.data.addToFeed.length) addFeedBoxes(res.data.addToFeed);
+        if (res.data.created + res.data.updated + res.data.deleted + res.data.addToFeed.length > 0) window.dispatchEvent(new Event(PLANNER_REFRESH_EVENT));
       } else {
         console.error("Planner sync failed:", res.error);
         window.dispatchEvent(new CustomEvent(PLANNER_SYNC_ERROR_EVENT, { detail: res.error }));
@@ -695,6 +676,32 @@ export function DashboardClient() {
     }, 1200);
     return () => clearTimeout(timeoutId);
   }, [items, isLoaded, status]);
+
+  // Planner → feed: content made in the planner gets a box at the top of the Posts grid
+  const addFeedBoxes = (boxes: FeedBox[]) => {
+    setItems((curr) => {
+      const have = new Set(curr.map((i) => i.id));
+      const fresh: SlotItem[] = boxes
+        .filter((b) => !have.has(b.slotId))
+        .map((b) => ({
+          id: b.slotId,
+          type: "placeholder",
+          urls: [],
+          currentUrlIndex: 0,
+          hexColor: "#E4E4E7",
+          text: /^Untitled/.test(b.title) ? "" : b.title,
+          contentType: b.contentType === "Reel" ? "Reel" : "Post",
+        }));
+      return fresh.length ? [...fresh, ...curr] : curr;
+    });
+  };
+  const addFeedBoxesRef = useRef(addFeedBoxes);
+  addFeedBoxesRef.current = addFeedBoxes;
+  useEffect(() => {
+    const onAdd = (e: Event) => addFeedBoxesRef.current((e as CustomEvent<FeedBox[]>).detail ?? []);
+    window.addEventListener(FEED_ADD_EVENT, onAdd);
+    return () => window.removeEventListener(FEED_ADD_EVENT, onAdd);
+  }, []);
 
   // Database → feed: remove boxes deleted in the planner (or another browser), and follow planner renames.
   const removeSlots = (slotIds: string[]) => {

@@ -8,7 +8,7 @@ import { isValidScheduleValue, type Schedule } from "@/lib/planner/dates"
 import { AUTO_STATUSES, categoryForFeedSlot, defaultFeedTitle, statusForFeedSlot } from "@/lib/planner/feed"
 import { SAMPLE_ORDERS, SAMPLE_QUICK_LINKS, sampleContent } from "@/lib/planner/sample"
 import { withScheduleRules } from "@/lib/planner/rules"
-import type { ContentDTO, ContentPatch, FeedSlotSync, FeedSyncRequest, Location } from "@/lib/planner/types"
+import type { ContentDTO, ContentPatch, FeedBox, FeedSlotSync, FeedSyncRequest, Location } from "@/lib/planner/types"
 
 const MAX_SYNC_SLOTS = 10000
 const MAX_URL_LENGTH = 2048
@@ -158,8 +158,11 @@ export async function createContent(input: ContentPatch = {}): Promise<Result<Co
     await validateParent(userId, parentId)
     const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null } }
     const data = patchToData(withScheduleRules(blank, input)) as Prisma.ContentUncheckedCreateInput
+    // Planner items get a box in the Posts grid (same slot id), so both sides always match
+    const slotId = typeof input.slotId === "string" && /^slot-[\w-]{3,100}$/.test(input.slotId) ? input.slotId : null
+    const contentType = input.contentType === "Reel" ? "Reel" : slotId ? "Post" : null
     const row = await prisma.content.create({
-      data: { ...data, userId, parentId, title: (data.title as string) ?? "Untitled", status: (data.status as string) ?? DEFAULT_STATUS },
+      data: { ...data, userId, parentId, slotId, contentType, title: (data.title as string) ?? "Untitled", status: (data.status as string) ?? DEFAULT_STATUS },
       include: { media: true },
     })
     return toDTO(row)
@@ -282,7 +285,7 @@ function cleanMediaUrls(urls: unknown): string[] {
  * "To Board"/"To Shoot" to "To Edit" once a photo is added; renaming a box renames its record; deleting a box deletes
  * its record. Boxes deleted elsewhere are never re-created.
  */
-export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number }>> {
+export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[] }>> {
   return run(async () => {
     const userId = await requireUserId()
     const slots = Array.isArray(request?.slots) ? request.slots : []
@@ -303,6 +306,16 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
 
     await prisma.content.deleteMany({ where: { userId, contentType: { startsWith: "Inspo" } } })
 
+    // Only Posts-tab boxes belong in the planner: drop rows for drafts/stories that are in the feed
+    const excluded = ids(request?.excludedSlotIds)
+    if (excluded.length) await prisma.content.deleteMany({ where: { userId, slotId: { in: excluded } } })
+    // The planner mirrors the Posts tab exactly: rows whose box isn't in the feed are removed. Skipped when this
+    // browser's feed has no posts at all (e.g. a fresh browser), so it can never wipe the planner.
+    const present = ids(request?.presentSlotIds)
+    if (present.length && slots.length) {
+      await prisma.content.deleteMany({ where: { userId, slotId: { not: null, notIn: present }, orderId: null, children: { none: {} } } })
+    }
+
     const LOCATIONS = ["grid", "drafts", "story"] as const
     const tombstoned = new Set(
       (await prisma.deletedFeedSlot.findMany({ where: { userId, slotId: { in: slots.map((s) => String(s?.slotId)) } }, select: { slotId: true } })).map((t) => t.slotId),
@@ -321,7 +334,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
         titleChanged: Boolean(s.titleChanged),
       }]
     })
-    if (clean.length === 0) return { created: 0, updated: 0, deleted }
+    if (clean.length === 0) return { created: 0, updated: 0, deleted, addToFeed: [] }
 
     // Parents before children so sub-items can be linked in the same pass.
     clean.sort((a, b) => Number(Boolean(a.parentSlotId)) - Number(Boolean(b.parentSlotId)))
@@ -415,6 +428,22 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       updated++
     }
 
-    return { created, updated, deleted }
+    // Planner items without a box (made in the planner) get one in the Posts grid. Batches (groups of posts,
+    // used by SHEIN orders) stay planner-only.
+    const addToFeed: FeedBox[] = []
+    if (slots.length) {
+      const unlinked = await prisma.content.findMany({
+        where: { userId, slotId: null, parentId: null, orderId: null, children: { none: {} } },
+        select: { id: true, title: true, contentType: true },
+      })
+      for (const row of unlinked) {
+        const slotId = `slot-planner-${row.id}`
+        const contentType = row.contentType === "Reel" ? "Reel" : "Post"
+        await prisma.content.update({ where: { id: row.id }, data: { slotId, contentType } })
+        addToFeed.push({ slotId, title: row.title, contentType })
+      }
+    }
+
+    return { created, updated, deleted, addToFeed }
   })
 }

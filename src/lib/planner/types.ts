@@ -52,7 +52,7 @@ export type ContentPatch = Partial<
     | "body"
     | "parentId"
   >
->
+> & { slotId?: string; contentType?: string }
 
 export type OrderDTO = {
   id: string
@@ -89,6 +89,10 @@ export type FeedSyncRequest = {
   deletedSlotIds: string[]
   /** Boxes that came back (e.g. undo) and may have been recorded as deleted. */
   restoredSlotIds: string[]
+  /** Boxes in this feed that aren't planner content (drafts, stories): their planner rows are removed. */
+  excludedSlotIds?: string[]
+  /** Every box in this feed, so untouched rows for boxes that no longer exist can be cleaned up. */
+  presentSlotIds?: string[]
 }
 
 /** Fired by the planner when records linked to feed boxes are deleted; detail: slot ids. */
@@ -110,6 +114,11 @@ export const PLANNER_REFRESH_EVENT = "planner:refresh"
 
 /** Fired by the planner when an item is opened, to highlight its box in the feed; detail: slot id. */
 export const PLANNER_FOCUS_EVENT = "planner:focus"
+
+export type FeedBox = { slotId: string; title: string; contentType: string }
+
+/** Fired by the planner when it creates content that needs a box in the Posts grid; detail: FeedBox[]. */
+export const FEED_ADD_EVENT = "feed:add"
 
 /** Fired by the feed when a box is selected, so the planner can show its row; detail: slot id. */
 export const FEED_SELECT_EVENT = "feed:select"
