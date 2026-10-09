@@ -172,7 +172,7 @@ export async function createContent(input: ContentPatch = {}): Promise<Result<Co
     scheduleCalendarSync(userId) // runs after this change is saved
     const parentId = input.parentId || null
     await validateParent(userId, parentId)
-    const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null } }
+    const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null }, edited: false }
     const data = patchToData(withScheduleRules(blank, input)) as Prisma.ContentUncheckedCreateInput
     // Planner items get a box in the Posts grid (same slot id), so both sides always match
     const slotId = typeof input.slotId === "string" && /^slot-[\w-]{3,100}$/.test(input.slotId) ? input.slotId : null
@@ -285,7 +285,7 @@ export async function loadSampleData(): Promise<Result<{ created: number }>> {
         })
         orderIds.set(o.key, order.id)
       }
-      const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null } }
+      const blank = { status: DEFAULT_STATUS as string, categories: [], post: { start: null, end: null }, edit: { start: null, end: null }, edited: false }
       for (const { key, parentKey, orderKey, orderedDaysAgo, deliveredDaysAgo, ...sample } of samples) {
         const patch = SHEIN_ENABLED ? sample : { ...sample, clothingStatus: null }
         const data = patchToData(withScheduleRules(blank, patch)) as Prisma.ContentUncheckedCreateInput

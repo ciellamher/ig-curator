@@ -22,7 +22,7 @@ export function autoEditDate(postStart: string | null, categories: string[]): st
  * - setting Post Now (or changing categories) moves Edit Date to 3 days (Story) / 1 week (Post, Reels) before it;
  * - an item waiting in "To Schedule" moves to "To Edit" once it has an edit date.
  */
-export function withScheduleRules(item: Pick<ContentDTO, "status" | "categories" | "post" | "edit">, patch: ContentPatch): ContentPatch {
+export function withScheduleRules(item: Pick<ContentDTO, "status" | "categories" | "post" | "edit" | "edited">, patch: ContentPatch): ContentPatch {
   const next: ContentPatch = { ...patch }
   const categories = patch.categories ?? item.categories
   const post = patch.post ?? item.post
@@ -33,8 +33,25 @@ export function withScheduleRules(item: Pick<ContentDTO, "status" | "categories"
   }
 
   const edit = next.edit ?? item.edit
-  const status = patch.status ?? item.status
-  if (!("status" in patch) && status === "To Schedule" && edit.start) next.status = "To Edit"
+  let status = next.status ?? patch.status ?? item.status
+  let edited = next.edited ?? patch.edited ?? item.edited
+
+  // If user explicitly checked Edited
+  if (patch.edited === true && !("status" in patch)) {
+    next.status = "Ready to Post"
+    status = "Ready to Post"
+  }
+  
+  // If user explicitly changed status to Ready to Post
+  if (patch.status === "Ready to Post" && !("edited" in patch)) {
+    next.edited = true
+    edited = true
+  }
+
+  // Automatic "To Schedule" -> "To Edit" progression if it's placed on the calendar
+  if (!("status" in next) && !("status" in patch) && status === "To Schedule" && edit.start) {
+    next.status = "To Edit"
+  }
 
   return next
 }
