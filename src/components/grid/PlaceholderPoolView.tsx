@@ -178,7 +178,7 @@ export function PlaceholderPoolView({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-[1px] bg-white w-full">
+          <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-[1px] bg-white w-full">
             {placeholders.map((item) => {
               const isSelected = selectedIds.includes(item.id);
               const isActive = activeSlotId === item.id;

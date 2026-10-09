@@ -233,7 +233,7 @@ export function InspoFolderView({
 
   return (
     <div
-      className="w-full flex flex-col bg-white min-h-[calc(100vh-80px)] relative"
+      className="w-full flex flex-col bg-white min-h-64 relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -317,7 +317,7 @@ export function InspoFolderView({
 
       {/* Sub-Folders Section */}
       {subFolders.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 px-3 py-3 border-b border-zinc-100 bg-white">
+        <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-2 px-3 py-3 border-b border-zinc-100 bg-white">
           {subFolders.map((item) => {
             const customCover = item.urls?.[0];
             const folderImages = customCover
@@ -487,7 +487,7 @@ export function InspoFolderView({
           <p className="text-xs">Use “Add photos” above, or drag photos here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 px-1 pb-24 bg-white mt-1">
+        <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-1 px-1 pb-6 bg-white mt-1">
           {postItems.map((item) => (
             <div
               key={item.id}

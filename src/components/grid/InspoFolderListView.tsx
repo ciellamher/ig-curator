@@ -116,7 +116,7 @@ export function InspoFolderListView({
   };
 
   return (
-    <div className="w-full flex flex-col pb-24">
+    <div className="w-full flex flex-col pb-6">
       <ConfirmModal
         isOpen={!!deleteFolderId}
         title="Delete folder"
@@ -269,7 +269,7 @@ export function InspoFolderListView({
         )}
 
         {/* Boards */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 @xl:grid-cols-4 @4xl:grid-cols-5 gap-3 sm:gap-4">
           {folders
             .slice()
             .sort((a, b) => (a.text || "").localeCompare(b.text || ""))

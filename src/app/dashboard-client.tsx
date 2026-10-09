@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
+import { createPortal } from "react-dom";
 import { Grid } from "@/components/grid/Grid";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { SlotItem } from "@/types";
@@ -521,6 +522,34 @@ export function DashboardClient() {
     setHighlightSlotId(activeSlotId);
     window.dispatchEvent(new CustomEvent(FEED_SELECT_EVENT, { detail: activeSlotId }));
   }, [activeSlotId]);
+
+
+  // ---- Drafts & Inspo live beside the feed (in the right column), not inside the phone ----
+  const [libraryEl, setLibraryEl] = useState<HTMLElement | null>(null);
+  const [libraryTab, setLibraryTab] = useState<"drafts" | "inspo">("drafts");
+  const [libraryOpen, setLibraryOpen] = useState(true);
+  useEffect(() => {
+    setLibraryEl(document.getElementById("library-slot"));
+    try {
+      const saved = JSON.parse(localStorage.getItem("ig-curator-library") || "{}");
+      if (saved.tab === "drafts" || saved.tab === "inspo") setLibraryTab(saved.tab);
+      if (saved.open === false) setLibraryOpen(false);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("ig-curator-library", JSON.stringify({ tab: libraryTab, open: libraryOpen }));
+    } catch {}
+  }, [libraryTab, libraryOpen]);
+  // Older saved views pointed the phone at Drafts/Inspo; those now live in the side panel
+  useEffect(() => {
+    if (gridFilter === "Placeholders" || gridFilter === "Inspo") {
+      setLibraryTab(gridFilter === "Inspo" ? "inspo" : "drafts");
+      setGridFilter("All");
+    }
+  }, [gridFilter]);
+  const draftCount = items.filter((i) => i.folderId === "draft-pool").length;
+  const boardCount = items.filter((i) => i.contentType === "InspoFolder" && !i.folderId).length;
 
   // Profile edits are backed up too
   const itemsRef = useRef(items);
@@ -1117,8 +1146,6 @@ export function DashboardClient() {
                           ["All", "Posts", Grid3X3],
                           ["Reel", "Reels", Clapperboard],
                           ["Story", "Stories", Circle],
-                          ["Placeholders", "Drafts", SquarePlus],
-                          ["Inspo", "Inspo", FolderHeart],
                         ] as const
                       ).map(([value, label, Icon]) => {
                         const isActive = gridFilter === value;
@@ -1155,63 +1182,6 @@ export function DashboardClient() {
                           photos.
                         </p>
                       </div>
-                    ) : gridFilter === "Inspo" ? (
-                      activeInspoFolderId && items.find((i) => i.id === activeInspoFolderId) ? (
-                        <InspoFolderView
-                          folder={items.find(
-                            (i) => i.id === activeInspoFolderId,
-                          )!}
-                          itemsInFolder={items.filter(
-                            (i) => i.folderId === activeInspoFolderId,
-                          )}
-                          allItems={items}
-                          onBack={() => {
-                            const currentFolder = items.find(
-                              (i) => i.id === activeInspoFolderId,
-                            );
-                            if (currentFolder && currentFolder.folderId) {
-                              setActiveInspoFolderId(currentFolder.folderId);
-                            } else {
-                              setActiveInspoFolderId(null);
-                            }
-                          }}
-                          onFolderClick={(folderId) =>
-                            setActiveInspoFolderId(folderId)
-                          }
-                          updateItems={updateItems}
-                          updateItem={updateItem}
-                          activeSlotId={activeSlotId}
-                          setActiveSlotId={setActiveSlotId}
-                          onCopyToMainGrid={handleCopyInspoToGrid}
-                        />
-                      ) : (
-                        <InspoFolderListView
-                          folders={items.filter(
-                            (i) =>
-                              i.contentType === "InspoFolder" && !i.folderId,
-                          )}
-                          allItems={items}
-                          onFolderClick={(folderId) =>
-                            setActiveInspoFolderId(folderId)
-                          }
-                          onAddFolder={handleCreateInspoFolder}
-                          onDeleteFolder={handleDeleteInspoFolder}
-                          updateItem={updateItem}
-                        />
-                      )
-                    ) : gridFilter === "Placeholders" ? (
-                      <PlaceholderPoolView
-                        placeholders={items.filter(
-                          (i) => i.folderId === "draft-pool",
-                        )}
-                        updateItems={updateItems}
-                        updateItem={updateItem}
-                        activeSlotId={activeSlotId}
-                        setActiveSlotId={setActiveSlotId}
-                        onTransferToMainGrid={handleTransferToMainGrid}
-                        isSearchActive={searchQuery.trim() !== ""}
-                        searchResults={searchMatches}
-                      />
                     ) : gridFilter === "Story" ? (
                       activeStoryFolderId && items.find((i) => i.id === activeStoryFolderId) ? (
                         <StoryFolderView
@@ -1380,6 +1350,105 @@ export function DashboardClient() {
       {vaultOpen && (
         <PhotoVault items={items} onClose={() => setVaultOpen(false)} onRestoreLayout={(snapshot) => updateItems(toMonochrome(snapshot))} />
       )}
+      {libraryEl && status === "authenticated" &&
+        createPortal(
+          <section aria-label="Drafts and Inspo" className="@container bg-white border border-zinc-200 rounded-2xl overflow-hidden">
+            <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-100">
+              {(
+                [
+                  ["drafts", "Drafts", draftCount],
+                  ["inspo", "Inspo", boardCount],
+                ] as const
+              ).map(([id, label, count]) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setLibraryTab(id);
+                    setLibraryOpen(true);
+                  }}
+                  aria-pressed={libraryTab === id}
+                  className={`inline-flex items-center gap-1.5 px-3 h-8 rounded-full text-sm font-semibold cursor-pointer transition-colors ${
+                    libraryTab === id && libraryOpen ? "bg-zinc-950 text-white" : "text-zinc-600 hover:bg-zinc-100"
+                  }`}
+                >
+                  {label}
+                  <span className="text-xs opacity-60 tabular-nums">{count}</span>
+                </button>
+              ))}
+              <span className="ml-2 hidden sm:inline text-xs text-zinc-400">Transfer anything to put it in the phone&apos;s grid</span>
+              <button
+                onClick={() => setLibraryOpen((o) => !o)}
+                className="ml-auto px-3 h-8 rounded-full text-xs font-semibold text-zinc-600 hover:bg-zinc-100 cursor-pointer"
+                aria-expanded={libraryOpen}
+              >
+                {libraryOpen ? "Hide" : "Show"}
+              </button>
+            </div>
+            {libraryOpen && (
+              <div className="max-h-[70vh] overflow-y-auto">
+                {libraryTab === "inspo" ? (
+                      activeInspoFolderId && items.find((i) => i.id === activeInspoFolderId) ? (
+                        <InspoFolderView
+                          folder={items.find(
+                            (i) => i.id === activeInspoFolderId,
+                          )!}
+                          itemsInFolder={items.filter(
+                            (i) => i.folderId === activeInspoFolderId,
+                          )}
+                          allItems={items}
+                          onBack={() => {
+                            const currentFolder = items.find(
+                              (i) => i.id === activeInspoFolderId,
+                            );
+                            if (currentFolder && currentFolder.folderId) {
+                              setActiveInspoFolderId(currentFolder.folderId);
+                            } else {
+                              setActiveInspoFolderId(null);
+                            }
+                          }}
+                          onFolderClick={(folderId) =>
+                            setActiveInspoFolderId(folderId)
+                          }
+                          updateItems={updateItems}
+                          updateItem={updateItem}
+                          activeSlotId={activeSlotId}
+                          setActiveSlotId={setActiveSlotId}
+                          onCopyToMainGrid={handleCopyInspoToGrid}
+                        />
+                      ) : (
+                        <InspoFolderListView
+                          folders={items.filter(
+                            (i) =>
+                              i.contentType === "InspoFolder" && !i.folderId,
+                          )}
+                          allItems={items}
+                          onFolderClick={(folderId) =>
+                            setActiveInspoFolderId(folderId)
+                          }
+                          onAddFolder={handleCreateInspoFolder}
+                          onDeleteFolder={handleDeleteInspoFolder}
+                          updateItem={updateItem}
+                        />
+                      )
+                ) : (
+                      <PlaceholderPoolView
+                        placeholders={items.filter(
+                          (i) => i.folderId === "draft-pool",
+                        )}
+                        updateItems={updateItems}
+                        updateItem={updateItem}
+                        activeSlotId={activeSlotId}
+                        setActiveSlotId={setActiveSlotId}
+                        onTransferToMainGrid={handleTransferToMainGrid}
+                        isSearchActive={searchQuery.trim() !== ""}
+                        searchResults={searchMatches}
+                      />
+                )}
+              </div>
+            )}
+          </section>,
+          libraryEl,
+        )}
       <ConfirmModal {...modalProps} />
     </div>
   );
