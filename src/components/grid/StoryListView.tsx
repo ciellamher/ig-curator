@@ -61,7 +61,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
-      <div className="p-4 grid grid-cols-1 gap-4">
+      <div className="p-3 grid grid-cols-1 gap-3">
         {folders.map(folder => {
           const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
           const previewImages = storiesInFolder.filter(s => s.type === "image").map(s => s.urls[s.currentUrlIndex]).slice(0, 3);
@@ -73,7 +73,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"
             >
-              <div className="w-full aspect-square rounded-2xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm">
+              <div className="w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm">
                 {previewImages.length > 0 ? (
                   <>
                     <div className="flex-1 h-full overflow-hidden">
@@ -116,15 +116,15 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                 )}
               </div>
               
-              <div className="mt-3 px-1">
+              <div className="mt-1.5 px-1">
                 <input 
                   value={folder.text || folder.caption || ""}
                   onChange={(e) => updateItem(folder.id, { text: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="New Folder"
-                  className="font-bold text-zinc-950 text-[17px] tracking-tight mb-0.5 bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-200 rounded px-1 -ml-1 w-full truncate cursor-text"
+                  className="font-bold text-zinc-950 text-sm tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-200 rounded px-1 -ml-1 w-full truncate cursor-text"
                 />
-                <div className="text-[13px] font-medium text-zinc-500 px-1">
+                <div className="text-[11px] font-medium text-zinc-500 px-1">
                   {storiesInFolder.length} Pin{storiesInFolder.length !== 1 ? 's' : ''}
                   {folder.scheduledTime && ` • ${folder.scheduledTime}`}
                 </div>

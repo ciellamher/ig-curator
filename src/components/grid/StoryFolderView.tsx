@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SlotItem } from "@/types";
 import { ChevronLeft, Eye, Plus } from "lucide-react";
 import { GridItem } from "./GridItem";
-import { DndContext, closestCenter } from "@dnd-kit/core";
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, rectSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { StoryPreviewModal } from "./StoryPreviewModal";
 
@@ -19,6 +19,8 @@ interface StoryFolderViewProps {
 export function StoryFolderView({ folder, stories, onBack, updateItems, updateItem, activeSlotId, setActiveSlotId }: StoryFolderViewProps) {
   
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  // A tap opens the story's editor (to add its photo); dragging starts only after moving a few pixels
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [previewStartIndex, setPreviewStartIndex] = useState(0);
 
   const handleAddStory = () => {
@@ -33,6 +35,7 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
       folderId: folder.id, // Linking to the current folder
     };
     updateItems(curr => [...curr, newStory]);
+    setActiveSlotId(newStory.id); // straight to its editor, ready for a photo
   };
 
   function handleDragEnd(event: any) {
@@ -66,7 +69,7 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
 
       {/* Grid */}
       <div className="flex-1 overflow-y-auto pb-20 p-0.5">
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-3 gap-[1px] bg-white">
             <SortableContext items={stories} strategy={rectSortingStrategy}>
               {stories.map(item => (

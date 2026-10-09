@@ -11,7 +11,7 @@ import { STATUS_STYLES } from "@/lib/planner/options"
 import { batchOptionsFor } from "@/lib/planner/views"
 import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
 import { feedKindsFor } from "@/lib/planner/feed"
-import { DATE_FIELDS, type ContentDTO, type Location } from "@/lib/planner/types"
+import { DATE_FIELDS, PAGE_EDITOR_EVENT, type ContentDTO, type Location, type PageEditorHost } from "@/lib/planner/types"
 import { Badge, CategorySelect, ClothingSelect, CommitInput, EditedCheckbox, ScheduleEditor, StatusSelect } from "./Fields"
 import type { Planner } from "./usePlanner"
 
@@ -56,6 +56,18 @@ export function ItemDrawer({
   const postRef = useRef<HTMLDivElement>(null)
   const feedKind = feedKindsFor(item.categories)
   const panelRef = useRef<HTMLElement>(null)
+  // The page's grid box (post or reel): its Edit Slot tools show inside the page
+  const gridSlotId = item.contentType && item.contentType !== "StoryFolder" ? item.slotId : (item.extraSlots?.Post ?? item.extraSlots?.Reel ?? null)
+  const slotHostRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = slotHostRef.current
+    if (!gridSlotId || !el) return
+    const detail: PageEditorHost = { slotId: gridSlotId, el }
+    window.dispatchEvent(new CustomEvent(PAGE_EDITOR_EVENT, { detail }))
+    return () => {
+      window.dispatchEvent(new CustomEvent(PAGE_EDITOR_EVENT, { detail: null }))
+    }
+  }, [gridSlotId])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose()
@@ -74,7 +86,7 @@ export function ItemDrawer({
 
   return (
     <>
-      {overlay && <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose} />}
+      {overlay && <div className="fixed inset-0 z-[70] bg-black/30 backdrop-blur-xs animate-in fade-in duration-200 lg:hidden" onClick={onClose} />}
       <aside
         ref={panelRef}
         tabIndex={-1}
@@ -114,7 +126,13 @@ export function ItemDrawer({
             </button>
           </div>
 
-          {item.media.length > 0 && (
+          {gridSlotId && (
+            <section aria-label="Feed post" className="rounded-2xl border border-zinc-200 overflow-hidden">
+              <div ref={slotHostRef} />
+            </section>
+          )}
+
+          {!gridSlotId && item.media.length > 0 && (
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
               {item.media.map((m) => (
                 <LocalMediaImage key={m.id} src={m.url} className="h-14 w-11 shrink-0 rounded-md object-cover" />

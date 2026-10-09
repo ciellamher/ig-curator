@@ -144,5 +144,9 @@ export type FeedAttach = {
   hidden?: boolean
 }
 
+/** Fired by an open planner page with the spot where its feed box's editor goes (null when the page closes). */
+export const PAGE_EDITOR_EVENT = "planner:page-editor"
+export type PageEditorHost = { slotId: string; el: HTMLElement } | null
+
 /** Fired by the planner when a page is opened, so the feed opens that box's editor; detail: slot id. */
 export const PLANNER_OPEN_EVENT = "planner:open"

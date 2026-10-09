@@ -52,6 +52,8 @@ import {
   PLANNER_DELETED_EVENT,
   PLANNER_FOCUS_EVENT,
   PLANNER_OPEN_EVENT,
+  PAGE_EDITOR_EVENT,
+  type PageEditorHost,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
@@ -148,6 +150,21 @@ export function DashboardClient() {
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
+  // An open planner page shows its box's Edit Slot tools inside the page instead of the floating panel
+  const [pageEditor, setPageEditor] = useState<PageEditorHost>(null);
+  const pageEditorRef = useRef<PageEditorHost>(null);
+  useEffect(() => {
+    const onHost = (e: Event) => {
+      const host = (e as CustomEvent<PageEditorHost>).detail;
+      const closing = pageEditorRef.current;
+      // Closing the page closes its box's editor too (it shouldn't pop up as a floating panel)
+      if (!host && closing) setActiveSlotId((id) => (id === closing.slotId ? null : id));
+      pageEditorRef.current = host;
+      setPageEditor(host);
+    };
+    window.addEventListener(PAGE_EDITOR_EVENT, onHost);
+    return () => window.removeEventListener(PAGE_EDITOR_EVENT, onHost);
+  }, []);
   const [gridFilter, setGridFilter] = useState<
     "All" | "Reel" | "Story" | "Placeholders" | "Inspo"
   >("All");
@@ -500,8 +517,8 @@ export function DashboardClient() {
       const slotId = (e as CustomEvent<string>).detail;
       const item = itemsRef.current.find((i) => i.id === slotId);
       if (!item) return;
+      // Posts and reels: the page itself shows the Edit Slot tools
       if (item.contentType === "StoryFolder") setActiveStoryFolderId(item.id);
-      else if (!item.folderId) setActiveSlotId(item.id);
     };
     window.addEventListener(PLANNER_FOCUS_EVENT, onFocus);
     window.addEventListener(PLANNER_OPEN_EVENT, onOpen);
@@ -1366,7 +1383,7 @@ export function DashboardClient() {
                 </div>
               </div>
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
-            {activeSlotId && activeSlot && (
+            {activeSlotId && activeSlot && pageEditor?.slotId !== activeSlotId && (
               <>
                 {/* Backdrop for Mobile Bottom Sheet */}
                 <div
@@ -1432,6 +1449,32 @@ export function DashboardClient() {
                 </div>
               </>
             )}
+
+            {pageEditor &&
+              (() => {
+                const slot = items.find((i) => i.id === pageEditor.slotId);
+                return slot
+                  ? createPortal(
+                      <EditorPanel
+                        activeSlot={slot}
+                        updateSlot={updateItem}
+                        onClose={() => {}}
+                        onDeleteSlot={async (id) => {
+                          const ok = await confirm({
+                            title: "Delete Post",
+                            message: "Delete this post from the feed? Its page in the database is deleted too. This cannot be undone.",
+                            confirmLabel: "Delete",
+                          });
+                          if (ok) {
+                            updateItems((prev) => prev.filter((i) => i.id !== id));
+                            if (activeSlotId === id) setActiveSlotId(null);
+                          }
+                        }}
+                      />,
+                      pageEditor.el,
+                    )
+                  : null;
+              })()}
 
             {/* Instagram Feed / Reel Preview Modal */}
             {previewSlotId && (
