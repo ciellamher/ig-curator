@@ -7,7 +7,7 @@ import { CalendarClock, Check, CheckCheck, MapPin, Plus, Trash2, X } from "lucid
 import { RETURN_WINDOW_DAYS, clothingAlert, itemTimeline, orderAlert, orderFor } from "@/lib/planner/clothing"
 import { formatDate } from "@/lib/planner/dates"
 import { STATUS_STYLES } from "@/lib/planner/options"
-import { batchOptionsFor } from "@/lib/planner/views"
+import { batchOptionsFor, isBatchTitle } from "@/lib/planner/views"
 import { autoEditDate, editLeadDays } from "@/lib/planner/rules"
 import { feedKindsFor } from "@/lib/planner/feed"
 import { DATE_FIELDS, FEED_ATTACH_EVENT, PAGE_EDITOR_EVENT, type ContentDTO, type FeedAttach, type Location, type PageEditorHost } from "@/lib/planner/types"
@@ -49,6 +49,9 @@ export function ItemDrawer({
 }) {
   const { items, byId, update, create } = planner
   const holdsPosts = items.filter((i) => i.parentId === item.id)
+  // Only content gets the Edit Slot tools: pages with a category or a feed box — not batches, orders or plans
+  const isContent = !!item.slotId || item.categories.length > 0 || Object.keys(item.extraSlots ?? {}).length > 0
+  const isContentPage = isContent && !isBatchTitle(item) && holdsPosts.length === 0
   const batchOptions = batchOptionsFor(items, item.id)
   const autoEdit = autoEditDate(item.post.start, item.categories)
   const order = orderFor(item, byId, planner.ordersById)
@@ -154,14 +157,14 @@ export function ItemDrawer({
           </div>
 
           {gridSlotId && (
-            <section aria-label="Feed post" className="rounded-2xl border border-zinc-200 overflow-hidden">
+            <section aria-label="Feed post" className="shrink-0 rounded-2xl border border-zinc-200 overflow-hidden">
               <div ref={slotHostRef} />
             </section>
           )}
 
           {/* Story pages and pages not in the feed yet: the same Edit Slot tools, working on the page itself */}
-          {!gridSlotId && (
-            <section aria-label={storyFolderSlotId ? "Stories" : "Photos"} className="rounded-2xl border border-zinc-200 overflow-hidden">
+          {!gridSlotId && isContentPage && (
+            <section aria-label={storyFolderSlotId ? "Stories" : "Photos"} className="shrink-0 rounded-2xl border border-zinc-200 overflow-hidden">
               <EditorPanel
                 pageOnly
                 activeSlot={pageSlot}
