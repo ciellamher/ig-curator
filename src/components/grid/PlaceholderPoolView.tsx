@@ -12,7 +12,9 @@ import {
   Video,
   GalleryHorizontal,
   Trash2,
+  Sparkles,
 } from "lucide-react";
+import { createFeedDrafts } from "@/lib/feedDraftsData";
 
 interface PlaceholderPoolViewProps {
   placeholders: SlotItem[];
@@ -83,10 +85,31 @@ export function PlaceholderPoolView({
     updateItems((prev) => [newPlaceholder, ...prev]);
   };
 
+  const handlePopulateAnalyzedDrafts = () => {
+    const drafts = createFeedDrafts();
+    updateItems((prev) => [...drafts, ...prev]);
+    setToastMessage(`Added ${drafts.length} analyzed feed draft boxes!`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const handleDeleteDraft = (id: string) => {
     updateItems((prev) => prev.filter((item) => item.id !== id));
     setSelectedIds((prev) => prev.filter((item) => item !== id));
     if (activeSlotId === id) setActiveSlotId(null);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    const count = selectedIds.length;
+    updateItems((prev) => prev.filter((item) => !selectedIds.includes(item.id)));
+    if (activeSlotId && selectedIds.includes(activeSlotId)) {
+      setActiveSlotId(null);
+    }
+    setSelectedIds([]);
+    setToastMessage(
+      `Deleted ${count} ${count === 1 ? "draft box" : "draft boxes"}`
+    );
+    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleTransfer = () => {
@@ -112,7 +135,7 @@ export function PlaceholderPoolView({
           {placeholders.length > 0 && (
             <button
               onClick={selectAll}
-              className="p-1.5 text-xs font-semibold text-foreground/60 hover:text-foreground rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-semibold text-foreground/70 hover:text-foreground hover:bg-zinc-100 rounded-lg transition-colors cursor-pointer"
               title={
                 selectedIds.length === placeholders.length
                   ? "Deselect All"
@@ -124,21 +147,48 @@ export function PlaceholderPoolView({
               ) : (
                 <Square size={16} />
               )}
+              <span className="text-[11px] hidden sm:inline">
+                {selectedIds.length === placeholders.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </span>
             </button>
           )}
 
           {selectedIds.length > 0 && (
-            <button
-              onClick={handleTransfer}
-              className="flex items-center justify-center w-8 h-8 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-full transition-all cursor-pointer active:scale-95 relative shrink-0"
-              title={`Transfer ${selectedIds.length} items`}
-            >
-              <ArrowUpToLine size={15} strokeWidth={2.5} />
-              <span className="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {selectedIds.length}
-              </span>
-            </button>
+            <>
+              <button
+                onClick={handleTransfer}
+                className="flex items-center justify-center w-8 h-8 bg-slate-200 text-slate-900 hover:bg-slate-300 rounded-full transition-all cursor-pointer active:scale-95 relative shrink-0"
+                title={`Transfer ${selectedIds.length} items`}
+              >
+                <ArrowUpToLine size={15} strokeWidth={2.5} />
+                <span className="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {selectedIds.length}
+                </span>
+              </button>
+
+              <button
+                onClick={handleDeleteSelected}
+                className="flex items-center justify-center w-8 h-8 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 rounded-full transition-all cursor-pointer active:scale-95 relative shrink-0 border border-rose-200"
+                title={`Delete ${selectedIds.length} selected draft boxes`}
+              >
+                <Trash2 size={15} strokeWidth={2.5} />
+                <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {selectedIds.length}
+                </span>
+              </button>
+            </>
           )}
+
+          <button
+            onClick={handlePopulateAnalyzedDrafts}
+            className="flex items-center justify-center h-8 px-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 shrink-0 gap-1 border border-zinc-200"
+            title="Add Analyzed Feed Draft Boxes"
+          >
+            <Sparkles size={14} className="text-zinc-600" />
+            <span className="hidden sm:inline">Add All Feed Drafts</span>
+          </button>
 
           <button
             onClick={handleAddPlaceholder}
@@ -170,13 +220,22 @@ export function PlaceholderPoolView({
             <p className="text-[11px] text-foreground/40 mt-0.5 mb-4 max-w-[200px]">
               Add draft placeholders to plan off the main grid.
             </p>
-            <button
-              onClick={handleAddPlaceholder}
-              className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
-            >
-              <Plus size={13} strokeWidth={2.5} />
-              <span>Add First Draft Box</span>
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <button
+                onClick={handleAddPlaceholder}
+                className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
+              >
+                <Plus size={13} strokeWidth={2.5} />
+                <span>Add First Draft Box</span>
+              </button>
+              <button
+                onClick={handlePopulateAnalyzedDrafts}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 rounded-full text-xs font-semibold transition-all cursor-pointer"
+              >
+                <Sparkles size={13} className="text-zinc-600" />
+                <span>Add All Feed Drafts</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-[1px] bg-white w-full">
