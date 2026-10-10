@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { SlotItem } from "@/types";
+import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import {
   Plus,
   CheckSquare,
@@ -210,11 +211,12 @@ export function PlaceholderPoolView({
                 >
                   {hasImage ? (
                     <div className="w-full h-full relative overflow-hidden bg-soft-100">
-                      <img
-                        src={item.urls[item.currentUrlIndex || 0]}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                      {/* Photos are stored in this browser (local-media://), so they need LocalMedia to show */}
+                      {(item.urls[item.currentUrlIndex || 0] ?? "").includes("-video-") ? (
+                        <LocalMediaVideo src={item.urls[item.currentUrlIndex || 0]} muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <LocalMediaImage src={item.urls[item.currentUrlIndex || 0]} alt="" className="w-full h-full object-cover" />
+                      )}
                     </div>
                   ) : (
                     <div
