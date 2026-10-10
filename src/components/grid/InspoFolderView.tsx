@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { SlotItem } from "@/types";
-import { PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { droppedPhotos, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import {
   ChevronLeft,
   Plus,
@@ -231,19 +231,80 @@ export function InspoFolderView({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
+
+    // 1. Files from computer
     const files = Array.from(e.dataTransfer.files || []);
-    await processFiles(files);
+    if (files.length > 0) {
+      await processFiles(files);
+      return;
+    }
+
+    // 2. Photos or stories dragged from phone or other boards
+    let urls: string[] = droppedPhotos(e);
+    if (!urls.length) {
+      const storyId =
+        e.dataTransfer.getData("application/x-ig-curator-story-id") ||
+        e.dataTransfer.getData("application/x-ig-curator-story");
+      if (storyId && allItems) {
+        const sourceItem = allItems.find((i) => i.id === storyId);
+        if (sourceItem?.urls?.length) urls = sourceItem.urls;
+      }
+    }
+    if (!urls.length) {
+      const uri = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+      if (uri && (uri.startsWith("http") || uri.startsWith("data:") || uri.startsWith("local-media:"))) {
+        urls = [uri];
+      }
+    }
+
+    if (urls.length > 0) {
+      const newItems: SlotItem[] = urls.map((u, n) => ({
+        id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+        type: u.includes("-video-") || u.startsWith("data:video") ? "video" : "image",
+        urls: [u],
+        currentUrlIndex: 0,
+        hexColor: "#E4E4E7",
+        text: "",
+        folderId: folder.id,
+        contentType: "InspoPost",
+      }));
+      updateItems((curr) => [...newItems, ...curr]);
+      return;
+    }
+
+    // 3. Folder/sub-folder moves
+    const draggedIdsStr = e.dataTransfer.getData("application/folder-ids");
+    if (draggedIdsStr) {
+      try {
+        const ids = JSON.parse(draggedIdsStr) as string[];
+        ids.forEach((id) => {
+          if (id !== folder.id) updateItem(id, { folderId: folder.id });
+        });
+        if (isSelectionMode) {
+          setIsSelectionMode(false);
+          setSelectedItems(new Set());
+        }
+        return;
+      } catch (e) {}
+    }
+
+    const draggedId = e.dataTransfer.getData("application/folder-id");
+    if (draggedId && draggedId !== folder.id) {
+      updateItem(draggedId, { folderId: folder.id });
+    }
   };
 
   const handleAddSubFolder = () => {
@@ -386,6 +447,31 @@ export function InspoFolderView({
                   const files = Array.from(e.dataTransfer.files || []);
                   if (files.length > 0) {
                     processFiles(files, item.id);
+                    return;
+                  }
+
+                  let urls: string[] = droppedPhotos(e);
+                  if (!urls.length) {
+                    const storyId =
+                      e.dataTransfer.getData("application/x-ig-curator-story-id") ||
+                      e.dataTransfer.getData("application/x-ig-curator-story");
+                    if (storyId && allItems) {
+                      const sourceItem = allItems.find((i) => i.id === storyId);
+                      if (sourceItem?.urls?.length) urls = sourceItem.urls;
+                    }
+                  }
+                  if (urls.length > 0) {
+                    const newItems: SlotItem[] = urls.map((u, n) => ({
+                      id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+                      type: u.includes("-video-") || u.startsWith("data:video") ? "video" : "image",
+                      urls: [u],
+                      currentUrlIndex: 0,
+                      hexColor: "#E4E4E7",
+                      text: "",
+                      folderId: item.id,
+                      contentType: "InspoPost",
+                    }));
+                    updateItems((curr) => [...newItems, ...curr]);
                     return;
                   }
 

@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 import { SlotItem } from "@/types";
-import { ChevronLeft, Eye, ImagePlus, Plus, X } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, Eye, ImagePlus, Plus, X } from "lucide-react";
 import { StoryPreviewModal } from "./StoryPreviewModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { Masonry } from "./Masonry";
-import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
+import { droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 
 interface StoryFolderViewProps {
@@ -18,6 +18,9 @@ interface StoryFolderViewProps {
   setActiveSlotId: (id: string | null) => void;
   /** Inspo photos dropped in the folder become stories */
   onDropPhotos?: (folderId: string, urls: string[]) => void;
+  /** Transfer stories/photos from this folder to the active board */
+  onTransferToBoard?: (urls: string[]) => void;
+  activeBoardName?: string;
 }
 
 /** Data type for moving a story within its folder */
@@ -35,6 +38,8 @@ export function StoryFolderView({
   activeSlotId,
   setActiveSlotId,
   onDropPhotos,
+  onTransferToBoard,
+  activeBoardName,
 }: StoryFolderViewProps) {
   const [dropping, setDropping] = useState(false);
   const dragCounter = useRef(0);
@@ -251,6 +256,18 @@ export function StoryFolderView({
         >
           <Plus size={13} /> Empty story
         </button>
+        {onTransferToBoard && activeBoardName && playable.length > 0 && (
+          <button
+            onClick={() => {
+              const allUrls = playable.flatMap((s) => s.urls).filter(Boolean);
+              if (allUrls.length) onTransferToBoard(allUrls);
+            }}
+            className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold cursor-pointer transition-colors"
+            title={`Transfer stories to ${activeBoardName}`}
+          >
+            <ArrowUpRight size={13} /> To {activeBoardName}
+          </button>
+        )}
         <span className="ml-auto text-[11px] text-zinc-400">
           {stories.length} {stories.length === 1 ? "story" : "stories"}
         </span>
@@ -307,7 +324,13 @@ export function StoryFolderView({
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.setData(STORY_DRAG_TYPE, story.id);
-                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("application/x-ig-curator-story-id", story.id);
+                    e.dataTransfer.setData(PHOTO_DRAG_TYPE, JSON.stringify(story.urls));
+                    if (url) {
+                      e.dataTransfer.setData("text/plain", url);
+                      e.dataTransfer.setData("text/uri-list", url);
+                    }
+                    e.dataTransfer.effectAllowed = "copyMove";
                   }}
                   onDragOver={(e) => {
                     if (!Array.from(e.dataTransfer.types).includes(STORY_DRAG_TYPE)) return;
@@ -358,17 +381,33 @@ export function StoryFolderView({
                       className="block w-full h-auto"
                     />
                   )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateItems((prev) => prev.filter((i) => i.id !== story.id));
-                      if (activeSlotId === story.id) setActiveSlotId(null);
-                    }}
-                    aria-label="Remove story"
-                    className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/45 text-white opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity cursor-pointer"
-                  >
-                    <X size={12} />
-                  </button>
+                  <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity z-10">
+                    {onTransferToBoard && story.urls && story.urls.length > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onTransferToBoard(story.urls);
+                        }}
+                        aria-label={`Transfer to ${activeBoardName || "board"}`}
+                        title={`Transfer to ${activeBoardName || "board"}`}
+                        className="p-1 rounded-full bg-black/45 hover:bg-black/75 text-white transition-colors cursor-pointer"
+                      >
+                        <ArrowUpRight size={12} />
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateItems((prev) => prev.filter((i) => i.id !== story.id));
+                        if (activeSlotId === story.id) setActiveSlotId(null);
+                      }}
+                      aria-label="Remove story"
+                      title="Remove story"
+                      className="p-1 rounded-full bg-black/45 hover:bg-black/75 text-white transition-colors cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
                 </div>
               );
             }}

@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
-import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
+import { droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 
 interface StoryListViewProps {
@@ -81,6 +81,14 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               key={folder.id}
               data-slot-id={folder.id}
               data-no-outline
+              draggable
+              onDragStart={(e) => {
+                const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
+                const urls = storiesInFolder.flatMap(s => s.urls).filter(Boolean);
+                e.dataTransfer.setData(PHOTO_DRAG_TYPE, JSON.stringify(urls));
+                e.dataTransfer.setData("application/folder-id", folder.id);
+                e.dataTransfer.effectAllowed = "copyMove";
+              }}
               onDragOver={(e) => {
                 const types = Array.from(e.dataTransfer.types || []);
                 const canDrop = types.includes("Files") || isPhotoDrag(e);

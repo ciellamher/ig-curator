@@ -1158,6 +1158,22 @@ export function DashboardClient() {
     ]);
   };
 
+  const handleTransferPhotosToBoard = (urls: string[], targetFolderId?: string) => {
+    const destId = targetFolderId || activeInspoFolderId || boardsIn(libraryTab)[0]?.id;
+    if (!destId || !urls.length) return;
+    const newItems: SlotItem[] = urls.map((u, n) => ({
+      id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      type: (u.includes("-video-") || u.startsWith("data:video") ? "video" : "image") as SlotItem["type"],
+      urls: [u],
+      currentUrlIndex: 0,
+      hexColor: "#E4E4E7",
+      text: "",
+      folderId: destId,
+      contentType: "InspoPost",
+    }));
+    updateItems((curr) => [...newItems, ...curr]);
+  };
+
   const handleCopyInspoToGrid = (
     inspoItem: SlotItem,
     targetType: "Post" | "Story",
@@ -1398,6 +1414,11 @@ export function DashboardClient() {
                           allItems={items}
                           onBack={() => setActiveStoryFolderId(null)}
                           onDropPhotos={dropPhotosInFolder}
+                          onTransferToBoard={handleTransferPhotosToBoard}
+                          activeBoardName={
+                            items.find((i) => i.id === activeInspoFolderId)?.text ||
+                            (libraryOpen && libraryTab !== "drafts" ? boardsIn(libraryTab)[0]?.text : undefined)
+                          }
                           updateItems={updateItems}
                           updateItem={updateItem}
                           activeSlotId={activeSlotId}
@@ -1679,6 +1700,7 @@ export function DashboardClient() {
                           onAddFolder={handleCreateInspoFolder}
                           onDeleteFolder={handleDeleteInspoFolder}
                           updateItem={updateItem}
+                          updateItems={updateItems}
                         />
                       )
                 ) : (

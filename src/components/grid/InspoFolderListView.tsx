@@ -5,6 +5,7 @@ import { SlotItem } from "@/types";
 import { Plus, Trash2, X, Edit2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
+import { droppedPhotos } from "@/lib/photoDrag";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -13,6 +14,7 @@ interface InspoFolderListViewProps {
   onAddFolder: (title: string, hexColor?: string, coverUrl?: string) => void;
   onDeleteFolder: (folderId: string) => void;
   updateItem?: (id: string, updates: Partial<SlotItem>) => void;
+  updateItems?: (newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[])) => void;
   /** The collection's name, e.g. "Inspo" or "Fits" */
   name?: string;
 }
@@ -24,6 +26,7 @@ export function InspoFolderListView({
   onAddFolder,
   onDeleteFolder,
   updateItem,
+  updateItems,
   name = "Inspo",
 }: InspoFolderListViewProps) {
   const [isCreating, setIsCreating] = useState(false);
@@ -301,6 +304,33 @@ export function InspoFolderListView({
                   onDrop={(e) => {
                     e.preventDefault();
                     setDragTargetId(null);
+
+                    // Dropped photos or stories from phone
+                    let urls: string[] = droppedPhotos(e);
+                    if (!urls.length) {
+                      const storyId =
+                        e.dataTransfer.getData("application/x-ig-curator-story-id") ||
+                        e.dataTransfer.getData("application/x-ig-curator-story");
+                      if (storyId && allItems) {
+                        const sourceItem = allItems.find((i) => i.id === storyId);
+                        if (sourceItem?.urls?.length) urls = sourceItem.urls;
+                      }
+                    }
+                    if (urls.length > 0 && updateItems) {
+                      const newItems: SlotItem[] = urls.map((u, n) => ({
+                        id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+                        type: u.includes("-video-") || u.startsWith("data:video") ? "video" : "image",
+                        urls: [u],
+                        currentUrlIndex: 0,
+                        hexColor: "#E4E4E7",
+                        text: "",
+                        folderId: folder.id,
+                        contentType: "InspoPost",
+                      }));
+                      updateItems((curr) => [...newItems, ...curr]);
+                      return;
+                    }
+
                     const draggedId = e.dataTransfer.getData(
                       "application/folder-id",
                     );
