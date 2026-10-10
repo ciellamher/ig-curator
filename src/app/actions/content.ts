@@ -6,7 +6,7 @@ import { scheduleCalendarSync } from "@/lib/googleCalendar"
 import { Prisma, type Content, type ContentMedia } from "@prisma/client"
 import { CATEGORY_OPTIONS, CLOTHING_NAMES, DEFAULT_STATUS, STATUS_NAMES } from "@/lib/planner/options"
 import { isValidScheduleValue, type Schedule } from "@/lib/planner/dates"
-import { AUTO_STATUSES, categoryForFeedSlot, defaultFeedTitle, statusForFeedSlot } from "@/lib/planner/feed"
+import { categoryForFeedSlot, defaultFeedTitle, statusForFeedSlot } from "@/lib/planner/feed"
 import { SAMPLE_ORDERS, SAMPLE_QUICK_LINKS, sampleContent } from "@/lib/planner/sample"
 import { withScheduleRules } from "@/lib/planner/rules"
 import { SHEIN_ENABLED } from "@/lib/features"
@@ -401,8 +401,8 @@ function cleanMediaUrls(urls: unknown): string[] {
 
 /**
  * Keeps the database in step with the feed. Everything added in the feed (posts, reels, drafts, story folders with
- * their stories, inspo boards with their photos) gets a record; photos are attached; items move from
- * "To Board"/"To Shoot" to "To Edit" once a photo is added; renaming a box renames its record; deleting a box deletes
+ * their stories, inspo boards with their photos) gets a record; photos are attached; the status is
+ * left alone (new boxes start To Board); renaming a box renames its record; deleting a box deletes
  * its record. Boxes deleted elsewhere are never re-created.
  */
 export async function syncFeedToContent(request: FeedSyncRequest): Promise<Result<{ created: number; updated: number; deleted: number; addToFeed: FeedBox[]; textForFeed: { slotId: string; title: string }[]; removeFromFeed: string[] }>> {
@@ -550,10 +550,7 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
       // The box's text and the planner title are always the same
       if (slot.title && current.title !== slot.title) data.title = slot.title
       else if (!slot.title && !DEFAULT_TITLE.test(current.title)) textForFeed.push({ slotId: slot.slotId, title: current.title })
-      const fromPhotos = statusForFeedSlot(slot)
-      // Photos make it "To Schedule"; it's "To Edit" only once it has a date to post
-      const autoStatus = fromPhotos === "To Schedule" && current.postStart ? "To Edit" : fromPhotos
-      if (AUTO_STATUSES.includes(current.status) && autoStatus !== current.status && autoStatus !== "To Board") data.status = autoStatus
+      // The feed never changes a page's status: adding photos or moving a box leaves it where it was set
       // Follow folder moves in the feed, but keep parents assigned by hand to planner-only records.
       const parentIsFromFeed = !current.parentId || feedRecordIds.has(current.parentId)
       if (parentIsFromFeed && current.parentId !== parentId && current.id !== parentId && !(parentId && parentsWithChildren.has(current.id))) {
