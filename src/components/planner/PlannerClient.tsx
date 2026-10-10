@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
-import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, PLANNER_FACEBOOK_EVENT, type FacebookPage, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
+import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, PLANNER_FACEBOOK_EVENT, PLANNER_POSTED_FOLDERS_EVENT, type FacebookPage, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
 import { usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
@@ -75,6 +75,12 @@ export function PlannerClient() {
     const ids = allPlanner.items.flatMap((i) => [i.slotId, ...Object.values(i.extraSlots ?? {})]).filter((s): s is string => !!s)
     ;(window as Window & { __plannerSlots?: string[] }).__plannerSlots = ids // for a feed that mounts later
     window.dispatchEvent(new CustomEvent(PLANNER_SLOTS_EVENT, { detail: ids }))
+    const postedFolders = allPlanner.items
+      .filter((i) => i.status === "Posted")
+      .flatMap((i) => [i.contentType === "StoryFolder" ? i.slotId : null, i.extraSlots?.StoryFolder ?? null])
+      .filter((s): s is string => !!s)
+    ;(window as Window & { __plannerPostedFolders?: string[] }).__plannerPostedFolders = postedFolders
+    window.dispatchEvent(new CustomEvent(PLANNER_POSTED_FOLDERS_EVENT, { detail: postedFolders }))
     // Facebook pages for the phone's Facebook tab (newest post date first, unscheduled last)
     const facebook: FacebookPage[] = allPlanner.items
       .filter((i) => i.categories.includes("Facebook"))

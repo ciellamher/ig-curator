@@ -152,6 +152,9 @@ export type FeedRemovePhotos = { folderId: string; urls: string[] }
 export const PLANNER_FACEBOOK_EVENT = "planner:facebook"
 export type FacebookPage = { id: string; title: string; status: string; post: string | null; urls: string[] }
 
+/** Fired by the planner with the story folders of Posted pages: they leave the Stories tab (kept, not deleted). */
+export const PLANNER_POSTED_FOLDERS_EVENT = "planner:posted-folders"
+
 /** Fired by the planner with every feed box that belongs to a page (those are edited in their page). */
 export const PLANNER_SLOTS_EVENT = "planner:slots"
 

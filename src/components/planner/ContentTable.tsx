@@ -28,7 +28,8 @@ const COLUMNS: Record<Tab, Column[]> = {
 }
 
 /** New items start in the stage of the tab they're added from. */
-const NEW_STATUS: Record<Tab, string | null> = { shoot: "To Shoot", edit: "To Edit", post: "Ready to Post", all: null }
+// To Board is the default (it's listed under To Shoot too)
+const NEW_STATUS: Record<Tab, string | null> = { shoot: "To Board", edit: "To Edit", post: "Ready to Post", all: null }
 
 const EMPTY: Record<Tab, string> = {
   shoot: "Nothing in the To-do stage.",

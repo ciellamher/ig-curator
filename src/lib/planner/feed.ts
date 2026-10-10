@@ -6,8 +6,9 @@ import type { FeedSlotSync } from "./types"
 /** Status a slot gets when it first lands in the database, based on where it was added in the feed. */
 export function statusForFeedSlot(slot: Pick<FeedSlotSync, "location" | "mediaUrls" | "isFolder">): Status {
   if (slot.location === "drafts" || slot.location === "inspo") return "To Board"
-  if (slot.isFolder) return "To Shoot"
-  return slot.mediaUrls.length > 0 ? "To Schedule" : "To Shoot"
+  // To Board is the default; photos move a box on to To Schedule
+  if (slot.isFolder) return "To Board"
+  return slot.mediaUrls.length > 0 ? "To Schedule" : "To Board"
 }
 
 /**

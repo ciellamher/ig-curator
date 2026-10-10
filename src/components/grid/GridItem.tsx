@@ -160,6 +160,30 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
     ? tempSettings 
     : (item.imageSettings?.[item.currentUrlIndex] || { scale: 1, x: 0, y: 0 });
 
+  // The box's placeholder look (colour + label); also shown when its photo isn't in this browser
+  const placeholder = (
+    <div
+      className="w-full h-full flex flex-col items-center justify-center p-2 relative"
+      style={{ backgroundColor: item.hexColor }}
+    >
+      {item.text ? (
+        <span 
+          className="text-white text-center font-extrabold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
+          style={{ fontSize: `${item.fontSize || 14}px` }}
+        >
+          {item.text}
+        </span>
+      ) : (
+        <span 
+          className="text-white text-center font-bold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
+          style={{ fontSize: `${item.fontSize || 14}px` }}
+        >
+          Slot
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div
       id={`grid-slot-${item.id}`}
@@ -207,6 +231,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
         >
           {(item.urls[item.currentUrlIndex]?.startsWith("data:video") || item.urls[item.currentUrlIndex]?.includes("video")) && !item.coverUrl ? (
             <LocalMediaVideo
+              fallback={placeholder}
               src={item.urls[item.currentUrlIndex]}
               className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
                 isHovered && !isAdjusting && !item.isLocked ? "scale-[1.03]" : ""
@@ -218,6 +243,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
             />
           ) : (
             <LocalMediaImage
+              fallback={placeholder}
               src={item.coverUrl && (item.urls[item.currentUrlIndex]?.includes("video") || item.urls[item.currentUrlIndex]?.startsWith("data:video")) ? item.coverUrl : item.urls[item.currentUrlIndex]}
               alt={`Grid image ${item.id}`}
               style={{ 
@@ -249,26 +275,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
           )}
         </div>
       ) : (
-        <div
-          className="w-full h-full flex flex-col items-center justify-center p-2 relative"
-          style={{ backgroundColor: item.hexColor }}
-        >
-          {item.text ? (
-            <span 
-              className="text-white text-center font-extrabold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
-              style={{ fontSize: `${item.fontSize || 14}px` }}
-            >
-              {item.text}
-            </span>
-          ) : (
-            <span 
-              className="text-white text-center font-bold leading-tight w-full break-words px-2 [text-shadow:0_1px_3px_rgba(0,0,0,0.35)]"
-              style={{ fontSize: `${item.fontSize || 14}px` }}
-            >
-              Slot
-            </span>
-          )}
-        </div>
+        placeholder
       )}
 
       {/* Visual Badges */}

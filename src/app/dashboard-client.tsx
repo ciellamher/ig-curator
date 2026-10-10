@@ -58,6 +58,7 @@ import {
   PAGE_EDITOR_EVENT,
   PLANNER_SLOTS_EVENT,
   PLANNER_FACEBOOK_EVENT,
+  PLANNER_POSTED_FOLDERS_EVENT,
   type FacebookPage,
   FEED_REMOVE_PHOTOS_EVENT,
   type FeedRemovePhotos,
@@ -172,6 +173,15 @@ export function DashboardClient() {
   const [pageEditor, setPageEditor] = useState<PageEditorHost>(null);
   // Boxes that belong to a planner page: they're edited in the page, never in the floating panel
   const [pageSlotIds, setPageSlotIds] = useState<Set<string>>(new Set());
+  // Story folders of Posted pages leave the Stories tab (they're kept, not deleted)
+  const [postedFolderIds, setPostedFolderIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const initial = (window as Window & { __plannerPostedFolders?: string[] }).__plannerPostedFolders;
+    if (initial) setPostedFolderIds(new Set(initial));
+    const onPosted = (e: Event) => setPostedFolderIds(new Set((e as CustomEvent<string[]>).detail));
+    window.addEventListener(PLANNER_POSTED_FOLDERS_EVENT, onPosted);
+    return () => window.removeEventListener(PLANNER_POSTED_FOLDERS_EVENT, onPosted);
+  }, []);
   // Pages with the Facebook category, for the Facebook tab
   const [facebookPages, setFacebookPages] = useState<FacebookPage[]>([]);
   useEffect(() => {
@@ -1378,7 +1388,7 @@ export function DashboardClient() {
                       ) : (
                         <StoryListView
                           folders={items.filter(
-                            (i) => i.contentType === "StoryFolder",
+                            (i) => i.contentType === "StoryFolder" && !postedFolderIds.has(i.id),
                           )}
                           allItems={items}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}

@@ -318,10 +318,10 @@ describe("standalone outfits", () => {
 describe("feed sync mapping", () => {
   it("sets the starting status from where the slot was added", () => {
     expect(statusForFeedSlot({ location: "drafts", mediaUrls: [], isFolder: false })).toBe("To Board")
-    expect(statusForFeedSlot({ location: "grid", mediaUrls: [], isFolder: false })).toBe("To Shoot")
+    expect(statusForFeedSlot({ location: "grid", mediaUrls: [], isFolder: false })).toBe("To Board")
     expect(statusForFeedSlot({ location: "grid", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Schedule")
     expect(statusForFeedSlot({ location: "story", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Schedule")
-    expect(statusForFeedSlot({ location: "story", mediaUrls: [], isFolder: true })).toBe("To Shoot")
+    expect(statusForFeedSlot({ location: "story", mediaUrls: [], isFolder: true })).toBe("To Board")
     expect(statusForFeedSlot({ location: "inspo", mediaUrls: ["local-media://x"], isFolder: false })).toBe("To Board")
     expect(categoryForFeedSlot({ location: "inspo", contentType: "InspoPost" })).toBeNull()
     expect(categoryForFeedSlot({ location: "story", contentType: "Story" })).toBe("Story")

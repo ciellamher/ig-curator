@@ -1,5 +1,5 @@
 import React, { ImgHTMLAttributes, VideoHTMLAttributes, useState, useEffect } from 'react';
-import { useLocalMedia } from '@/hooks/useLocalMedia';
+import { useLocalMediaStatus } from '@/hooks/useLocalMedia';
 import { Image as ImageIcon, Film } from 'lucide-react';
 
 interface LocalMediaImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
@@ -8,13 +8,18 @@ interface LocalMediaImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>,
 }
 
 export function LocalMediaImage({ src, alt = "", fallback, ...props }: LocalMediaImageProps) {
-  const resolvedSrc = useLocalMedia(src);
+  const { src: resolvedSrc, missing } = useLocalMediaStatus(src);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     setHasError(false);
   }, [src, resolvedSrc]);
 
+  // Still loading: a quiet box (no flash of the fallback)
+  if (!resolvedSrc && !missing && !hasError) {
+    return <div className={`bg-soft-100 ${props.className || ''}`} style={props.style} />;
+  }
+  // Not in this browser, or it can't be shown
   if (!resolvedSrc || hasError) {
     if (fallback) return <>{fallback}</>;
     return (
@@ -43,13 +48,18 @@ interface LocalMediaVideoProps extends Omit<VideoHTMLAttributes<HTMLVideoElement
 }
 
 export function LocalMediaVideo({ src, fallback, ...props }: LocalMediaVideoProps) {
-  const resolvedSrc = useLocalMedia(src);
+  const { src: resolvedSrc, missing } = useLocalMediaStatus(src);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     setHasError(false);
   }, [src, resolvedSrc]);
 
+  // Still loading: a quiet box (no flash of the fallback)
+  if (!resolvedSrc && !missing && !hasError) {
+    return <div className={`bg-soft-100 ${props.className || ''}`} style={props.style} />;
+  }
+  // Not in this browser, or it can't be shown
   if (!resolvedSrc || hasError) {
     if (fallback) return <>{fallback}</>;
     return (

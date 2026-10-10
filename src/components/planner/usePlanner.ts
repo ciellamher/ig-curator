@@ -68,7 +68,10 @@ export function usePlanner(enabled: boolean) {
     if (page.slotId && page.contentType) current.set(kind(page.contentType), { slotId: page.slotId, type: page.contentType })
 
     const wanted = feedKindsFor(page.categories)
-    const keep = addOnly ? [...new Set([...current.keys(), ...wanted])] : wanted
+    // A story folder stays even when the page's categories change (it leaves the Stories tab once Posted)
+    const keep = addOnly
+      ? [...new Set([...current.keys(), ...wanted])]
+      : [...new Set([...wanted, ...(current.has("StoryFolder") ? ["StoryFolder"] : [])])]
     const removed = [...current].filter(([k]) => !keep.includes(k)).map(([, box]) => box.slotId)
     const slots = new Map<string, { slotId: string; type: string }>()
     const added: { slotId: string; contentType: string }[] = []
