@@ -167,6 +167,7 @@ export function ItemDrawer({
             <section aria-label={storyFolderSlotId ? "Stories" : "Photos"} className="shrink-0 rounded-2xl border border-zinc-200 overflow-hidden">
               <EditorPanel
                 pageOnly
+                virtualPage
                 activeSlot={pageSlot}
                 updateSlot={(_, changes) => {
                   if (changes.urls) planner.setPagePhotos(item, changes.urls)
@@ -205,7 +206,8 @@ export function ItemDrawer({
                     id="hide-from-feed"
                   />
                   <label htmlFor="hide-from-feed" className="cursor-pointer select-none">
-                    Hide from feed
+                    Hide from Posts grid
+                    {item.categories.includes("Reels") && <span className="text-zinc-400"> (still shows in Reels)</span>}
                   </label>
                 </div>
               </Row>

@@ -257,9 +257,10 @@ export function DashboardClient() {
               (i) =>
                 i.contentType !== "StoryFolder" &&
                 !i.folderId &&
-                !i.isHiddenFromGrid,
+                !i.isHiddenFromGrid &&
+                !i.isHiddenFromPhone,
             )
-          : items.filter((i) => i.contentType === gridFilter && !i.folderId && !i.isHiddenFromGrid);
+          : items.filter((i) => i.contentType === gridFilter && !i.folderId && !i.isHiddenFromPhone);
 
     return currentViewItems
       .filter((item) => {
@@ -1424,11 +1425,13 @@ export function DashboardClient() {
                                   i.contentType !== "PlaceholderFolder" &&
                                   i.contentType !== "InspoFolder" &&
                                   !i.folderId &&
-                                  !i.isHiddenFromGrid,
+                                  !i.isHiddenFromGrid &&
+                                  !i.isHiddenFromPhone,
                               )
                             : items.filter(
+                                // Reels hidden from the Posts grid still show here; hidden from the phone don't
                                 (i) =>
-                                  i.contentType === gridFilter && !i.folderId && !i.isHiddenFromGrid,
+                                  i.contentType === gridFilter && !i.folderId && !i.isHiddenFromPhone,
                               )
                         }
                         setItems={updateItems}

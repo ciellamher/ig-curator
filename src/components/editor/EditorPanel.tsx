@@ -44,8 +44,10 @@ interface EditorPanelProps {
   updateSlot: (id: string, updates: Partial<SlotItem>) => void;
   onClose?: () => void;
   onDeleteSlot?: (id: string) => void;
-  /** Editing a planner page that has no grid box: no "Move to Drafts" */
+  /** Shown inside a planner page: no "Move to Drafts" */
   pageOnly?: boolean;
+  /** A page with no feed box at all: nothing on the phone to hide */
+  virtualPage?: boolean;
 }
 
 export function EditorPanel({
@@ -54,6 +56,7 @@ export function EditorPanel({
   onClose,
   onDeleteSlot,
   pageOnly = false,
+  virtualPage = false,
 }: EditorPanelProps) {
   const [activeTab, setActiveTab] = useState<"details" | "appearance">(
     "details",
@@ -441,15 +444,15 @@ export function EditorPanel({
           </>
         ) : (
           <>
-            {activeSlot.contentType === "Reel" && (
+            {!virtualPage && activeSlot.contentType !== "Story" && (
               <div className="flex items-center gap-3 bg-soft-50 border border-soft-200 p-3 rounded-xl">
                 <input
                   type="checkbox"
                   id="hideFromGrid"
-                  checked={activeSlot.isHiddenFromGrid || false}
+                  checked={activeSlot.isHiddenFromPhone || false}
                   onChange={(e) =>
                     updateSlot(activeSlot.id, {
-                      isHiddenFromGrid: e.target.checked,
+                      isHiddenFromPhone: e.target.checked,
                     })
                   }
                   className="w-4 h-4 rounded text-slate-800 focus:ring-slate-800/20 cursor-pointer"
@@ -458,7 +461,7 @@ export function EditorPanel({
                   htmlFor="hideFromGrid"
                   className="text-xs font-medium text-foreground cursor-pointer"
                 >
-                  Hide from Profile Grid
+                  Hide from phone <span className="text-foreground/50">(Posts and Reels)</span>
                 </label>
               </div>
             )}

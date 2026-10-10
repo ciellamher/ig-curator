@@ -19,7 +19,10 @@ export type SlotItem = {
   
   // Instagram Sync
   isLocked?: boolean;
+  /** Off the Posts grid (a reel still shows in Reels) — the page's "Hide from Posts grid" */
   isHiddenFromGrid?: boolean;
+  /** Not on the phone at all (Posts and Reels) — Edit Slot's "Hide from phone" */
+  isHiddenFromPhone?: boolean;
   /** A video's cover picture (picked frame or uploaded), shown in the grid instead of the playing video */
   coverUrl?: string;
 
