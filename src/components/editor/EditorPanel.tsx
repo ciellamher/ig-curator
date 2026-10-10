@@ -326,7 +326,10 @@ export function EditorPanel({
     (!activeSlot.urls || activeSlot.urls.length === 0);
 
   return (
-    <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-y-auto no-scrollbar text-foreground select-none bg-white">
+    <div
+      // Inside a page it grows to its full height and the page scrolls; on its own it scrolls itself
+      className={`p-4 flex flex-col gap-3.5 text-foreground select-none bg-white ${pageOnly ? "" : "h-full max-h-[85vh] overflow-y-auto no-scrollbar"}`}
+    >
       <input
         type="file"
         ref={fileInputRef}
@@ -776,7 +779,7 @@ export function EditorPanel({
       )}
 
       {/* Tab Content / Minimal Placeholder Controls */}
-      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-4 py-1">
+      <div className="shrink-0 flex flex-col gap-4 py-1">
         {isDraftPlaceholder || activeTab === "appearance" ? (
           <>
             <div className="flex flex-col gap-1.5">
