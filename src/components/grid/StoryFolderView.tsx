@@ -233,40 +233,45 @@ export function StoryFolderView({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-soft-100 sticky top-0 bg-white/95 backdrop-blur z-20">
-        <button onClick={onBack} aria-label="Back to story folders" className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground cursor-pointer">
-          <ChevronLeft size={28} strokeWidth={2.5} />
+      <div className="flex items-center justify-between px-3 py-2 border-b border-soft-100 sticky top-0 bg-white/95 backdrop-blur z-20">
+        <button onClick={onBack} aria-label="Back to story folders" className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground cursor-pointer shrink-0">
+          <ChevronLeft size={26} strokeWidth={2.5} />
         </button>
-        <input
-          value={folder.text || folder.caption || ""}
-          onChange={(e) => updateItem(folder.id, { text: e.target.value })}
-          placeholder="New Folder"
-          aria-label="Folder name"
-          className="font-bold text-[18px] text-foreground tracking-tight text-center bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-2 w-[150px]"
-        />
+        <div className="flex flex-col items-center min-w-0 px-2">
+          <input
+            value={folder.text || folder.caption || ""}
+            onChange={(e) => updateItem(folder.id, { text: e.target.value })}
+            placeholder="New Folder"
+            aria-label="Folder name"
+            className="font-bold text-[17px] text-foreground tracking-tight text-center bg-transparent border-none outline-none focus:ring-2 focus:ring-pastel-200 rounded px-1.5 w-[160px] truncate"
+          />
+          <span className="text-[11px] font-medium text-zinc-400 -mt-0.5 leading-none">
+            {stories.length} {stories.length === 1 ? "story" : "stories"}
+          </span>
+        </div>
         <button
           onClick={() => {
             setPreviewStartIndex(0);
             setIsPreviewOpen(true);
           }}
           aria-label="Play stories"
-          className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground cursor-pointer"
+          className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground cursor-pointer shrink-0"
         >
-          <Eye size={24} strokeWidth={2.5} />
+          <Eye size={22} strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
         <button
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-zinc-950 text-white text-xs font-semibold hover:bg-black disabled:opacity-50 cursor-pointer whitespace-nowrap shrink-0 transition-colors"
         >
           <ImagePlus size={14} /> {uploading ? "Adding…" : "Add photos"}
         </button>
         <button
           onClick={handleAddEmpty}
-          className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-zinc-300 text-zinc-800 text-xs font-semibold hover:border-zinc-950 cursor-pointer"
+          className="inline-flex items-center gap-1 px-3 h-8 rounded-full border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-800 text-xs font-semibold hover:border-zinc-950 cursor-pointer whitespace-nowrap shrink-0 transition-colors"
         >
           <Plus size={13} /> Empty story
         </button>
@@ -276,15 +281,13 @@ export function StoryFolderView({
               const allUrls = playable.flatMap((s) => s.urls).filter(Boolean);
               if (allUrls.length) onTransferToBoard(allUrls);
             }}
-            className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold cursor-pointer transition-colors"
+            className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 transition-colors"
             title={`Transfer stories to ${activeBoardName}`}
           >
-            <ArrowUpRight size={13} /> To {activeBoardName}
+            <ArrowUpRight size={13} />
+            <span className="truncate max-w-[110px]">To {activeBoardName}</span>
           </button>
         )}
-        <span className="ml-auto text-[11px] text-zinc-400">
-          {stories.length} {stories.length === 1 ? "story" : "stories"}
-        </span>
         <input
           ref={fileRef}
           type="file"
