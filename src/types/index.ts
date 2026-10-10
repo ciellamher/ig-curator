@@ -20,6 +20,8 @@ export type SlotItem = {
   // Instagram Sync
   isLocked?: boolean;
   isHiddenFromGrid?: boolean;
+  /** A video's cover picture (picked frame or uploaded), shown in the grid instead of the playing video */
+  coverUrl?: string;
 
   /** Which collection a board belongs to beside the phone (none = Inspo). */
   library?: "other" | "fits" | "highlights";

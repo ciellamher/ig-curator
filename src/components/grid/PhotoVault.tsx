@@ -14,7 +14,7 @@ function mediaTime(id: string): number {
 
 function referencedIds(items: SlotItem[]): Set<string> {
   const ids = new Set<string>();
-  for (const i of items) for (const u of i.urls ?? []) if (u.startsWith(LOCAL)) ids.add(u.slice(LOCAL.length));
+  for (const i of items) for (const u of [...(i.urls ?? []), ...(i.coverUrl ? [i.coverUrl] : [])]) if (u.startsWith(LOCAL)) ids.add(u.slice(LOCAL.length));
   return ids;
 }
 
@@ -90,6 +90,11 @@ export async function downloadAllPhotos(items: SlotItem[], onProgress: (done: nu
       jobs.push({ url, path: `${folder}/${base}${urls.length > 1 ? `-${i + 1}` : ""}` });
       if (url.startsWith(LOCAL)) used.add(url.slice(LOCAL.length));
     });
+    // A reel's cover goes next to it
+    if (item.coverUrl) {
+      jobs.push({ url: item.coverUrl, path: `${folder}/${base} cover` });
+      if (item.coverUrl.startsWith(LOCAL)) used.add(item.coverUrl.slice(LOCAL.length));
+    }
   }
   // Photos in this browser that no box uses
   const orphans = (await listMediaIds()).filter((id) => !used.has(id)).sort((a, b) => mediaTime(a) - mediaTime(b));

@@ -10,8 +10,11 @@ export function statusForFeedSlot(slot: Pick<FeedSlotSync, "location" | "mediaUr
   return slot.mediaUrls.length > 0 ? "To Schedule" : "To Shoot"
 }
 
-/** Statuses the feed may still move automatically; anything later was set by hand and is left alone. */
-export const AUTO_STATUSES: readonly string[] = ["To Board", "To Shoot"]
+/**
+ * Statuses the feed may still move automatically; anything later was set by hand and is left alone.
+ * To Board isn't one: a page stays To Board until it's changed by hand.
+ */
+export const AUTO_STATUSES: readonly string[] = ["To Shoot"]
 
 export function categoryForFeedSlot(slot: Pick<FeedSlotSync, "location" | "contentType">): Category | null {
   if (slot.location === "inspo") return null

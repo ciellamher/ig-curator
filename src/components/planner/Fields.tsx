@@ -258,22 +258,6 @@ export function CommitInput({
   return multiline ? <textarea rows={1} {...props} className={`${props.className} resize-none field-sizing-content`} /> : <input type={type} {...props} />
 }
 
-export function PinterestLink({ url }: { url: string | null }) {
-  if (!url) return <Empty />
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className="inline-flex items-center gap-1 text-xs text-zinc-600 hover:text-zinc-900 underline decoration-soft-300 underline-offset-2 break-all"
-    >
-      {url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 32)}
-      <ExternalLink size={11} className="shrink-0" />
-    </a>
-  )
-}
-
 export function Thumb({ item, size = 28 }: { item: ContentDTO; size?: number }) {
   const url = item.media[0]?.url
   const style = { width: size, height: size }

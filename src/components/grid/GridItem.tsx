@@ -205,7 +205,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {item.urls[item.currentUrlIndex]?.startsWith("data:video") || item.urls[item.currentUrlIndex]?.includes("video") ? (
+          {(item.urls[item.currentUrlIndex]?.startsWith("data:video") || item.urls[item.currentUrlIndex]?.includes("video")) && !item.coverUrl ? (
             <LocalMediaVideo
               src={item.urls[item.currentUrlIndex]}
               className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
@@ -218,7 +218,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
             />
           ) : (
             <LocalMediaImage
-              src={item.urls[item.currentUrlIndex]}
+              src={item.coverUrl && (item.urls[item.currentUrlIndex]?.includes("video") || item.urls[item.currentUrlIndex]?.startsWith("data:video")) ? item.coverUrl : item.urls[item.currentUrlIndex]}
               alt={`Grid image ${item.id}`}
               style={{ 
                 transform: `translate(${currentSettings.x}px, ${currentSettings.y}px) scale(${currentSettings.scale})`,

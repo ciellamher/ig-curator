@@ -1,6 +1,6 @@
 import { SlotItem } from "@/types";
 import { X, Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react";
-import { LocalMediaImage } from "./LocalMedia";
+import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 
 interface InstagramPreviewModalProps {
   item: SlotItem;
@@ -24,7 +24,7 @@ export function InstagramPreviewModal({ item, onClose }: InstagramPreviewModalPr
           // Reel Preview
           <>
             <div className="absolute inset-0 z-0 bg-neutral-900">
-              {imageUrl && <LocalMediaImage src={imageUrl} alt="" className="w-full h-full object-cover" />}
+              {imageUrl && (imageUrl.includes("-video-") || imageUrl.startsWith("data:video") ? <LocalMediaVideo src={imageUrl} autoPlay muted loop playsInline className="w-full h-full object-cover" /> : <LocalMediaImage src={imageUrl} alt="" className="w-full h-full object-cover" />)}
             </div>
             {/* Reel Header */}
             <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/50 to-transparent">
@@ -76,7 +76,7 @@ export function InstagramPreviewModal({ item, onClose }: InstagramPreviewModalPr
             {/* Post Image */}
             <div className="w-full aspect-[4/5] bg-soft-50 relative flex items-center justify-center overflow-hidden">
                {imageUrl ? (
-                 <LocalMediaImage src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                 (imageUrl.includes("-video-") || imageUrl.startsWith("data:video") ? <LocalMediaVideo src={imageUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" /> : <LocalMediaImage src={imageUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />)
                ) : (
                  <span className="text-foreground/40 font-medium">Empty Slot</span>
                )}

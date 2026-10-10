@@ -23,7 +23,7 @@ import { Section } from "./Section"
 import type { Planner } from "./usePlanner"
 
 // Original Outfits columns, followed by the SHEIN deadline columns (an app addition).
-const COLUMNS: Column[] = ["title", "shoot", "status", "clothing", "edit", "category", "pinterest", "orderBy", "returnBy"]
+const COLUMNS: Column[] = ["title", "shoot", "status", "clothing", "edit", "category", "orderBy", "returnBy"]
 
 function DateField({ label, value, onChange, dark }: { label: string; value: string | null; onChange: (v: string | null) => void; dark?: boolean }) {
   return (

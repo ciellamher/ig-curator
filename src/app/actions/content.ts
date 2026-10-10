@@ -518,7 +518,8 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
               contentType: slot.contentType,
               parentId: parentCandidate && topLevel.has(parentCandidate) ? parentCandidate : null,
               title: slot.title || defaultFeedTitle(slot),
-              status: statusForFeedSlot(slot),
+              // A post or reel added to the feed (e.g. a draft moved in) starts as To Board, with or without photos
+              status: slot.isFolder ? statusForFeedSlot(slot) : "To Board",
               categories: category ? [category] : [],
             }
           }),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { batchShootDate, clothingAlert, clothingAlerts, itemTimeline, orderAlert, orderStage, orderTimeline } from "./clothing"
 import { addDaysISO, formatDate, moveSchedule, scheduleCovers, todayISO } from "./dates"
-import { categoryForFeedSlot, feedKindsFor, statusForFeedSlot, toggleCategory } from "./feed"
+import { AUTO_STATUSES, categoryForFeedSlot, feedKindsFor, statusForFeedSlot, toggleCategory } from "./feed"
 import { STATUS_NAMES } from "./options"
 import type { ContentDTO, OrderDTO } from "./types"
 import { editLeadDays, withScheduleRules } from "./rules"
@@ -159,6 +159,12 @@ describe("automatic edit dates", () => {
     expect(withScheduleRules(waiting, { post: { start: "2026-05-10", end: null } }).status).toBe("To Edit")
     expect(withScheduleRules(waiting, { post: { start: "2026-05-10", end: null }, status: "Posted" }).status).toBe("Posted")
     expect(withScheduleRules({ ...base, status: "To Shoot" }, { post: { start: "2026-05-10", end: null } }).status).toBeUndefined()
+  })
+})
+
+describe("To Board", () => {
+  it("is never moved on automatically by the feed (it stays until changed by hand)", () => {
+    expect(AUTO_STATUSES).not.toContain("To Board")
   })
 })
 

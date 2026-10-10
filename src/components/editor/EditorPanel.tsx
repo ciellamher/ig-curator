@@ -11,7 +11,33 @@ import {
   ChevronRight,
   ImageMinus,
   ArrowDownToLine,
+  Download,
+  ImageIcon,
 } from "lucide-react";
+import { LocalMediaImage, LocalMediaVideo } from "@/components/grid/LocalMedia";
+import { CoverPicker } from "./CoverPicker";
+
+const isVideoUrl = (url: string) => url.startsWith("data:video") || url.includes("-video-");
+
+/** Saves one photo or video to the computer, named after the box. */
+async function downloadMedia(url: string, name: string) {
+  let href = url;
+  let blob: Blob | null = null;
+  if (url.startsWith("local-media://")) {
+    const { getMediaBlob } = await import("@/lib/idb");
+    blob = await getMediaBlob(url.replace("local-media://", ""));
+    if (!blob) return;
+    href = URL.createObjectURL(blob);
+  }
+  const ext = blob?.type.split("/")[1]?.replace("quicktime", "mov").replace("jpeg", "jpg") ?? (isVideoUrl(url) ? "mp4" : "jpg");
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = `${name.replace(/[\/\\:*?"<>|]/g, "").trim() || "photo"}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  if (blob) setTimeout(() => URL.revokeObjectURL(href), 10_000);
+}
 
 interface EditorPanelProps {
   activeSlot: SlotItem | null;
@@ -33,6 +59,8 @@ export function EditorPanel({
     "details",
   );
   const [isUploading, setIsUploading] = useState(false);
+  // A video just added to a reel (or "Change cover"): ask what its cover should be
+  const [coverFor, setCoverFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localText, setLocalText] = useState(activeSlot?.text || "");
@@ -82,10 +110,12 @@ export function EditorPanel({
       const newUrls = [...(activeSlot.urls || []), ...newBase64Strings];
 
       updateSlot(activeSlot.id, {
-        type: "image",
+        type: newBase64Strings.length && newBase64Strings.every(isVideoUrl) ? "video" : "image",
         urls: newUrls,
         currentUrlIndex: (activeSlot.urls || []).length,
       });
+      const video = newBase64Strings.find(isVideoUrl);
+      if (video && activeSlot.contentType === "Reel") setCoverFor(video);
     } catch (error) {
       console.error("Upload failed", error);
     } finally {
@@ -133,7 +163,7 @@ export function EditorPanel({
         ref={fileInputRef}
         onChange={handleUpload}
         className="hidden"
-        accept="image/*"
+        accept="image/*,video/*"
         multiple
       />
 
@@ -202,9 +232,20 @@ export function EditorPanel({
                   <span>Prev</span>
                 </button>
 
-                <span className="text-xs font-bold text-foreground/80 tracking-tight">
-                  Photo {(activeSlot.currentUrlIndex || 0) + 1} of{" "}
+                <span className="flex items-center gap-1.5 text-xs font-bold text-foreground/80 tracking-tight">
+                  {isVideoUrl(activeSlot.urls[activeSlot.currentUrlIndex || 0] ?? "") ? "Video" : "Photo"} {(activeSlot.currentUrlIndex || 0) + 1} of{" "}
                   {activeSlot.urls.length}
+                  <button
+                    onClick={() => {
+                      const i = activeSlot.currentUrlIndex || 0;
+                      downloadMedia(activeSlot.urls[i], `${activeSlot.text || "photo"}${activeSlot.urls.length > 1 ? ` ${i + 1}` : ""}`);
+                    }}
+                    className="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-soft-100 cursor-pointer"
+                    title="Download this photo"
+                    aria-label="Download this photo"
+                  >
+                    <Download size={13} strokeWidth={2.4} />
+                  </button>
                 </span>
 
                 <button
@@ -237,11 +278,11 @@ export function EditorPanel({
                           : "border-transparent opacity-60 hover:opacity-100"
                       }`}
                     >
-                      <img
-                        src={url}
-                        alt={`Thumb ${idx}`}
-                        className="w-full h-full object-cover"
-                      />
+                      {isVideoUrl(url) ? (
+                        <LocalMediaVideo src={url} muted playsInline className="w-full h-full object-cover" />
+                      ) : (
+                        <LocalMediaImage src={url} alt="" className="w-full h-full object-cover" />
+                      )}
                     </button>
                   ))}
                 </div>
@@ -249,6 +290,32 @@ export function EditorPanel({
             </div>
           )}
       </div>
+
+      {/* A reel's cover */}
+      {activeSlot.contentType === "Reel" && activeSlot.urls?.some(isVideoUrl) && (
+        <div className="flex items-center gap-2.5 p-2.5 bg-soft-50/80 border border-soft-200/80 rounded-2xl">
+          <div className="w-9 h-12 rounded-md overflow-hidden bg-zinc-200 shrink-0">
+            {activeSlot.coverUrl && <LocalMediaImage src={activeSlot.coverUrl} alt="" className="w-full h-full object-cover" />}
+          </div>
+          <span className="text-xs font-semibold text-foreground/80">{activeSlot.coverUrl ? "Cover" : "No cover yet"}</span>
+          <button
+            onClick={() => setCoverFor(activeSlot.urls.find(isVideoUrl) ?? null)}
+            className="ml-auto inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-soft-200 rounded-lg text-xs font-semibold hover:bg-soft-100 cursor-pointer"
+          >
+            <ImageIcon size={13} /> {activeSlot.coverUrl ? "Change cover" : "Choose cover"}
+          </button>
+        </div>
+      )}
+      {coverFor && (
+        <CoverPicker
+          videoUrl={coverFor}
+          onClose={() => setCoverFor(null)}
+          onPick={(coverUrl) => {
+            updateSlot(activeSlot.id, { coverUrl });
+            setCoverFor(null);
+          }}
+        />
+      )}
 
       {/* iOS Segmented Tabs - Hidden for draft placeholders */}
       {!isDraftPlaceholder && (

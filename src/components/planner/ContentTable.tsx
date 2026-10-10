@@ -21,9 +21,9 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 
 const COLUMNS: Record<Tab, Column[]> = {
-  shoot: ["title", "shoot", "status", "category", "pinterest"],
-  edit: ["edited", "title", "edit", "post", "status", "category", "pinterest"],
-  post: ["edited", "title", "post", "status", "category", "pinterest"],
+  shoot: ["title", "shoot", "status", "category"],
+  edit: ["edited", "title", "edit", "post", "status", "category"],
+  post: ["edited", "title", "post", "status", "category"],
   all: ["title", "status", "category", "shoot", "edit", "post"],
 }
 

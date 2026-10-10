@@ -233,16 +233,6 @@ export function ItemDrawer({
                 <ClothingSelect value={item.clothingStatus} onChange={(clothingStatus) => update(item.id, { clothingStatus })} />
               </Row>
             )}
-            <Row label="Pinterest">
-              <div className="flex items-center gap-1">
-                <CommitInput label="Pinterest URL" type="url" value={item.pinterestUrl ?? ""} placeholder="https://pinterest.com/…" onCommit={(v) => update(item.id, { pinterestUrl: v || null })} className="flex-1 text-sm text-zinc-700" />
-                {item.pinterestUrl && (
-                  <a href={item.pinterestUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-zinc-500 hover:text-zinc-900 px-1.5">
-                    Open
-                  </a>
-                )}
-              </div>
-            </Row>
             <Row label="Location">
               <div className="flex flex-col gap-1">
                 <CommitInput label="Location name" value={loc.name} placeholder="Place name" onCommit={(name) => setLoc({ name })} className="text-sm text-zinc-700" />

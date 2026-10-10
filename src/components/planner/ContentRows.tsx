@@ -6,10 +6,10 @@ import { formatDate } from "@/lib/planner/dates"
 import { autoEditDate } from "@/lib/planner/rules"
 import { shootDateOf } from "@/lib/planner/views"
 import type { ContentDTO } from "@/lib/planner/types"
-import { CategorySelect, ClothingSelect, CommitInput, DateCell, EditedCheckbox, Empty, PinterestLink, StatusSelect, Thumb } from "./Fields"
+import { CategorySelect, ClothingSelect, CommitInput, DateCell, EditedCheckbox, Empty, StatusSelect, Thumb } from "./Fields"
 import type { Planner } from "./usePlanner"
 
-export type Column = "edited" | "title" | "shoot" | "edit" | "post" | "status" | "category" | "pinterest" | "clothing" | "orderBy" | "returnBy"
+export type Column = "edited" | "title" | "shoot" | "edit" | "post" | "status" | "category" | "clothing" | "orderBy" | "returnBy"
 
 const HEADERS: Record<Column, string> = {
   edited: "Edited",
@@ -19,7 +19,6 @@ const HEADERS: Record<Column, string> = {
   post: "Post Now",
   status: "Status",
   category: "Category",
-  pinterest: "Pinterest",
   clothing: "Clothing",
   orderBy: "Order by",
   returnBy: "Return by",
@@ -29,7 +28,6 @@ const WIDTHS: Partial<Record<Column, string>> = {
   edited: "w-14",
   title: "min-w-[260px]",
   category: "min-w-[130px]",
-  pinterest: "min-w-[140px]",
 }
 
 export type Selection = { selected: Set<string>; toggle: (id: string) => void; setAll: (ids: string[], on: boolean) => void }
@@ -120,8 +118,6 @@ export function ContentRows({
         return <StatusSelect value={item.status} onChange={(status) => update(item.id, { status })} />
       case "category":
         return <CategorySelect value={item.categories} onChange={(categories) => update(item.id, { categories })} />
-      case "pinterest":
-        return <PinterestLink url={item.pinterestUrl} />
       case "clothing":
         return <ClothingSelect value={item.clothingStatus} onChange={(clothingStatus) => update(item.id, { clothingStatus })} />
       case "orderBy":
