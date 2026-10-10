@@ -14,6 +14,7 @@ import {
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
   PLANNER_HIDDEN_EVENT,
+  PLANNER_LINKS_EVENT,
   type ContentDTO,
   type ContentPatch,
   type FeedAttach,
@@ -125,8 +126,6 @@ export function usePlanner(enabled: boolean) {
     const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
     if (content.success) {
       setItems(content.data)
-      const linkedGroups = content.data.map((page) => [page.slotId, ...Object.values(page.extraSlots || {})].filter(Boolean) as string[])
-      window.dispatchEvent(new CustomEvent("ig-curator:planner-links", { detail: linkedGroups }))
       
       // Pages ticked Post / Reels / Story get their feed boxes, also in a browser whose feed doesn't have them yet.
       // Only missing boxes are created: photos are never sent again to a box that's there (that looped before).
@@ -153,6 +152,17 @@ export function usePlanner(enabled: boolean) {
     setError(failed && !failed.success ? failed.error : null)
     setLoading(false)
   }, [reconcileFeed, ensureGridBoxes])
+
+  // Each page's boxes (its story folder and post or reel), which the feed keeps holding the same photos
+  const linksSentRef = useRef("")
+  useEffect(() => {
+    const groups = items.map((page) => [page.slotId, ...Object.values(page.extraSlots ?? {})].filter(Boolean) as string[]).filter((g) => g.length > 1)
+    const key = JSON.stringify(groups)
+    if (key === linksSentRef.current) return
+    linksSentRef.current = key
+    ;(window as Window & { __plannerLinks?: string[][] }).__plannerLinks = groups
+    window.dispatchEvent(new CustomEvent(PLANNER_LINKS_EVENT, { detail: groups }))
+  }, [items])
 
   useEffect(() => {
     if (!enabled) return

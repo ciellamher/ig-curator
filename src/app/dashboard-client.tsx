@@ -8,6 +8,7 @@ import { EditorPanel } from "@/components/editor/EditorPanel";
 import { SlotItem } from "@/types";
 import { removeRepeatedPhotos } from "@/lib/feedRepair";
 import { alreadyIn, type PhotoDropMode, withoutMoved } from "@/lib/photoDrag";
+import { mergeLinked, syncLinked } from "@/lib/linkedSlots";
 import { FacebookFeedView } from "@/components/grid/FacebookFeedView";
 import { getLiveGrid } from "@/app/actions/instagram";
 import { CalendarView } from "@/components/calendar/CalendarView";
@@ -165,41 +166,12 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
 
 const STARTER_SLOT_IDS = new Set(initialItems.map((i) => i.id));
 
-function getSlotUrls(items: SlotItem[], id: string) {
-  const item = items.find(i => i.id === id);
-  if (!item) return [];
-  if (item.contentType === "StoryFolder") {
-    return items.filter(i => i.folderId === id).map(i => i.urls?.[0]).filter(Boolean) as string[];
-  }
-  return item.urls || [];
-}
-
-function setSlotUrls(items: SlotItem[], id: string, urls: string[]) {
-  const item = items.find(i => i.id === id);
-  if (!item) return items;
-  if (item.contentType === "StoryFolder") {
-    const withoutChildren = items.filter(i => i.folderId !== id);
-    const newChildren = urls.map((u, n) => ({
-      id: `story-${id}-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
-      type: (u.includes("-video-") || u.startsWith("data:video")) ? "video" : "image",
-      urls: [u],
-      currentUrlIndex: 0,
-      hexColor: "#E4E4E7",
-      text: "",
-      contentType: "Story" as const,
-      folderId: id,
-    } as SlotItem));
-    return [...withoutChildren, ...newChildren];
-  } else {
-    return items.map(i => i.id === id ? { ...i, urls, type: (urls.length ? (urls.every(u => u.includes("-video-") || u.startsWith("data:video")) ? "video" : "image") : "placeholder") as SlotItem["type"] } : i);
-  }
-}
-
 export function DashboardClient() {
   const { data: session, status } = useSession();
   // @ts-ignore - id is added in the session callback
   const userId: string | null = status === "authenticated" ? session?.user?.id ?? null : null;
-  const linkedSlotsRef = useRef<Record<string, string[]>>({});
+  // Boxes of the same page (its story folder and its post or reel box): they always hold the same photos
+  const linkGroupsRef = useRef<string[][]>([]);
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
@@ -876,7 +848,7 @@ export function DashboardClient() {
       const { slotId, urls, title, contentType, ensure, hidden } = (e as CustomEvent<FeedAttach>).detail;
       // Boxes removed in this feed but not yet synced are not brought back
       if (ensure && pendingDeletesRef.current.has(slotId)) return;
-      setItems((curr) => {
+      setLinked((curr) => {
         const box = curr.find((i) => i.id === slotId);
         // Making sure a page has its box: never add its photos again to a box that's already there, but a post or
         // reel box belongs in the grid (not Drafts) and follows the page's "Hide from feed"
@@ -970,46 +942,21 @@ export function DashboardClient() {
     };
 
     const onLinks = (e: Event) => {
-      const groups = (e as CustomEvent<string[][]>).detail;
-      const map: Record<string, string[]> = {};
-      groups.forEach(group => {
-        if (group.length > 1) {
-          group.forEach(id => { map[id] = group; });
-        }
-      });
-      linkedSlotsRef.current = map;
-      
-      setItems(curr => {
-        let next = curr;
-        groups.forEach(group => {
-          if (group.length <= 1) return;
-          let longest: string[] = [];
-          for (const id of group) {
-            const u = getSlotUrls(next, id);
-            if (u.length > longest.length) longest = u;
-          }
-          if (longest.length > 0) {
-            for (const id of group) {
-              if (getSlotUrls(next, id).join(",") !== longest.join(",")) {
-                next = setSlotUrls(next, id, longest);
-              }
-            }
-          }
-        });
-        return next;
-      });
+      const groups = ((e as CustomEvent<string[][]>).detail ?? []).filter((g) => g.length > 1);
+      linkGroupsRef.current = groups;
+      setItems((curr) => mergeLinked(curr, groups));
     };
 
     // Photos removed on a story page: its stories with those photos leave the folder
     const onRemovePhotos = (e: Event) => {
       const { folderId, urls } = (e as CustomEvent<FeedRemovePhotos>).detail;
-      setItems((curr) => curr.filter((i) => !(i.folderId === folderId && i.urls?.length && urls.includes(i.urls[0]))));
+      setLinked((curr) => curr.filter((i) => !(i.folderId === folderId && i.urls?.length && urls.includes(i.urls[0]))));
     };
     window.addEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
     // Photos rearranged on a story page: its stories follow that order
     const onReorderStories = (e: Event) => {
       const { folderId, urls } = (e as CustomEvent<FeedReorderStories>).detail;
-      setItems((curr) => {
+      setLinked((curr) => {
         const rank = (i: SlotItem) => {
           const at = urls.indexOf(i.urls?.[0] ?? "");
           return at === -1 ? urls.length : at;
@@ -1025,6 +972,9 @@ export function DashboardClient() {
     window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
     window.addEventListener(PLANNER_HIDDEN_EVENT, onHidden);
     window.addEventListener(PLANNER_LINKS_EVENT, onLinks);
+    // Links sent before this feed was listening
+    const sentEarlier = (window as Window & { __plannerLinks?: string[][] }).__plannerLinks;
+    if (sentEarlier) onLinks(new CustomEvent(PLANNER_LINKS_EVENT, { detail: sentEarlier }));
     return () => {
       window.removeEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
       window.removeEventListener(FEED_REORDER_STORIES_EVENT, onReorderStories);
@@ -1057,38 +1007,13 @@ export function DashboardClient() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [items]);
 
-  function updateItems(
-    newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
-  ) {
-    setItems((curr) => {
-      let next = typeof newItemsOrUpdater === "function" ? newItemsOrUpdater(curr) : newItemsOrUpdater;
-      
-      const processedGroups = new Set<string>();
-      for (const [id, group] of Object.entries(linkedSlotsRef.current)) {
-        const groupId = [...group].sort().join(",");
-        if (processedGroups.has(groupId)) continue;
-        processedGroups.add(groupId);
+  /** Every change to the boxes goes through here, so a page's linked story folder and post keep the same photos. */
+  function setLinked(update: (curr: SlotItem[]) => SlotItem[]) {
+    setItems((curr) => syncLinked(curr, update(curr), linkGroupsRef.current));
+  }
 
-        let changedUrls: string[] | null = null;
-        for (const memberId of group) {
-          const oldUrls = getSlotUrls(curr, memberId);
-          const newUrls = getSlotUrls(next, memberId);
-          if (oldUrls.join(",") !== newUrls.join(",")) {
-            changedUrls = newUrls;
-            break;
-          }
-        }
-
-        if (changedUrls !== null) {
-          for (const memberId of group) {
-            if (getSlotUrls(next, memberId).join(",") !== changedUrls.join(",")) {
-              next = setSlotUrls(next, memberId, changedUrls);
-            }
-          }
-        }
-      }
-      return next;
-    });
+  function updateItems(newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[])) {
+    setLinked((curr) => (typeof newItemsOrUpdater === "function" ? newItemsOrUpdater(curr) : newItemsOrUpdater));
   }
 
   function handleUndo() {
