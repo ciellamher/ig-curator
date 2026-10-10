@@ -18,7 +18,7 @@ import { matchesSearch, outfitsView, shootDateOf } from "@/lib/planner/views"
 import type { ContentDTO, OrderDTO } from "@/lib/planner/types"
 import { ContentRows, type Column } from "./ContentRows"
 import { BulkBar, useSelection } from "./Selection"
-import { Badge, CommitInput, Thumb } from "./Fields"
+import { Badge, CommitInput, DateInput, Thumb } from "./Fields"
 import { Section } from "./Section"
 import type { Planner } from "./usePlanner"
 
@@ -29,10 +29,9 @@ function DateField({ label, value, onChange, dark }: { label: string; value: str
   return (
     <label className="flex items-center gap-1.5 text-xs opacity-80">
       {label}
-      <input
-        type="date"
+      <DateInput
         value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || null)}
+        onChange={(v) => onChange(v || null)}
         className={`bg-transparent rounded-md px-1 py-0.5 border border-current/20 text-xs cursor-pointer ${dark ? "[color-scheme:dark]" : ""}`}
       />
     </label>

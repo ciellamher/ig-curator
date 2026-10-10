@@ -190,6 +190,7 @@ export function EditorPanel({
   };
 
   const handlePanelDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(PHOTO_ORDER_TYPE)) return;
     if (
       e.dataTransfer.types.includes("Files") ||
       isPhotoDrag(e) ||
@@ -209,6 +210,8 @@ export function EditorPanel({
   const handlePanelDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOverPanel(false);
+    // A thumbnail being rearranged in this box isn't a new photo (adding it again then deleted every copy)
+    if (Array.from(e.dataTransfer.types).includes(PHOTO_ORDER_TYPE)) return;
 
     const files = Array.from(e.dataTransfer.files || []).filter(
       (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type,
@@ -641,6 +644,7 @@ export function EditorPanel({
                       setDragOverIdx((d) => (d === idx ? null : d))
                     }
                     onDrop={(e) => {
+                      e.stopPropagation();
                       const from = Number(
                         e.dataTransfer.getData(PHOTO_ORDER_TYPE),
                       );
@@ -906,6 +910,8 @@ export function EditorPanel({
               </div>
             )}
 
+            {/* In a page, its Post Now date is the schedule */}
+            {!pageOnly && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-bold text-foreground/60 uppercase tracking-wider">
                 Schedule Time
@@ -921,6 +927,7 @@ export function EditorPanel({
                 className="p-2.5 bg-soft-50 border border-soft-200 rounded-xl outline-none focus:border-slate-800 focus:bg-white text-xs transition-all"
               />
             </div>
+            )}
           </>
         )}
       </div>

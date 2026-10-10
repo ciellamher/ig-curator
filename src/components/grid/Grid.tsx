@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { draggedItemIds, dropModeAt, droppedPhotos, isPhotoDrag, type PhotoDropMode } from "@/lib/photoDrag"
 import {
   DndContext,
@@ -34,10 +34,13 @@ interface GridProps {
   focusedMatchId?: string | null;
   /** Inspo photos dropped on a box (into it) or beside it (new boxes there); targetId null = the end */
   onDropPhotos?: (targetId: string | null, mode: PhotoDropMode, urls: string[], sourceIds?: string[]) => void;
+  /** A box dragged off the grid and let go over a board or story folder (anything marked data-slot-id / data-photo-target) */
+  onDropOutside?: (boxId: string, targetId: string) => void;
 }
 
-export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId, onDropPhotos }: GridProps) {
+export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId, onDropPhotos, onDropOutside }: GridProps) {
   const [dropAt, setDropAt] = useState<{ id: string; mode: PhotoDropMode } | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   const dropProps = (id: string) =>
     onDropPhotos
@@ -78,6 +81,25 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
 
+    // Let go outside the grid (the nearest box always counts as "over", so go by the pointer): over a board or
+    // story folder, its photos go there; anywhere else, nothing moves
+    const start = event.activatorEvent
+    const rect = gridRef.current?.getBoundingClientRect()
+    const x = start instanceof PointerEvent ? start.clientX + event.delta.x : NaN
+    const y = start instanceof PointerEvent ? start.clientY + event.delta.y : NaN
+    if (rect && !Number.isNaN(x) && (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)) {
+      if (!onDropOutside) return
+      for (const el of document.elementsFromPoint(x, y)) {
+        const target = (el as HTMLElement).closest<HTMLElement>("[data-photo-target], [data-slot-id]")
+        const id = target?.dataset.photoTarget ?? target?.dataset.slotId
+        if (id && id !== active.id && !items.some((i) => i.id === id)) {
+          onDropOutside(String(active.id), id)
+          return
+        }
+      }
+      return
+    }
+
     if (over && active.id !== over.id) {
       setItems((items) => {
         const oldIndex = items.findIndex((item) => item.id === active.id)
@@ -111,7 +133,7 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-3 gap-[1px] bg-white">
+        <div ref={gridRef} className="grid grid-cols-3 gap-[1px] bg-white">
           <SortableContext items={items} strategy={rectSortingStrategy}>
             {items.map((item) => (
               <div key={item.id} className="relative" {...dropProps(item.id)}>

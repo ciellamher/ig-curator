@@ -334,6 +334,8 @@ export function InspoFolderView({
 
   return (
     <div
+      // A grid post dropped anywhere on the open board adds its photos here
+      data-photo-target={folder.id}
       className="w-full flex flex-col bg-white min-h-64 relative"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

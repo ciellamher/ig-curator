@@ -1175,7 +1175,8 @@ export function DashboardClient() {
   const dropPhotosOnGrid = (targetId: string | null, mode: PhotoDropMode, urls: string[], sourceIds: string[] = []) => {
     const kind = gridFilter === "Reel" ? "Reel" : "Post";
     updateItems((all) => {
-      const curr = withoutMoved(all, sourceIds.filter((id) => id !== targetId));
+      // A photo dragged from this same box's editor stays put (it isn't moved out of it)
+      const curr = withoutMoved(all, sourceIds.filter((id) => id !== targetId && !id.startsWith(`editor_photo|${targetId}|`)));
       if (targetId && mode === "into") {
         return curr.map((i) => {
           if (i.id !== targetId) return i;
@@ -1234,6 +1235,32 @@ export function DashboardClient() {
       if (firstIndex === -1) return [...newItems, ...curr];
       return [...curr.slice(0, firstIndex), ...newItems, ...curr.slice(firstIndex)];
     });
+  };
+
+  /**
+   * A grid post or reel dragged onto a board or a story folder: its photos go there. The post itself stays, since it's
+   * a page in the planner (removing it would delete that page).
+   */
+  const dropBoxOutside = (boxId: string, targetId: string) => {
+    const box = items.find((i) => i.id === boxId);
+    const urls = box?.urls?.filter(Boolean) ?? [];
+    let target = items.find((i) => i.id === targetId);
+    // Let go over a pin or a story: it's the board or folder they're in
+    if (target && (target.contentType === "InspoPost" || target.contentType === "Story") && target.folderId) target = items.find((i) => i.id === target!.folderId);
+    if (!target || !urls.length) return;
+    if (target.contentType === "StoryFolder") return dropPhotosInFolder(target.id, urls);
+    if (target.contentType !== "InspoFolder") return;
+    const pins: SlotItem[] = urls.map((u, n) => ({
+      id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      type: (u.includes("-video-") || u.startsWith("data:video") ? "video" : "image") as SlotItem["type"],
+      urls: [u],
+      currentUrlIndex: 0,
+      hexColor: "#E4E4E7",
+      text: "",
+      folderId: target.id,
+      contentType: "InspoPost",
+    }));
+    updateItems((curr) => [...pins, ...curr]);
   };
 
   /** An inspo photo moved to the phone: a new post or story, and it leaves the board. */
@@ -1575,6 +1602,7 @@ export function DashboardClient() {
                         searchResults={searchMatches}
                         onDoubleClickItem={(id) => setPreviewSlotId(id)}
                         onDropPhotos={dropPhotosOnGrid}
+                        onDropOutside={dropBoxOutside}
                         onDeleteItem={async (id) => {
                           const ok = await confirm({
                             title: "Delete Post",

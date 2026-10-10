@@ -19,6 +19,35 @@ import type { ContentDTO } from "@/lib/planner/types"
 
 const FIELD = "rounded-md hover:bg-soft-100 focus:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/15"
 
+
+const COMPLETE_DATE = /^(\d{4})-\d{2}-\d{2}$/
+
+/**
+ * A date box that saves only a complete, real date (or clearing it). While a year is being typed the browser reports
+ * in-between values like year 0002 or 20261; saving those moved the item and was rejected as an invalid date.
+ */
+export function DateInput({ value, onChange, ...rest }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & { value: string; onChange: (value: string) => void }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  return (
+    <input
+      {...rest}
+      type="date"
+      value={draft}
+      onChange={(e) => {
+        const next = e.target.value
+        setDraft(next)
+        const year = Number(COMPLETE_DATE.exec(next)?.[1])
+        if (next === "" || (year >= 1900 && year <= 2200)) onChange(next)
+      }}
+      onBlur={(e) => {
+        setDraft(value) // an unfinished date goes back to the saved one
+        rest.onBlur?.(e)
+      }}
+    />
+  )
+}
+
 export function Badge({ value, styles }: { value: string; styles: Record<string, string> }) {
   return (
     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium whitespace-nowrap ${styles[value] ?? "bg-zinc-100 text-zinc-600"}`}>
@@ -124,11 +153,10 @@ export function DateCell({ label, value, onChange }: { label: string; value: Sch
   const hasExtra = value.start && (timePart(value.start) || value.end)
   return (
     <div className="flex flex-col">
-      <input
-        type="date"
+      <DateInput
         aria-label={label}
         value={value.start ? datePart(value.start) : ""}
-        onChange={(e) => onChange(e.target.value ? moveSchedule(value, e.target.value) : { start: null, end: null })}
+        onChange={(v) => onChange(v ? moveSchedule(value, v) : { start: null, end: null })}
         className={`bg-transparent text-sm px-1 py-0.5 cursor-pointer ${FIELD} ${value.start ? "text-zinc-700" : "text-zinc-300"}`}
       />
       {hasExtra && (
@@ -150,11 +178,10 @@ export function ScheduleEditor({ label, value, onChange }: { label: string; valu
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <input
-          type="date"
+        <DateInput
           aria-label={label}
           value={value.start ? datePart(value.start) : ""}
-          onChange={(e) => onChange(e.target.value ? moveSchedule(value, e.target.value) : { start: null, end: null })}
+          onChange={(v) => onChange(v ? moveSchedule(value, v) : { start: null, end: null })}
           className={input}
         />
         {value.start && startTime !== null && (
@@ -181,12 +208,11 @@ export function ScheduleEditor({ label, value, onChange }: { label: string; valu
           {value.end ? (
             <>
               <span className="text-xs text-zinc-400">ends</span>
-              <input
-                type="date"
+              <DateInput
                 aria-label={`${label} end`}
                 value={datePart(value.end)}
                 min={datePart(value.start)}
-                onChange={(e) => onChange({ ...value, end: e.target.value ? withTime(e.target.value, endTime) : null })}
+                onChange={(v) => onChange({ ...value, end: v ? withTime(v, endTime) : null })}
                 className={input}
               />
               {endTime !== null && (
