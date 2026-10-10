@@ -44,6 +44,24 @@ export function usePlanner(enabled: boolean) {
    * a placement is unticked. A carousel counts as the page's Post box.
    */
   const reconcileFeed = useCallback(async (page: ContentDTO, addOnly = false) => {
+    // Loads can overlap (and arrive with data from before boxes were given): a page gets its missing boxes once,
+    // or it would get two boxes — the second one then turning into a copy of the page.
+    if (addOnly) {
+      const last = boxesGivenRef.current.get(page.id)
+      if (last && Date.now() - last < 60_000) return
+    }
+    if (reconcilingRef.current.has(page.id)) return
+    reconcilingRef.current.add(page.id)
+    try {
+      await reconcileFeedNow(page, addOnly)
+    } finally {
+      reconcilingRef.current.delete(page.id)
+    }
+  }, [])
+  const reconcilingRef = useRef(new Set<string>())
+  const boxesGivenRef = useRef(new Map<string, number>())
+
+  const reconcileFeedNow = async (page: ContentDTO, addOnly: boolean) => {
     const kind = (type: string) => (type === "Carousel" ? "Post" : type)
     const current = new Map<string, { slotId: string; type: string }>()
     for (const [type, slotId] of Object.entries(page.extraSlots ?? {})) current.set(kind(type), { slotId, type })
@@ -82,7 +100,8 @@ export function usePlanner(enabled: boolean) {
       const detail: FeedAttach = { ...box, urls: res.data.media.map((m) => m.url), title: res.data.title, hidden: res.data.hiddenFromFeed && box.contentType !== "StoryFolder" }
       window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
     }
-  }, [])
+    if (added.length) boxesGivenRef.current.set(page.id, Date.now())
+  }
 
   /** A page's post/reel boxes: in the grid (out of Drafts), shown or hidden like the page. */
   const ensureGridBoxes = useCallback((page: ContentDTO) => {
