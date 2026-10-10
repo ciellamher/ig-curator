@@ -75,9 +75,10 @@ export function PlannerClient() {
     const ids = allPlanner.items.flatMap((i) => [i.slotId, ...Object.values(i.extraSlots ?? {})]).filter((s): s is string => !!s)
     ;(window as Window & { __plannerSlots?: string[] }).__plannerSlots = ids // for a feed that mounts later
     window.dispatchEvent(new CustomEvent(PLANNER_SLOTS_EVENT, { detail: ids }))
+    // Every box of a posted page (its story folder, post or reel): they leave the phone's Stories tab
     const postedFolders = allPlanner.items
       .filter((i) => i.status === "Posted")
-      .flatMap((i) => [i.contentType === "StoryFolder" ? i.slotId : null, i.extraSlots?.StoryFolder ?? null])
+      .flatMap((i) => [i.slotId, ...Object.values(i.extraSlots ?? {})])
       .filter((s): s is string => !!s)
     ;(window as Window & { __plannerPostedFolders?: string[] }).__plannerPostedFolders = postedFolders
     window.dispatchEvent(new CustomEvent(PLANNER_POSTED_FOLDERS_EVENT, { detail: postedFolders }))

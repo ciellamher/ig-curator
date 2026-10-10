@@ -15,9 +15,34 @@ interface StoryListViewProps {
   onAddFolder?: () => void;
   /** Inspo photos dropped on a folder become its stories */
   onDropPhotos?: (folderId: string, urls: string[], sourceIds?: string[]) => void;
+  /** Posts and reels on the phone, shown under the folders whether or not they're also stories */
+  posts?: SlotItem[];
+  onPostClick?: (id: string) => void;
 }
 
-export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder, onDropPhotos }: StoryListViewProps) {
+/** Up to three photos side by side, like a folder cover */
+function PhotoStrip({ urls }: { urls: string[] }) {
+  return (
+    <>
+      {[0, 1, 2].map((n) => {
+        const url = urls[n];
+        if (!url) return <div key={n} className={`flex-1 h-full ${urls.length ? "bg-zinc-50" : "bg-zinc-100"}`} />;
+        const cls = "w-full h-full object-cover group-hover:scale-105 transition-transform duration-500";
+        return (
+          <div key={n} className="flex-1 h-full overflow-hidden">
+            {url.includes("-video-") || url.startsWith("data:video") ? (
+              <LocalMediaVideo src={url} muted playsInline preload="metadata" className={cls} />
+            ) : (
+              <LocalMediaImage src={url} alt="" className={cls} />
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder, onDropPhotos, posts = [], onPostClick }: StoryListViewProps) {
   const [dropFolder, setDropFolder] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
@@ -38,7 +63,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
     </div>
   );
 
-  if (folders.length === 0) {
+  if (folders.length === 0 && posts.length === 0) {
     return (
       <div className="w-full flex flex-col bg-white">
         {header}
@@ -67,7 +92,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
-      <div className="p-3 grid grid-cols-1 gap-3">
+      <div className="p-3 grid grid-cols-1 gap-3 empty:hidden">
         {folders.map(folder => {
           const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
           const customCover = folder.urls?.[0];
@@ -178,6 +203,41 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
           );
         })}
       </div>
+      {posts.length > 0 && (
+        <>
+          <div className="px-4 pt-2">
+            <h3 className="text-[13px] font-bold text-zinc-950">Posts &amp; reels</h3>
+            <p className="text-[11px] text-zinc-500">Everything on your grid, to use as stories too</p>
+          </div>
+          <div className="p-3 grid grid-cols-1 gap-3">
+            {posts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                data-slot-id={post.id}
+                data-no-outline
+                onClick={() => onPostClick?.(post.id)}
+                className="flex flex-col group cursor-pointer text-left"
+              >
+                <div className="w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm">
+                  <PhotoStrip urls={post.coverUrl ? [post.coverUrl, ...post.urls.filter((u) => u !== post.coverUrl)] : post.urls} />
+                  <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-black/55 text-white text-[10px] font-semibold">
+                    {post.contentType === "Reel" ? "Reel" : "Post"}
+                  </span>
+                </div>
+                <div className="mt-1.5 px-1">
+                  <div className="font-bold text-zinc-950 text-[13px] tracking-tight truncate">
+                    {post.text?.trim() || (post.contentType === "Reel" ? "Untitled reel" : "Untitled post")}
+                  </div>
+                  <div className="text-[11px] font-medium text-zinc-500">
+                    {post.urls.length} {post.urls.length === 1 ? "photo" : "photos"}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

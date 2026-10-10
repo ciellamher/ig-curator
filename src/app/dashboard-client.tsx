@@ -1487,6 +1487,14 @@ export function DashboardClient() {
                             (i) => i.contentType === "StoryFolder" && !postedFolderIds.has(i.id),
                           )}
                           allItems={items}
+                          posts={items.filter((i) => {
+                            if (!["Post", "Reel", "Carousel"].includes(i.contentType ?? "Post") || i.folderId) return false;
+                            if (i.isHiddenFromPhone || postedFolderIds.has(i.id) || !i.urls?.length) return false;
+                            // A post that has its own story folder already shows as that folder
+                            const group = linkGroupsRef.current.find((g) => g.includes(i.id));
+                            return !group?.some((id) => id !== i.id && items.some((f) => f.id === id && f.contentType === "StoryFolder"));
+                          })}
+                          onPostClick={(id) => setActiveSlotId(id)}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
                           onDropPhotos={dropPhotosInFolder}
                           onAddFolder={() => {
