@@ -239,6 +239,16 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
             onContextMenu={(e) => e.preventDefault()}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            draggable={!isAdjusting}
+            onDragStart={(e) => {
+              e.stopPropagation();
+              const dragUrls = item.urls && item.urls.length > 0 ? item.urls : [item.coverUrl].filter(Boolean);
+              if (dragUrls.length) {
+                e.dataTransfer.setData("application/x-ig-curator-photos", JSON.stringify(dragUrls));
+                e.dataTransfer.setData("application/x-ig-curator-story-id", item.id);
+                e.dataTransfer.effectAllowed = "copyMove";
+              }
+            }}
           >
             {(currentUrl.startsWith("data:video") || currentUrl.includes("video")) && !item.coverUrl ? (
               <LocalMediaVideo
