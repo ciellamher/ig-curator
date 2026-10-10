@@ -160,7 +160,7 @@ export function EditorPanel({
     (!activeSlot.urls || activeSlot.urls.length === 0);
 
   return (
-    <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-hidden text-foreground select-none">
+    <div className="p-4 flex flex-col gap-3.5 h-full max-h-[85vh] overflow-hidden text-foreground select-none bg-white">
       <input
         type="file"
         ref={fileInputRef}

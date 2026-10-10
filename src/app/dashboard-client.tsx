@@ -615,10 +615,12 @@ export function DashboardClient() {
 
 
   // ---- Drafts & Inspo live beside the feed (in the right column), not inside the phone ----
+  const [mounted, setMounted] = useState(false);
   const [libraryEl, setLibraryEl] = useState<HTMLElement | null>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>("drafts");
   const [libraryOpen, setLibraryOpen] = useState(true);
   useEffect(() => {
+    setMounted(true);
     setLibraryEl(document.getElementById("library-slot"));
     try {
       const saved = JSON.parse(localStorage.getItem("ig-curator-library") || "{}");
@@ -1463,72 +1465,74 @@ export function DashboardClient() {
                 </div>
               </div>
             {/* Floating Editor Panel: Side-pane on Desktop, Native Bottom Sheet on Mobile */}
-            {activeSlotId && activeSlot && !pageSlotIds.has(activeSlotId) && (
-              <>
-                {/* Backdrop for Mobile Bottom Sheet */}
-                <div
-                  className="fixed inset-0 bg-black/40 backdrop-blur-xs lg:hidden z-[70] animate-in fade-in duration-200"
-                  onClick={() => setActiveSlotId(null)}
-                />
-
-                <div
-                  className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[80] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:fixed lg:left-[464px] xl:left-[504px] lg:top-24 lg:z-[65] lg:w-80 lg:max-h-[calc(100dvh-8rem)] bg-white shadow-2xl border border-soft-200 rounded-3xl z-50 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
-                  style={{
-                    transform:
-                      typeof window !== "undefined" && window.innerWidth >= 1024
-                        ? `translate(${modalPos.x}px, ${modalPos.y}px)`
-                        : "none",
-                  }}
-                >
+            {mounted && activeSlotId && activeSlot && !pageSlotIds.has(activeSlotId) &&
+              createPortal(
+                <>
+                  {/* Backdrop for Mobile Bottom Sheet */}
                   <div
-                    className="py-3 px-4 bg-white/90 backdrop-blur border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
-                    onPointerDown={handleModalPointerDown}
-                    onPointerMove={handleModalPointerMove}
-                    onPointerUp={handleModalPointerUp}
-                    onPointerCancel={handleModalPointerUp}
+                    className="fixed inset-0 bg-black/40 backdrop-blur-xs lg:hidden z-[85] animate-in fade-in duration-200"
+                    onClick={() => setActiveSlotId(null)}
+                  />
+
+                  <div
+                    className={`max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-[90] max-lg:max-h-[85dvh] max-lg:rounded-b-none max-lg:pb-safe sm:max-lg:inset-x-auto sm:max-lg:left-1/2 sm:max-lg:-translate-x-1/2 sm:max-lg:w-[440px] lg:fixed lg:left-[464px] xl:left-[504px] lg:top-24 lg:z-[90] lg:w-80 lg:max-h-[calc(100dvh-8rem)] bg-white shadow-2xl border border-soft-200 rounded-3xl z-[90] overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300`}
+                    style={{
+                      transform:
+                        typeof window !== "undefined" && window.innerWidth >= 1024
+                          ? `translate(${modalPos.x}px, ${modalPos.y}px)`
+                          : "none",
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={16} className="text-pastel-500" />
-                      <h3 className="font-semibold text-base text-zinc-900 tracking-tight">
-                        Edit Slot
-                      </h3>
-                    </div>
-
-                    <div className="w-10 h-1 bg-soft-300 rounded-full lg:hidden"></div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveSlotId(null);
-                      }}
-                      className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors pointer-events-auto cursor-pointer"
-                      title="Close"
+                    <div
+                      className="py-3 px-4 bg-white border-b border-soft-100 flex justify-between items-center cursor-move shrink-0 active:cursor-grabbing select-none"
+                      onPointerDown={handleModalPointerDown}
+                      onPointerMove={handleModalPointerMove}
+                      onPointerUp={handleModalPointerUp}
+                      onPointerCancel={handleModalPointerUp}
                     >
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <div className="pointer-events-auto flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                    <EditorPanel
-                      activeSlot={activeSlot}
-                      updateSlot={updateItem}
-                      onClose={() => setActiveSlotId(null)}
-                      onDeleteSlot={async (id) => {
-                        const ok = await confirm({
-                          title: "Delete Post",
-                          message: "Are you sure you want to delete this post? This cannot be undone.",
-                          confirmLabel: "Delete",
-                        });
-                        if (ok) {
-                          updateItems((prev) => prev.filter((i) => i.id !== id));
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-pastel-500" />
+                        <h3 className="font-semibold text-base text-zinc-900 tracking-tight">
+                          Edit Slot
+                        </h3>
+                      </div>
+
+                      <div className="w-10 h-1 bg-soft-300 rounded-full lg:hidden"></div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setActiveSlotId(null);
-                        }
-                      }}
-                    />
+                        }}
+                        className="p-1 rounded-full text-foreground/40 hover:text-foreground hover:bg-soft-100 transition-colors pointer-events-auto cursor-pointer"
+                        title="Close"
+                      >
+                        <X size={18} />
+                      </button>
+                    </div>
+                    <div className="pointer-events-auto flex-1 min-h-0 overflow-y-auto no-scrollbar bg-white">
+                      <EditorPanel
+                        activeSlot={activeSlot}
+                        updateSlot={updateItem}
+                        onClose={() => setActiveSlotId(null)}
+                        onDeleteSlot={async (id) => {
+                          const ok = await confirm({
+                            title: "Delete Post",
+                            message: "Are you sure you want to delete this post? This cannot be undone.",
+                            confirmLabel: "Delete",
+                          });
+                          if (ok) {
+                            updateItems((prev) => prev.filter((i) => i.id !== id));
+                            setActiveSlotId(null);
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>,
+                document.body
+              )}
 
             {pageEditor &&
               (() => {
@@ -1561,12 +1565,14 @@ export function DashboardClient() {
               })()}
 
             {/* Instagram Feed / Reel Preview Modal */}
-            {previewSlotId && (
-              <InstagramPreviewModal
-                item={items.find((i) => i.id === previewSlotId)!}
-                onClose={() => setPreviewSlotId(null)}
-              />
-            )}
+            {mounted && previewSlotId &&
+              createPortal(
+                <InstagramPreviewModal
+                  item={items.find((i) => i.id === previewSlotId)!}
+                  onClose={() => setPreviewSlotId(null)}
+                />,
+                document.body
+              )}
           </div>
         </div>
       </div>

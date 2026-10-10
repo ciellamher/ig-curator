@@ -491,7 +491,7 @@ export function InspoFolderView({
             <div
               key={item.id}
               data-slot-id={item.id}
-              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-xl transition-all ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
+              className={`relative ${item.urls?.length ? "min-h-16" : "aspect-[4/5]"} cursor-pointer group bg-zinc-100 overflow-hidden rounded-xl transition-all isolate ${isSelectionMode && selectedItems.has(item.id) ? 'ring-4 ring-inset ring-zinc-950' : ''}`}
               onClick={() => {
                 if (isSelectionMode) {
                   setSelectedItems(prev => {
@@ -518,7 +518,7 @@ export function InspoFolderView({
               }}
             >
               {isSelectionMode && (
-                <div className="absolute top-2 left-2 z-30">
+                <div className="absolute top-2 left-2 z-10">
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedItems.has(item.id) ? 'bg-slate-800 border-slate-800' : 'bg-white/50 border-white/80 backdrop-blur-sm'}`}>
                     {selectedItems.has(item.id) && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                   </div>

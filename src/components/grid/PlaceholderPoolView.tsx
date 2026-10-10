@@ -228,14 +228,14 @@ export function PlaceholderPoolView({
                     setActiveSlotId(isActive ? null : item.id);
                   }}
                   className={`
-                    relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-200
+                    relative w-full aspect-[4/5] overflow-hidden cursor-pointer group select-none transition-all duration-200 isolate
                     ${
                       isSearchActive
                         ? isSearchResult
-                          ? "ring-4 ring-slate-900 ring-offset-1 z-30 shadow-xl opacity-100 scale-[1.01]"
+                          ? "ring-4 ring-slate-900 ring-offset-1 z-10 shadow-xl opacity-100 scale-[1.01]"
                           : "opacity-40 grayscale-[40%]"
                         : isActive
-                          ? "ring-4 ring-slate-900 ring-inset z-20"
+                          ? "ring-4 ring-slate-900 ring-inset z-10"
                           : "hover:ring-2 hover:ring-slate-300/60 hover:ring-inset"
                     }
                     ${isSelected ? "brightness-95" : ""}
@@ -280,7 +280,7 @@ export function PlaceholderPoolView({
                       toggleSelect(item.id);
                     }}
                     className={`
-                      absolute top-2 left-2 w-6 h-6 rounded-md flex items-center justify-center transition-all z-30 shadow-xs cursor-pointer active:scale-95
+                      absolute top-2 left-2 w-6 h-6 rounded-md flex items-center justify-center transition-all z-10 shadow-xs cursor-pointer active:scale-95
                       ${isSelected ? "bg-slate-900 text-white scale-105" : "bg-white/80 text-foreground/50 hover:bg-white hover:text-slate-900"}
                     `}
                     title={
@@ -300,14 +300,14 @@ export function PlaceholderPoolView({
                       e.stopPropagation();
                       handleDeleteDraft(item.id);
                     }}
-                    className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-zinc-50 text-foreground/40 hover:text-zinc-900 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-30"
+                    className="absolute bottom-2 right-2 p-1.5 bg-white/90 hover:bg-zinc-50 text-foreground/40 hover:text-zinc-900 rounded-md shadow-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
                     title="Delete box"
                   >
                     <Trash2 size={12} />
                   </button>
 
                   {/* Content Type Badges */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none z-20">
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none z-10">
                     {item.contentType === "Reel" && (
                       <div className="bg-white/80 backdrop-blur text-foreground p-1 rounded-full shadow-xs">
                         <Video size={11} />

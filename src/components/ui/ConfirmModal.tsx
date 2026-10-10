@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 type ConfirmModalProps = {
@@ -55,7 +56,7 @@ export function ConfirmModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalElement = (
     <div
       className={`fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-3 sm:p-4 transition-all duration-200 ${visible ? "bg-black/30 backdrop-blur-sm" : "bg-transparent"}`}
       onClick={handleCancel}
@@ -98,6 +99,11 @@ export function ConfirmModal({
       </div>
     </div>
   );
+
+  if (typeof document !== "undefined") {
+    return createPortal(modalElement, document.body);
+  }
+  return modalElement;
 }
 
 // Hook for easy usage
