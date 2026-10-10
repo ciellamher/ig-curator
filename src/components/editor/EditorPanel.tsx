@@ -625,7 +625,7 @@ export function EditorPanel({
                       e.dataTransfer.setData(PHOTO_ORDER_TYPE, String(idx));
                       e.dataTransfer.setData("application/x-ig-curator-photos", JSON.stringify([url]));
                       e.dataTransfer.setData("application/x-ig-curator-story-id", `editor_photo|${activeSlot.id}|${url}`);
-                      e.dataTransfer.effectAllowed = "move";
+                      e.dataTransfer.effectAllowed = "copyMove";
                     }}
                     onDragOver={(e) => {
                       if (

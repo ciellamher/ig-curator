@@ -45,10 +45,24 @@ export function draggedItemIds(e: React.DragEvent): string[] {
  * Moving, not copying: removes the dragged items from where they were. Boards and folders are never removed (only
  * the photos and stories dragged out of them), and neither is anything already in the folder they were dropped into.
  */
-export function withoutMoved<T extends { id: string; contentType?: string; folderId?: string }>(items: T[], ids: string[], intoFolderId?: string): T[] {
+export function withoutMoved<T extends { id: string; contentType?: string; folderId?: string; urls?: string[] }>(items: T[], ids: string[], intoFolderId?: string): T[] {
   if (!ids.length) return items;
   const moved = new Set(ids);
-  return items.filter((i) => !moved.has(i.id) || FOLDER_TYPES.has(i.contentType ?? "") || (intoFolderId !== undefined && i.folderId === intoFolderId));
+  let curr = items.filter((i) => !moved.has(i.id) || FOLDER_TYPES.has(i.contentType ?? "") || (intoFolderId !== undefined && i.folderId === intoFolderId));
+  
+  ids.forEach(id => {
+    if (id.startsWith("editor_photo|")) {
+      const [, boxId, photoUrl] = id.split("|");
+      curr = curr.map(i => {
+        if (i.id === boxId && i.urls) {
+          return { ...i, urls: i.urls.filter(u => u !== photoUrl) };
+        }
+        return i;
+      });
+    }
+  });
+  
+  return curr;
 }
 
 /** True when every dragged item already sits in `folderId` (a drop back where it came from does nothing). */
