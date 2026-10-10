@@ -1172,10 +1172,26 @@ export function DashboardClient() {
    * Onto a post or reel: added to its photos. Beside one: a new post (or reel) per photo, right there.
    * The photos move: the inspo photos, stories or drafts they were dragged from are removed.
    */
+  const applyPhotoMoves = (items: SlotItem[], sourceIds: string[], targetFolderId?: string) => {
+    let curr = withoutMoved(items, sourceIds, targetFolderId);
+    sourceIds.forEach(id => {
+      if (id.startsWith("editor_photo|")) {
+        const [, boxId, photoUrl] = id.split("|");
+        curr = curr.map(i => {
+          if (i.id === boxId && i.urls) {
+            return { ...i, urls: i.urls.filter(u => u !== photoUrl) };
+          }
+          return i;
+        });
+      }
+    });
+    return curr;
+  };
+
   const dropPhotosOnGrid = (targetId: string | null, mode: PhotoDropMode, urls: string[], sourceIds: string[] = []) => {
     const kind = gridFilter === "Reel" ? "Reel" : "Post";
     updateItems((all) => {
-      const curr = withoutMoved(all, sourceIds.filter((id) => id !== targetId));
+      const curr = applyPhotoMoves(all, sourceIds.filter((id) => id !== targetId));
       if (targetId && mode === "into") {
         return curr.map((i) => {
           if (i.id !== targetId) return i;
@@ -1207,7 +1223,7 @@ export function DashboardClient() {
       folderId,
     }));
     updateItems((all) => {
-      const curr = withoutMoved(all, sourceIds, folderId);
+      const curr = applyPhotoMoves(all, sourceIds, folderId);
       const firstIndex = curr.findIndex((i) => i.folderId === folderId);
       if (firstIndex === -1) return [...newStories, ...curr];
       return [...curr.slice(0, firstIndex), ...newStories, ...curr.slice(firstIndex)];
@@ -1229,7 +1245,7 @@ export function DashboardClient() {
       contentType: "InspoPost",
     }));
     updateItems((all) => {
-      const curr = withoutMoved(all, sourceIds, destId);
+      const curr = applyPhotoMoves(all, sourceIds, destId);
       const firstIndex = curr.findIndex((i) => i.folderId === destId);
       if (firstIndex === -1) return [...newItems, ...curr];
       return [...curr.slice(0, firstIndex), ...newItems, ...curr.slice(firstIndex)];
