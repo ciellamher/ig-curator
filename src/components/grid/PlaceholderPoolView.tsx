@@ -184,7 +184,7 @@ export function PlaceholderPoolView({
               const isSelected = selectedIds.includes(item.id);
               const isActive = activeSlotId === item.id;
               const hasImage =
-                item.type === "image" && item.urls && item.urls.length > 0;
+                item.type !== "placeholder" && item.urls && item.urls.length > 0;
               const isSearchResult = searchResults.includes(item.id);
               const isFocusedSearchMatch = focusedMatchId === item.id;
 

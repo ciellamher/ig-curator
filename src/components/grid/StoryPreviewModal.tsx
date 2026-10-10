@@ -10,8 +10,8 @@ interface StoryPreviewModalProps {
 }
 
 export function StoryPreviewModal({ stories, initialIndex = 0, onClose }: StoryPreviewModalProps) {
-  // Extract all valid image URLs in order
-  const validStories = stories.filter(s => s.type === "image" && s.urls.length > 0);
+  // Stories with a photo or video, in order
+  const validStories = stories.filter(s => s.type !== "placeholder" && s.urls.length > 0);
   
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);

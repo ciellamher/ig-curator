@@ -103,8 +103,8 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
                   isActive={activeSlotId === item.id}
                   onClick={() => setActiveSlotId(activeSlotId === item.id ? null : item.id)}
                   onDoubleClick={() => {
-                    // Only stories with images can be previewed
-                    const validStories = stories.filter(s => s.type === "image" && s.urls.length > 0);
+                    // Only stories with a photo or video can be previewed
+                    const validStories = stories.filter(s => s.type !== "placeholder" && s.urls.length > 0);
                     const idx = validStories.findIndex(s => s.id === item.id);
                     if (idx !== -1) {
                       setPreviewStartIndex(idx);

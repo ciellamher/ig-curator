@@ -192,7 +192,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
         multiple
       />
 
-      {item.type === "image" && item.urls.length > 0 ? (
+      {item.type !== "placeholder" && item.urls.length > 0 ? (
         <div 
           className="w-full h-full relative"
           onPointerDown={handlePointerDown}
