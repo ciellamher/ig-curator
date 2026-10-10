@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { Plus, ChevronDown, Undo2, Settings, Calendar as CalendarIcon, User, Edit3, Check } from "lucide-react";
+import { LocalMediaImage } from "./LocalMedia";
 
 interface ProfileHeaderProps {
   session: any;
@@ -169,7 +170,16 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
             />
             <div className="w-full h-full bg-white rounded-full p-[2px] relative overflow-hidden group">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                <LocalMediaImage
+                  src={avatarUrl}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover"
+                  fallback={
+                    <div className="w-full h-full rounded-full bg-soft-50 flex items-center justify-center">
+                      <User size={30} className="text-slate-400" strokeWidth={2} />
+                    </div>
+                  }
+                />
               ) : (
                 <div className="w-full h-full rounded-full bg-soft-50 flex items-center justify-center">
                   <User size={30} className="text-slate-400" strokeWidth={2} />

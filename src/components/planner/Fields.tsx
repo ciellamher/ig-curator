@@ -261,12 +261,13 @@ export function CommitInput({
 export function Thumb({ item, size = 28 }: { item: ContentDTO; size?: number }) {
   const url = item.media[0]?.url
   const style = { width: size, height: size }
+  const fallback = (
+    <div style={style} className="shrink-0 rounded-md bg-soft-100 flex items-center justify-center text-zinc-300">
+      <ImageIcon size={Math.round(size * 0.45)} />
+    </div>
+  )
   if (!url) {
-    return (
-      <div style={style} className="shrink-0 rounded-md bg-soft-100 flex items-center justify-center text-zinc-300">
-        <ImageIcon size={Math.round(size * 0.45)} />
-      </div>
-    )
+    return fallback
   }
-  return <LocalMediaImage src={url} style={style} className="shrink-0 rounded-md object-cover" />
+  return <LocalMediaImage src={url} style={style} className="shrink-0 rounded-md object-cover" fallback={fallback} />
 }

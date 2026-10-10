@@ -3,6 +3,7 @@
 import { SlotItem } from "@/types"
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Plus } from "lucide-react"
 import { useState } from "react"
+import { LocalMediaImage } from "@/components/grid/LocalMedia"
 
 export function CalendarView({ items }: { items: SlotItem[] }) {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -102,7 +103,7 @@ export function CalendarView({ items }: { items: SlotItem[] }) {
                 {dayItems.map(item => (
                   <div key={item.id} className="bg-pastel-50 rounded-lg p-1.5 flex items-center gap-2 border border-pastel-100 shadow-sm">
                     {item.type === "image" && item.urls.length > 0 ? (
-                      <img src={item.urls[item.currentUrlIndex]} className="w-6 h-6 rounded object-cover" />
+                      <LocalMediaImage src={item.urls[item.currentUrlIndex]} className="w-6 h-6 rounded object-cover" />
                     ) : (
                       <div className="w-6 h-6 rounded bg-soft-200 flex items-center justify-center text-foreground/30"><ImageIcon size={10} /></div>
                     )}
