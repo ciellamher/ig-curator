@@ -168,3 +168,6 @@ export type PageEditorHost = { slotId: string; el: HTMLElement } | null
 
 /** Fired by the planner when a page is opened, so the feed opens that box's editor; detail: slot id. */
 export const PLANNER_OPEN_EVENT = "planner:open"
+
+/** Fired by the planner with arrays of linked slot ids. */
+export const PLANNER_LINKS_EVENT = "ig-curator:planner-links"

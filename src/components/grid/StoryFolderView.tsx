@@ -223,7 +223,16 @@ export function StoryFolderView({
     });
   };
 
-  const playable = stories.filter((s) => s.type !== "placeholder" && s.urls.length > 0);
+  const sortedStories = [...stories].sort((a, b) => {
+    if (a.scheduledTime && b.scheduledTime) {
+      return new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime();
+    }
+    if (a.scheduledTime) return -1;
+    if (b.scheduledTime) return 1;
+    return 0;
+  });
+
+  const playable = sortedStories.filter((s) => s.type !== "placeholder" && s.urls.length > 0);
 
   return (
     <div
@@ -277,20 +286,7 @@ export function StoryFolderView({
         >
           <Plus size={13} /> Empty story
         </button>
-        {onTransferToBoard && activeBoardName && playable.length > 0 && (
-          <button
-            onClick={() => {
-              const allUrls = playable.flatMap((s) => s.urls).filter(Boolean);
-              const allIds = playable.map((s) => s.id);
-              if (allUrls.length) onTransferToBoard(allUrls, allIds);
-            }}
-            className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 transition-colors"
-            title={`Transfer stories to ${activeBoardName}`}
-          >
-            <ArrowUpRight size={13} />
-            <span className="truncate max-w-[110px]">To {activeBoardName}</span>
-          </button>
-        )}
+
         {playable.length > 0 && (
           <button
             onClick={async () => {
@@ -353,7 +349,7 @@ export function StoryFolderView({
           </div>
         ) : (
           <Masonry
-            items={stories}
+            items={sortedStories}
             columnWidth={130}
             defaultRatio={16 / 9}
             renderItem={(story, onRatio) => {
@@ -427,19 +423,7 @@ export function StoryFolderView({
                     />
                   )}
                   <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity z-10">
-                    {onTransferToBoard && story.urls && story.urls.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onTransferToBoard(story.urls, [story.id]);
-                        }}
-                        aria-label={`Transfer to ${activeBoardName || "board"}`}
-                        title={`Transfer to ${activeBoardName || "board"}`}
-                        className="p-1 rounded-full bg-black/45 hover:bg-black/75 text-white transition-colors cursor-pointer"
-                      >
-                        <ArrowUpRight size={12} />
-                      </button>
-                    )}
+
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -467,7 +451,7 @@ export function StoryFolderView({
         </div>
       )}
 
-      {isPreviewOpen && <StoryPreviewModal stories={stories} initialIndex={previewStartIndex} onClose={() => setIsPreviewOpen(false)} />}
+      {isPreviewOpen && <StoryPreviewModal stories={sortedStories} initialIndex={previewStartIndex} onClose={() => setIsPreviewOpen(false)} />}
     </div>
   );
 }

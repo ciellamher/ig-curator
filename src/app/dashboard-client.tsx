@@ -69,6 +69,7 @@ import {
   PLANNER_SYNC_ERROR_EVENT,
   PLANNER_TITLE_EVENT,
   PLANNER_HIDDEN_EVENT,
+  PLANNER_LINKS_EVENT,
   type FeedAttach,
   type FeedBox,
   type FeedSlotSync,
@@ -143,7 +144,7 @@ function toFeedSync(items: SlotItem[]): FeedSlotSync[] {
       // A story folder's page shows the folder cover plus its stories' photos
       mediaUrls: isStoryFolder
         ? [...(item.urls ?? []), ...items.filter((s) => s.folderId === item.id).flatMap((s) => s.urls?.slice(0, 1) ?? [])].slice(0, 20)
-        : item.urls ?? [],
+        : (item.coverUrl ? [item.coverUrl, ...(item.urls ?? []).filter(u => u !== item.coverUrl)] : (item.urls ?? [])),
       parentSlotId: null,
       isFolder: isStoryFolder,
       isHiddenFromGrid: item.isHiddenFromGrid,
@@ -164,10 +165,41 @@ const initialItems: SlotItem[] = Array.from({ length: 9 }).map((_, index) => ({
 
 const STARTER_SLOT_IDS = new Set(initialItems.map((i) => i.id));
 
+function getSlotUrls(items: SlotItem[], id: string) {
+  const item = items.find(i => i.id === id);
+  if (!item) return [];
+  if (item.contentType === "StoryFolder") {
+    return items.filter(i => i.folderId === id).map(i => i.urls?.[0]).filter(Boolean) as string[];
+  }
+  return item.urls || [];
+}
+
+function setSlotUrls(items: SlotItem[], id: string, urls: string[]) {
+  const item = items.find(i => i.id === id);
+  if (!item) return items;
+  if (item.contentType === "StoryFolder") {
+    const withoutChildren = items.filter(i => i.folderId !== id);
+    const newChildren = urls.map((u, n) => ({
+      id: `story-${id}-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      type: (u.includes("-video-") || u.startsWith("data:video")) ? "video" : "image",
+      urls: [u],
+      currentUrlIndex: 0,
+      hexColor: "#E4E4E7",
+      text: "",
+      contentType: "Story" as const,
+      folderId: id,
+    } as SlotItem));
+    return [...withoutChildren, ...newChildren];
+  } else {
+    return items.map(i => i.id === id ? { ...i, urls, type: (urls.length ? (urls.every(u => u.includes("-video-") || u.startsWith("data:video")) ? "video" : "image") : "placeholder") as SlotItem["type"] } : i);
+  }
+}
+
 export function DashboardClient() {
   const { data: session, status } = useSession();
   // @ts-ignore - id is added in the session callback
   const userId: string | null = status === "authenticated" ? session?.user?.id ?? null : null;
+  const linkedSlotsRef = useRef<Record<string, string[]>>({});
   const [items, setItems] = useState<SlotItem[]>(initialItems);
   const [history, setHistory] = useState<SlotItem[][]>([]);
   const [activeSlotId, setActiveSlotId] = useState<string | null>(null);
@@ -936,6 +968,38 @@ export function DashboardClient() {
       const { slotId, hidden } = (e as CustomEvent<{ slotId: string; hidden: boolean }>).detail;
       setItems((curr) => curr.map((i) => (i.id === slotId && i.isHiddenFromGrid !== hidden ? { ...i, isHiddenFromGrid: hidden } : i)));
     };
+
+    const onLinks = (e: Event) => {
+      const groups = (e as CustomEvent<string[][]>).detail;
+      const map: Record<string, string[]> = {};
+      groups.forEach(group => {
+        if (group.length > 1) {
+          group.forEach(id => { map[id] = group; });
+        }
+      });
+      linkedSlotsRef.current = map;
+      
+      setItems(curr => {
+        let next = curr;
+        groups.forEach(group => {
+          if (group.length <= 1) return;
+          let longest: string[] = [];
+          for (const id of group) {
+            const u = getSlotUrls(next, id);
+            if (u.length > longest.length) longest = u;
+          }
+          if (longest.length > 0) {
+            for (const id of group) {
+              if (getSlotUrls(next, id).join(",") !== longest.join(",")) {
+                next = setSlotUrls(next, id, longest);
+              }
+            }
+          }
+        });
+        return next;
+      });
+    };
+
     // Photos removed on a story page: its stories with those photos leave the folder
     const onRemovePhotos = (e: Event) => {
       const { folderId, urls } = (e as CustomEvent<FeedRemovePhotos>).detail;
@@ -955,16 +1019,19 @@ export function DashboardClient() {
         return curr.map((i) => (i.folderId === folderId ? stories[n++] : i));
       });
     };
+
     window.addEventListener(FEED_REORDER_STORIES_EVENT, onReorderStories);
     window.addEventListener(PLANNER_DELETED_EVENT, onDeleted);
     window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
     window.addEventListener(PLANNER_HIDDEN_EVENT, onHidden);
+    window.addEventListener(PLANNER_LINKS_EVENT, onLinks);
     return () => {
       window.removeEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
       window.removeEventListener(FEED_REORDER_STORIES_EVENT, onReorderStories);
       window.removeEventListener(PLANNER_DELETED_EVENT, onDeleted);
       window.removeEventListener(PLANNER_TITLE_EVENT, onTitle);
       window.removeEventListener(PLANNER_HIDDEN_EVENT, onHidden);
+      window.removeEventListener(PLANNER_LINKS_EVENT, onLinks);
     };
   }, []);
 
@@ -993,7 +1060,35 @@ export function DashboardClient() {
   function updateItems(
     newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[]),
   ) {
-    setItems(newItemsOrUpdater);
+    setItems((curr) => {
+      let next = typeof newItemsOrUpdater === "function" ? newItemsOrUpdater(curr) : newItemsOrUpdater;
+      
+      const processedGroups = new Set<string>();
+      for (const [id, group] of Object.entries(linkedSlotsRef.current)) {
+        const groupId = [...group].sort().join(",");
+        if (processedGroups.has(groupId)) continue;
+        processedGroups.add(groupId);
+
+        let changedUrls: string[] | null = null;
+        for (const memberId of group) {
+          const oldUrls = getSlotUrls(curr, memberId);
+          const newUrls = getSlotUrls(next, memberId);
+          if (oldUrls.join(",") !== newUrls.join(",")) {
+            changedUrls = newUrls;
+            break;
+          }
+        }
+
+        if (changedUrls !== null) {
+          for (const memberId of group) {
+            if (getSlotUrls(next, memberId).join(",") !== changedUrls.join(",")) {
+              next = setSlotUrls(next, memberId, changedUrls);
+            }
+          }
+        }
+      }
+      return next;
+    });
   }
 
   function handleUndo() {

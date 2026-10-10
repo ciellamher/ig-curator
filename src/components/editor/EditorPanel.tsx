@@ -367,18 +367,31 @@ export function EditorPanel({
             )}
           </div>
 
-          {/* Single Photo / Slot Trash Button */}
-          <button
-            onClick={handleDelete}
-            className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-zinc-900 hover:bg-zinc-50 hover:border-zinc-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-            title={
-              effectiveUrls.length > 0
-                ? "Delete Current Photo"
-                : "Delete Box"
-            }
-          >
-            <Trash2 size={18} strokeWidth={2.2} />
-          </button>
+          {/* Action Buttons: Download & Trash */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                import("@/lib/visionBoardCollage").then((m) =>
+                  m.downloadVisionBoardCollage(effectiveUrls, { title: activeSlot.text })
+                );
+              }}
+              className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-zinc-900 hover:bg-zinc-50 hover:border-zinc-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              title="Download as Vision Board"
+            >
+              <Download size={18} strokeWidth={2.2} />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-2.5 bg-soft-100 border border-soft-200 text-slate-600 hover:text-zinc-900 hover:bg-zinc-50 hover:border-zinc-200 rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
+              title={
+                effectiveUrls.length > 0
+                  ? "Delete Current Photo"
+                  : "Delete Box"
+              }
+            >
+              <Trash2 size={18} strokeWidth={2.2} />
+            </button>
+          </div>
         </div>
 
         {/* Carousel & Photo Section */}
