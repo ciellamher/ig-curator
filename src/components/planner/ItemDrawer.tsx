@@ -172,6 +172,7 @@ export function ItemDrawer({
                 updateSlot={(_, changes) => {
                   if (changes.urls) planner.setPagePhotos(item, changes.urls)
                   if (typeof changes.currentUrlIndex === "number") setPhotoIndex(changes.currentUrlIndex)
+                  if (typeof changes.contentType === "string") update(item.id, { contentType: changes.contentType as any })
                   if (typeof changes.text === "string" && changes.text.trim() && changes.text.trim() !== item.title) update(item.id, { title: changes.text.trim() })
                   if (typeof changes.scheduledTime === "string") update(item.id, { post: { start: changes.scheduledTime ? changes.scheduledTime.slice(0, 16) : null, end: null } })
                 }}

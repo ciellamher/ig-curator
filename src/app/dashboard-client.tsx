@@ -849,10 +849,36 @@ export function DashboardClient() {
         // Making sure a page has its box: never add its photos again to a box that's already there, but a post or
         // reel box belongs in the grid (not Drafts) and follows the page's "Hide from feed"
         if (ensure && box) {
-          if (contentType === "StoryFolder") return curr;
+          if (contentType === "StoryFolder") {
+            const existingStories = curr.filter((i) => i.folderId === slotId);
+            if (existingStories.length === 0 && urls.length > 0) {
+              const stories: SlotItem[] = urls.map((u, n) => ({
+                id: `story-${Date.now()}-${n}`,
+                type: u.includes("-video-") ? "video" : "image",
+                urls: [u],
+                currentUrlIndex: 0,
+                hexColor: "#E4E4E7",
+                text: "",
+                contentType: "Story",
+                folderId: slotId,
+              }));
+              return [...curr, ...stories];
+            }
+            return curr;
+          }
           const inDrafts = box.folderId === "draft-pool";
-          if (!inDrafts && Boolean(box.isHiddenFromGrid) === Boolean(hidden)) return curr;
-          return curr.map((i) => (i.id === slotId ? { ...i, folderId: inDrafts ? undefined : i.folderId, isHiddenFromGrid: Boolean(hidden) } : i));
+          const needsUrls = (!box.urls || box.urls.length === 0) && urls.length > 0;
+          if (!needsUrls && !inDrafts && Boolean(box.isHiddenFromGrid) === Boolean(hidden)) return curr;
+          return curr.map((i) =>
+            i.id === slotId
+              ? {
+                  ...i,
+                  folderId: inDrafts ? undefined : i.folderId,
+                  isHiddenFromGrid: Boolean(hidden),
+                  ...(needsUrls ? { urls, type: urls.every((u) => u.includes("-video-") || u.startsWith("data:video")) ? "video" : "image", currentUrlIndex: 0 } : {}),
+                }
+              : i,
+          );
         }
         const text = /^Untitled/.test(title) ? "" : title;
         if (contentType === "StoryFolder") {
@@ -1582,6 +1608,9 @@ export function DashboardClient() {
                       <EditorPanel
                         activeSlot={activeSlot}
                         updateSlot={updateItem}
+                        allItems={items}
+                        onDropPhotos={dropPhotosInFolder}
+                        updateItems={updateItems}
                         onClose={() => setActiveSlotId(null)}
                         onDeleteSlot={async (id) => {
                           const ok = await confirm({
@@ -1610,6 +1639,9 @@ export function DashboardClient() {
                         pageOnly
                         activeSlot={slot}
                         updateSlot={updateItem}
+                        allItems={items}
+                        onDropPhotos={dropPhotosInFolder}
+                        updateItems={updateItems}
                         onClose={() => {}}
                         onDeleteSlot={async (id) => {
                           const ok = await confirm({
