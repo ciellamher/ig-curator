@@ -60,6 +60,20 @@ export function StoryFolderView({
     folderId: folder.id,
   });
 
+  const insertStoriesAtTop = (newStories: SlotItem[]) => {
+    updateItems((curr) => {
+      const firstIndex = curr.findIndex((i) => i.folderId === folder.id);
+      if (firstIndex !== -1) {
+        return [
+          ...curr.slice(0, firstIndex),
+          ...newStories,
+          ...curr.slice(firstIndex),
+        ];
+      }
+      return [...newStories, ...curr];
+    });
+  };
+
   const addPhotos = async (files: File[]) => {
     if (!files.length) return;
     setUploading(true);
@@ -68,7 +82,7 @@ export function StoryFolderView({
       if (onDropPhotos) {
         onDropPhotos(folder.id, urls);
       } else {
-        updateItems((curr) => [...curr, ...urls.map(storyFor)]);
+        insertStoriesAtTop(urls.map(storyFor));
       }
     } finally {
       setUploading(false);
@@ -132,7 +146,7 @@ export function StoryFolderView({
       if (onDropPhotos) {
         onDropPhotos(folder.id, photoUrls);
       } else {
-        updateItems((curr) => [...curr, ...photoUrls.map(storyFor)]);
+        insertStoriesAtTop(photoUrls.map(storyFor));
       }
       return;
     }
@@ -165,7 +179,7 @@ export function StoryFolderView({
         if (onDropPhotos) {
           onDropPhotos(folder.id, extractedUrls);
         } else {
-          updateItems((curr) => [...curr, ...extractedUrls.map(storyFor)]);
+          insertStoriesAtTop(extractedUrls.map(storyFor));
         }
         return;
       }
@@ -184,14 +198,14 @@ export function StoryFolderView({
       if (onDropPhotos) {
         onDropPhotos(folder.id, [uri]);
       } else {
-        updateItems((curr) => [...curr, storyFor(uri, 0)]);
+        insertStoriesAtTop([storyFor(uri, 0)]);
       }
     }
   };
 
   const handleAddEmpty = () => {
     const story: SlotItem = { ...storyFor("", 0), type: "placeholder", urls: [] };
-    updateItems((curr) => [...curr, story]);
+    insertStoriesAtTop([story]);
     setActiveSlotId(story.id); // straight to its editor
   };
 

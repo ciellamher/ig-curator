@@ -1143,19 +1143,27 @@ export function DashboardClient() {
   };
   /** Into a story folder: each photo becomes a story at the end. */
   const dropPhotosInFolder = (folderId: string, urls: string[]) => {
-    updateItems((curr) => [
-      ...curr,
-      ...urls.map((u, n) => ({
-        id: `story-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
-        type: (u.includes("-video-") ? "video" : "image") as SlotItem["type"],
-        urls: [u],
-        currentUrlIndex: 0,
-        hexColor: "#E4E4E7",
-        text: "",
-        contentType: "Story" as const,
-        folderId,
-      })),
-    ]);
+    const newStories: SlotItem[] = urls.map((u, n) => ({
+      id: `story-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      type: (u.includes("-video-") ? "video" : "image") as SlotItem["type"],
+      urls: [u],
+      currentUrlIndex: 0,
+      hexColor: "#E4E4E7",
+      text: "",
+      contentType: "Story" as const,
+      folderId,
+    }));
+    updateItems((curr) => {
+      const firstIndex = curr.findIndex((i) => i.folderId === folderId);
+      if (firstIndex !== -1) {
+        return [
+          ...curr.slice(0, firstIndex),
+          ...newStories,
+          ...curr.slice(firstIndex),
+        ];
+      }
+      return [...newStories, ...curr];
+    });
   };
 
   const handleTransferPhotosToBoard = (urls: string[], targetFolderId?: string) => {
@@ -1171,7 +1179,17 @@ export function DashboardClient() {
       folderId: destId,
       contentType: "InspoPost",
     }));
-    updateItems((curr) => [...newItems, ...curr]);
+    updateItems((curr) => {
+      const firstIndex = curr.findIndex((i) => i.folderId === destId);
+      if (firstIndex !== -1) {
+        return [
+          ...curr.slice(0, firstIndex),
+          ...newItems,
+          ...curr.slice(firstIndex),
+        ];
+      }
+      return [...newItems, ...curr];
+    });
   };
 
   const handleCopyInspoToGrid = (
