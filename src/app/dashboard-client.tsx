@@ -62,6 +62,8 @@ import {
   type FacebookPage,
   FEED_REMOVE_PHOTOS_EVENT,
   type FeedRemovePhotos,
+  FEED_REORDER_STORIES_EVENT,
+  type FeedReorderStories,
   type PageEditorHost,
   PLANNER_REFRESH_EVENT,
   PLANNER_SYNC_ERROR_EVENT,
@@ -914,11 +916,26 @@ export function DashboardClient() {
       setItems((curr) => curr.filter((i) => !(i.folderId === folderId && i.urls?.length && urls.includes(i.urls[0]))));
     };
     window.addEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
+    // Photos rearranged on a story page: its stories follow that order
+    const onReorderStories = (e: Event) => {
+      const { folderId, urls } = (e as CustomEvent<FeedReorderStories>).detail;
+      setItems((curr) => {
+        const rank = (i: SlotItem) => {
+          const at = urls.indexOf(i.urls?.[0] ?? "");
+          return at === -1 ? urls.length : at;
+        };
+        const stories = curr.filter((i) => i.folderId === folderId).sort((a, b) => rank(a) - rank(b));
+        let n = 0;
+        return curr.map((i) => (i.folderId === folderId ? stories[n++] : i));
+      });
+    };
+    window.addEventListener(FEED_REORDER_STORIES_EVENT, onReorderStories);
     window.addEventListener(PLANNER_DELETED_EVENT, onDeleted);
     window.addEventListener(PLANNER_TITLE_EVENT, onTitle);
     window.addEventListener(PLANNER_HIDDEN_EVENT, onHidden);
     return () => {
       window.removeEventListener(FEED_REMOVE_PHOTOS_EVENT, onRemovePhotos);
+      window.removeEventListener(FEED_REORDER_STORIES_EVENT, onReorderStories);
       window.removeEventListener(PLANNER_DELETED_EVENT, onDeleted);
       window.removeEventListener(PLANNER_TITLE_EVENT, onTitle);
       window.removeEventListener(PLANNER_HIDDEN_EVENT, onHidden);

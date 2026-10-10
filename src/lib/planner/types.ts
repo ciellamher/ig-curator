@@ -148,6 +148,10 @@ export type FeedAttach = {
 export const FEED_REMOVE_PHOTOS_EVENT = "feed:remove-photos"
 export type FeedRemovePhotos = { folderId: string; urls: string[] }
 
+/** Fired by a story page when its photos are rearranged: the folder's stories follow that order. */
+export const FEED_REORDER_STORIES_EVENT = "feed:reorder-stories"
+export type FeedReorderStories = { folderId: string; urls: string[] }
+
 /** Fired by the planner with the pages that have the Facebook category, for the phone's Facebook tab. */
 export const PLANNER_FACEBOOK_EVENT = "planner:facebook"
 export type FacebookPage = { id: string; title: string; status: string; post: string | null; urls: string[] }

@@ -19,6 +19,8 @@ import {
   type FeedAttach,
   type FeedRemovePhotos,
   FEED_REMOVE_PHOTOS_EVENT,
+  type FeedReorderStories,
+  FEED_REORDER_STORIES_EVENT,
   type OrderDTO,
   type OrderStage,
   type QuickLinkDTO,
@@ -301,6 +303,11 @@ export function usePlanner(enabled: boolean) {
       if (removed.length) {
         const detail: FeedRemovePhotos = { folderId: folder, urls: removed }
         window.dispatchEvent(new CustomEvent(FEED_REMOVE_PHOTOS_EVENT, { detail }))
+      }
+      // Rearranged: the folder's stories play in this order
+      if (!added.length && !removed.length && urls.join("\n") !== before.join("\n")) {
+        const detail: FeedReorderStories = { folderId: folder, urls }
+        window.dispatchEvent(new CustomEvent(FEED_REORDER_STORIES_EVENT, { detail }))
       }
       // Shown right away; the feed sync then confirms it
       setItems((curr) => curr.map((i) => (i.id === page.id ? { ...i, media: urls.map((url, position) => ({ id: `${page.id}-${position}`, url, position })) } : i)))

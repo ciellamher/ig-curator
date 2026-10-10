@@ -1,9 +1,10 @@
 import { SlotItem } from "@/types";
-import { ChevronRight, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
+import { Masonry } from "./Masonry";
 
 interface StoryListViewProps {
   folders: SlotItem[];
@@ -66,14 +67,19 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
-      <div className="p-3 grid grid-cols-1 gap-3">
-        {folders.map(folder => {
-          const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
-          const previewImages = storiesInFolder.filter(s => s.type !== "placeholder").map(s => s.urls[s.currentUrlIndex] ?? s.urls[0]).filter(Boolean).slice(0, 3);
-          
+      {/* Vision board: each folder shows its first photo at its own shape */}
+      <Masonry
+        className="p-3"
+        items={folders}
+        columnWidth={140}
+        defaultRatio={1.3}
+        renderItem={(folder, onRatio) => {
+          const storiesInFolder = allItems.filter((item) => item.folderId === folder.id);
+          const media = storiesInFolder.filter((s) => s.type !== "placeholder").map((s) => s.urls[s.currentUrlIndex] ?? s.urls[0]).filter(Boolean);
+          const cover = folder.urls?.[0] || media[0];
+          const empty = <div className="w-full aspect-[3/4] bg-zinc-100" />;
           return (
-            <div 
-              key={folder.id}
+            <div
               data-slot-id={folder.id}
               data-no-outline
               onDragOver={(e) => {
@@ -95,66 +101,44 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"
             >
-              <div className={`w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm ${dropFolder === folder.id ? "ring-4 ring-zinc-950" : ""}`}>
-                {previewImages.length > 0 ? (
-                  <>
-                    <div className="flex-1 h-full overflow-hidden">
-                      {previewImages[0].includes("-video-") ? <LocalMediaVideo src={previewImages[0]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
-                    </div>
-                    {previewImages.length > 1 ? (
-                      <div className="flex-1 h-full overflow-hidden">
-                        {previewImages[1].includes("-video-") ? <LocalMediaVideo src={previewImages[1]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[1]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
-                      </div>
-                    ) : (
-                      <div className="flex-1 h-full bg-zinc-50" />
-                    )}
-                    {previewImages.length > 2 ? (
-                      <div className="flex-1 h-full overflow-hidden">
-                        {previewImages[2].includes("-video-") ? <LocalMediaVideo src={previewImages[2]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[2]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
-                      </div>
-                    ) : (
-                      <div className="flex-1 h-full bg-zinc-50" />
-                    )}
-                  </>
+              <div className={`relative w-full min-h-16 rounded-xl overflow-hidden bg-zinc-100 shadow-sm ${dropFolder === folder.id ? "ring-4 ring-zinc-950" : ""}`}>
+                {!cover ? (
+                  empty
+                ) : cover.includes("-video-") ? (
+                  <LocalMediaVideo src={cover} fallback={empty} muted playsInline preload="metadata" onLoadedMetadata={(e) => onRatio(e.currentTarget.videoWidth, e.currentTarget.videoHeight)} className="block w-full h-auto group-hover:brightness-95 transition" />
                 ) : (
-                  <>
-                    <div className="flex-1 h-full bg-zinc-100" />
-                    <div className="flex-1 h-full bg-zinc-100" />
-                    <div className="flex-1 h-full bg-zinc-100" />
-                  </>
+                  <LocalMediaImage src={cover} fallback={empty} alt="" onLoad={(e) => onRatio(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} className="block w-full h-auto group-hover:brightness-95 transition" />
                 )}
-                
                 {onDeleteFolder && (
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteTarget(folder.id);
                     }}
-                    className="absolute top-2 right-2 p-1.5 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
+                    className="absolute top-2 right-2 p-1.5 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity hover:bg-black/60 cursor-pointer"
                     title="Delete Folder"
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                   </button>
                 )}
               </div>
-              
               <div className="mt-1.5 px-1">
-                <input 
+                <input
                   value={folder.text || folder.caption || ""}
                   onChange={(e) => updateItem(folder.id, { text: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
                   placeholder="New Folder"
-                  className="font-bold text-zinc-950 text-sm tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-200 rounded px-1 -ml-1 w-full truncate cursor-text"
+                  aria-label="Folder name"
+                  className="font-bold text-zinc-950 text-[13px] tracking-tight bg-transparent border-none outline-none focus:ring-2 focus:ring-zinc-200 rounded px-1 -ml-1 w-full truncate cursor-text"
                 />
-                <div className="text-[11px] font-medium text-zinc-500 px-1">
-                  {storiesInFolder.length} Pin{storiesInFolder.length !== 1 ? 's' : ''}
-                  {folder.scheduledTime && ` • ${folder.scheduledTime}`}
+                <div className="text-[11px] font-medium text-zinc-500">
+                  {storiesInFolder.length} {storiesInFolder.length === 1 ? "story" : "stories"}
                 </div>
               </div>
             </div>
           );
-        })}
-      </div>
+        }}
+      />
     </div>
   );
 }

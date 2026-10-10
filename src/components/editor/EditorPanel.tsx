@@ -17,6 +17,9 @@ import {
 import { LocalMediaImage, LocalMediaVideo } from "@/components/grid/LocalMedia";
 import { CoverPicker } from "./CoverPicker";
 
+/** Data type for moving a photo within a box */
+const PHOTO_ORDER_TYPE = "application/x-ig-curator-photo-index";
+
 const isVideoUrl = (url: string) => url.startsWith("data:video") || url.includes("-video-");
 
 /** Saves one photo or video to the computer, named after the box. */
@@ -64,6 +67,7 @@ export function EditorPanel({
   const [isUploading, setIsUploading] = useState(false);
   // A video just added to a reel (or "Change cover"): ask what its cover should be
   const [coverFor, setCoverFor] = useState<string | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [localText, setLocalText] = useState(activeSlot?.text || "");
@@ -266,30 +270,50 @@ export function EditorPanel({
                 </button>
               </div>
 
-              {/* Thumbnail Strip */}
-              {activeSlot.urls.length > 1 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
-                  {activeSlot.urls.map((url, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() =>
-                        updateSlot(activeSlot.id, { currentUrlIndex: idx })
-                      }
-                      className={`relative w-9 h-9 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
-                        idx === (activeSlot.currentUrlIndex || 0)
-                          ? "border-slate-800 ring-2 ring-slate-400/40 scale-105"
-                          : "border-transparent opacity-60 hover:opacity-100"
-                      }`}
-                    >
-                      {isVideoUrl(url) ? (
-                        <LocalMediaVideo src={url} muted playsInline className="w-full h-full object-cover" />
-                      ) : (
-                        <LocalMediaImage src={url} alt="" className="w-full h-full object-cover" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {/* Every photo: tap to pick one, drag onto another to move it there (the first is the cover) */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1">
+                {activeSlot.urls.map((url, idx) => (
+                  <button
+                    key={`${url}-${idx}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(PHOTO_ORDER_TYPE, String(idx));
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragOver={(e) => {
+                      if (!Array.from(e.dataTransfer.types).includes(PHOTO_ORDER_TYPE)) return;
+                      e.preventDefault();
+                      setDragOverIdx(idx);
+                    }}
+                    onDragLeave={() => setDragOverIdx((d) => (d === idx ? null : d))}
+                    onDrop={(e) => {
+                      const from = Number(e.dataTransfer.getData(PHOTO_ORDER_TYPE));
+                      setDragOverIdx(null);
+                      if (Number.isNaN(from) || from === idx) return;
+                      e.preventDefault();
+                      const selected = activeSlot.urls[activeSlot.currentUrlIndex || 0];
+                      const urls = [...activeSlot.urls];
+                      const [moved] = urls.splice(from, 1);
+                      urls.splice(idx, 0, moved);
+                      updateSlot(activeSlot.id, { urls, currentUrlIndex: Math.max(0, urls.indexOf(selected)) });
+                    }}
+                    onClick={() => updateSlot(activeSlot.id, { currentUrlIndex: idx })}
+                    title={idx === 0 ? "Cover (first photo) · drag to rearrange" : "Drag to rearrange"}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                      idx === (activeSlot.currentUrlIndex || 0) ? "border-slate-800" : "border-transparent hover:border-slate-300"
+                    } ${dragOverIdx === idx ? "outline outline-2 outline-offset-1 outline-slate-800" : ""}`}
+                  >
+                    {isVideoUrl(url) ? (
+                      <LocalMediaVideo src={url} muted playsInline className="w-full h-full object-cover pointer-events-none" />
+                    ) : (
+                      <LocalMediaImage src={url} alt="" className="w-full h-full object-cover pointer-events-none" />
+                    )}
+                    <span className="absolute bottom-0.5 left-0.5 px-1 rounded bg-black/55 text-white text-[9px] font-semibold leading-tight">
+                      {idx === 0 ? "Cover" : idx + 1}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
       </div>
