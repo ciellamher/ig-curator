@@ -94,6 +94,14 @@ export function ItemDrawer({
     }
   }, [gridSlotId])
 
+  // While a page is open, the planner and boards behind it make room for it instead of being covered
+  useEffect(() => {
+    document.documentElement.dataset.pageOpen = ""
+    return () => {
+      delete document.documentElement.dataset.pageOpen
+    }
+  }, [])
+
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
   useEffect(() => {

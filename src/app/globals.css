@@ -115,3 +115,13 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* A page open on the right (460px + its 12px margin): the planner and boards shrink to sit beside it */
+@media (min-width: 1024px) {
+  section[aria-label="Content planner"] {
+    transition: padding-right 200ms ease;
+  }
+  html[data-page-open] section[aria-label="Content planner"] {
+    padding-right: 476px;
+  }
+}
