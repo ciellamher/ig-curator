@@ -10,6 +10,7 @@ import { saveFilesLocally } from "@/lib/localUpload";
 interface StoryFolderViewProps {
   folder: SlotItem;
   stories: SlotItem[];
+  allItems?: SlotItem[];
   onBack: () => void;
   updateItems: (newItemsOrUpdater: SlotItem[] | ((curr: SlotItem[]) => SlotItem[])) => void;
   updateItem: (id: string, updates: Partial<SlotItem>) => void;
@@ -24,8 +25,19 @@ const STORY_DRAG_TYPE = "application/x-ig-curator-story";
 const isVideo = (url: string) => url.includes("-video-") || url.startsWith("data:video");
 
 /** Inside a story folder: a vision board of its stories. Add photos, tap one to edit it, drag to rearrange. */
-export function StoryFolderView({ folder, stories, onBack, updateItems, updateItem, activeSlotId, setActiveSlotId, onDropPhotos }: StoryFolderViewProps) {
+export function StoryFolderView({
+  folder,
+  stories,
+  allItems,
+  onBack,
+  updateItems,
+  updateItem,
+  activeSlotId,
+  setActiveSlotId,
+  onDropPhotos,
+}: StoryFolderViewProps) {
   const [dropping, setDropping] = useState(false);
+  const dragCounter = useRef(0);
   const [dragOver, setDragOver] = useState<string | null>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewStartIndex, setPreviewStartIndex] = useState(0);
@@ -48,9 +60,127 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
     setUploading(true);
     try {
       const urls = await saveFilesLocally(files);
-      updateItems((curr) => [...curr, ...urls.map(storyFor)]);
+      if (onDropPhotos) {
+        onDropPhotos(folder.id, urls);
+      } else {
+        updateItems((curr) => [...curr, ...urls.map(storyFor)]);
+      }
     } finally {
       setUploading(false);
+    }
+  };
+
+  const canAcceptDrop = (e: React.DragEvent) => {
+    const types = Array.from(e.dataTransfer.types || []);
+    if (types.includes(STORY_DRAG_TYPE)) return false; // Story reorder handled separately
+    return (
+      types.includes("Files") ||
+      isPhotoDrag(e) ||
+      types.includes("application/folder-ids") ||
+      types.includes("application/folder-id") ||
+      types.includes("text/uri-list") ||
+      types.includes("text/plain")
+    );
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (!canAcceptDrop(e)) return;
+    e.preventDefault();
+    dragCounter.current++;
+    setDropping(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!canAcceptDrop(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    if (!dropping) setDropping(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setDropping(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    const types = Array.from(e.dataTransfer.types || []);
+    if (types.includes(STORY_DRAG_TYPE)) return; // Reordering within folder
+    e.preventDefault();
+    dragCounter.current = 0;
+    setDropping(false);
+
+    // 1. Files dragged from computer (Finder / desktop)
+    const files = Array.from(e.dataTransfer.files || []).filter(
+      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type
+    );
+    if (files.length > 0) {
+      await addPhotos(files);
+      return;
+    }
+
+    // 2. Photos dragged from inspo boards
+    const photoUrls = droppedPhotos(e);
+    if (photoUrls.length > 0) {
+      if (onDropPhotos) {
+        onDropPhotos(folder.id, photoUrls);
+      } else {
+        updateItems((curr) => [...curr, ...photoUrls.map(storyFor)]);
+      }
+      return;
+    }
+
+    // 3. Inspo items or folders dragged by id
+    const folderIdsJson = e.dataTransfer.getData("application/folder-ids");
+    const singleFolderId = e.dataTransfer.getData("application/folder-id");
+    let ids: string[] = [];
+    if (folderIdsJson) {
+      try {
+        ids = JSON.parse(folderIdsJson);
+      } catch {}
+    } else if (singleFolderId) {
+      ids = [singleFolderId];
+    }
+    if (ids.length > 0 && allItems) {
+      const extractedUrls: string[] = [];
+      for (const id of ids) {
+        const item = allItems.find((i) => i.id === id);
+        if (item?.urls?.length) {
+          extractedUrls.push(...item.urls);
+        } else {
+          const children = allItems.filter((i) => i.folderId === id);
+          for (const child of children) {
+            if (child.urls?.length) extractedUrls.push(...child.urls);
+          }
+        }
+      }
+      if (extractedUrls.length > 0) {
+        if (onDropPhotos) {
+          onDropPhotos(folder.id, extractedUrls);
+        } else {
+          updateItems((curr) => [...curr, ...extractedUrls.map(storyFor)]);
+        }
+        return;
+      }
+    }
+
+    // 4. URL string or web image
+    const uri = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (
+      uri &&
+      (uri.startsWith("http://") ||
+        uri.startsWith("https://") ||
+        uri.startsWith("data:image/") ||
+        uri.startsWith("local-media://") ||
+        uri.startsWith("blob:"))
+    ) {
+      if (onDropPhotos) {
+        onDropPhotos(folder.id, [uri]);
+      } else {
+        updateItems((curr) => [...curr, storyFor(uri, 0)]);
+      }
     }
   };
 
@@ -75,7 +205,15 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
   const playable = stories.filter((s) => s.type !== "placeholder" && s.urls.length > 0);
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
+    <div
+      className={`w-full h-full flex flex-col bg-white relative transition-all ${
+        dropping ? "ring-4 ring-inset ring-zinc-950" : ""
+      }`}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b border-soft-100 sticky top-0 bg-white/95 backdrop-blur z-20">
         <button onClick={onBack} aria-label="Back to story folders" className="p-1 hover:bg-soft-50 rounded-full transition-colors text-foreground cursor-pointer">
           <ChevronLeft size={28} strokeWidth={2.5} />
@@ -130,29 +268,26 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
         />
       </div>
 
-      <div
-        className={`flex-1 overflow-y-auto pb-20 px-3 ${dropping ? "ring-4 ring-inset ring-zinc-950" : ""}`}
-        onDragOver={(e) => {
-          if (!onDropPhotos || !isPhotoDrag(e)) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
-          setDropping(true);
-        }}
-        onDragLeave={(e) => {
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
-        }}
-        onDrop={(e) => {
-          if (!onDropPhotos || !isPhotoDrag(e)) return;
-          e.preventDefault();
-          setDropping(false);
-          const urls = droppedPhotos(e);
-          if (urls.length) onDropPhotos(folder.id, urls);
-        }}
-      >
+      <div className="flex-1 overflow-y-auto pb-20 px-3">
         {stories.length === 0 ? (
-          <div className="flex flex-col items-center text-center gap-2 py-14 px-6">
-            <p className="text-sm font-semibold text-zinc-800">No stories yet</p>
-            <p className="text-xs text-zinc-500">Add photos, or drag them in from your boards.</p>
+          <div
+            className={`flex flex-col items-center justify-center text-center gap-2 py-16 px-6 mx-2 my-4 rounded-2xl border-2 transition-all ${
+              dropping
+                ? "border-dashed border-zinc-950 bg-zinc-50 scale-[1.02]"
+                : "border-dashed border-zinc-200 bg-zinc-50/50"
+            }`}
+          >
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-1 transition-colors ${dropping ? "bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-600"}`}>
+              <ImagePlus size={22} />
+            </div>
+            <p className="text-sm font-semibold text-zinc-800">
+              {dropping ? "Drop photos here" : "No stories yet"}
+            </p>
+            <p className="text-xs text-zinc-500 max-w-[240px]">
+              {dropping
+                ? "Release to add photos to this story folder"
+                : "Add photos, or drag them in from your boards or computer."}
+            </p>
           </div>
         ) : (
           <Masonry
@@ -240,6 +375,13 @@ export function StoryFolderView({ folder, stories, onBack, updateItems, updateIt
           />
         )}
       </div>
+
+      {uploading && (
+        <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-30 flex flex-col items-center justify-center gap-2">
+          <div className="w-6 h-6 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-zinc-800">Adding photos…</p>
+        </div>
+      )}
 
       {isPreviewOpen && <StoryPreviewModal stories={stories} initialIndex={previewStartIndex} onClose={() => setIsPreviewOpen(false)} />}
     </div>

@@ -1395,6 +1395,7 @@ export function DashboardClient() {
                           stories={items.filter(
                             (i) => i.folderId === activeStoryFolderId,
                           )}
+                          allItems={items}
                           onBack={() => setActiveStoryFolderId(null)}
                           onDropPhotos={dropPhotosInFolder}
                           updateItems={updateItems}

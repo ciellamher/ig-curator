@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { droppedPhotos, isPhotoDrag } from "@/lib/photoDrag";
-import { Masonry } from "./Masonry";
+import { saveFilesLocally } from "@/lib/localUpload";
 
 interface StoryListViewProps {
   folders: SlotItem[];
@@ -67,23 +67,24 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
         onConfirm={() => { if (deleteTarget && onDeleteFolder) onDeleteFolder(deleteTarget); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
-      {/* Vision board: each folder shows its first photo at its own shape */}
-      <Masonry
-        className="p-3"
-        items={folders}
-        columnWidth={140}
-        defaultRatio={1.3}
-        renderItem={(folder, onRatio) => {
-          const storiesInFolder = allItems.filter((item) => item.folderId === folder.id);
-          const media = storiesInFolder.filter((s) => s.type !== "placeholder").map((s) => s.urls[s.currentUrlIndex] ?? s.urls[0]).filter(Boolean);
-          const cover = folder.urls?.[0] || media[0];
-          const empty = <div className="w-full aspect-[3/4] bg-zinc-100" />;
+      <div className="p-3 grid grid-cols-1 gap-3">
+        {folders.map(folder => {
+          const storiesInFolder = allItems.filter(item => item.folderId === folder.id);
+          const customCover = folder.urls?.[0];
+          const rawPreviews = storiesInFolder.filter(s => s.type !== "placeholder").map(s => s.urls[s.currentUrlIndex] ?? s.urls[0]).filter(Boolean);
+          const previewImages = customCover
+            ? [customCover, ...rawPreviews.filter(u => u !== customCover)].slice(0, 3)
+            : rawPreviews.slice(0, 3);
+          
           return (
-            <div
+            <div 
+              key={folder.id}
               data-slot-id={folder.id}
               data-no-outline
               onDragOver={(e) => {
-                if (!onDropPhotos || !isPhotoDrag(e)) return;
+                const types = Array.from(e.dataTransfer.types || []);
+                const canDrop = types.includes("Files") || isPhotoDrag(e);
+                if (!onDropPhotos || !canDrop) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = "copy";
                 setDropFolder(folder.id);
@@ -91,26 +92,55 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               onDragLeave={(e) => {
                 if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropFolder((f) => (f === folder.id ? null : f));
               }}
-              onDrop={(e) => {
-                if (!onDropPhotos || !isPhotoDrag(e)) return;
+              onDrop={async (e) => {
+                if (!onDropPhotos) return;
                 e.preventDefault();
                 setDropFolder(null);
+                const files = Array.from(e.dataTransfer.files || []).filter(
+                  (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type
+                );
+                if (files.length > 0) {
+                  const urls = await saveFilesLocally(files);
+                  if (urls.length) onDropPhotos(folder.id, urls);
+                  return;
+                }
                 const urls = droppedPhotos(e);
                 if (urls.length) onDropPhotos(folder.id, urls);
               }}
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"
             >
-              <div className={`relative w-full min-h-16 rounded-xl overflow-hidden bg-zinc-100 shadow-sm ${dropFolder === folder.id ? "ring-4 ring-zinc-950" : ""}`}>
-                {!cover ? (
-                  empty
-                ) : cover.includes("-video-") ? (
-                  <LocalMediaVideo src={cover} fallback={empty} muted playsInline preload="metadata" onLoadedMetadata={(e) => onRatio(e.currentTarget.videoWidth, e.currentTarget.videoHeight)} className="block w-full h-auto group-hover:brightness-95 transition" />
+              <div className={`w-full aspect-[5/2] rounded-xl overflow-hidden flex gap-0.5 bg-zinc-100 relative shadow-sm ${dropFolder === folder.id ? "ring-4 ring-zinc-950" : ""}`}>
+                {previewImages.length > 0 ? (
+                  <>
+                    <div className="flex-1 h-full overflow-hidden">
+                      {previewImages[0].includes("-video-") ? <LocalMediaVideo src={previewImages[0]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
+                    </div>
+                    {previewImages.length > 1 ? (
+                      <div className="flex-1 h-full overflow-hidden">
+                        {previewImages[1].includes("-video-") ? <LocalMediaVideo src={previewImages[1]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[1]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
+                      </div>
+                    ) : (
+                      <div className="flex-1 h-full bg-zinc-50" />
+                    )}
+                    {previewImages.length > 2 ? (
+                      <div className="flex-1 h-full overflow-hidden">
+                        {previewImages[2].includes("-video-") ? <LocalMediaVideo src={previewImages[2]} muted playsInline preload="metadata" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" /> : <LocalMediaImage src={previewImages[2]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />}
+                      </div>
+                    ) : (
+                      <div className="flex-1 h-full bg-zinc-50" />
+                    )}
+                  </>
                 ) : (
-                  <LocalMediaImage src={cover} fallback={empty} alt="" onLoad={(e) => onRatio(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)} className="block w-full h-auto group-hover:brightness-95 transition" />
+                  <>
+                    <div className="flex-1 h-full bg-zinc-100" />
+                    <div className="flex-1 h-full bg-zinc-100" />
+                    <div className="flex-1 h-full bg-zinc-100" />
+                  </>
                 )}
+                
                 {onDeleteFolder && (
-                  <button
+                  <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       setDeleteTarget(folder.id);
@@ -122,8 +152,9 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                   </button>
                 )}
               </div>
+              
               <div className="mt-1.5 px-1">
-                <input
+                <input 
                   value={folder.text || folder.caption || ""}
                   onChange={(e) => updateItem(folder.id, { text: e.target.value })}
                   onClick={(e) => e.stopPropagation()}
@@ -137,8 +168,8 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
               </div>
             </div>
           );
-        }}
-      />
+        })}
+      </div>
     </div>
   );
 }
