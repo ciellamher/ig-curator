@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
-import { droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 
 interface StoryListViewProps {
@@ -14,7 +14,7 @@ interface StoryListViewProps {
   onDeleteFolder?: (folderId: string) => void;
   onAddFolder?: () => void;
   /** Inspo photos dropped on a folder become its stories */
-  onDropPhotos?: (folderId: string, urls: string[]) => void;
+  onDropPhotos?: (folderId: string, urls: string[], sourceIds?: string[]) => void;
 }
 
 export function StoryListView({ folders, allItems, onFolderClick, updateItem, onDeleteFolder, onAddFolder, onDropPhotos }: StoryListViewProps) {
@@ -113,7 +113,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                   return;
                 }
                 const urls = droppedPhotos(e);
-                if (urls.length) onDropPhotos(folder.id, urls);
+                if (urls.length) onDropPhotos(folder.id, urls, draggedItemIds(e));
               }}
               onClick={() => onFolderClick(folder.id)}
               className="flex flex-col group cursor-pointer"

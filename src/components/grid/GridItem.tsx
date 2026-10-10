@@ -216,67 +216,79 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
         multiple
       />
 
-      {item.type !== "placeholder" && item.urls.length > 0 ? (
-        <div 
-          className="w-full h-full relative"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          onContextMenu={(e) => e.preventDefault()}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-        >
-          {(item.urls[item.currentUrlIndex]?.startsWith("data:video") || item.urls[item.currentUrlIndex]?.includes("video")) && !item.coverUrl ? (
-            <LocalMediaVideo
-              fallback={placeholder}
-              src={item.urls[item.currentUrlIndex]}
-              className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
-                isHovered && !isAdjusting && !item.isLocked ? "scale-[1.03]" : ""
-              }`}
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-          ) : (
-            <LocalMediaImage
-              fallback={placeholder}
-              src={item.coverUrl && (item.urls[item.currentUrlIndex]?.includes("video") || item.urls[item.currentUrlIndex]?.startsWith("data:video")) ? item.coverUrl : item.urls[item.currentUrlIndex]}
-              alt={`Grid image ${item.id}`}
-              style={{ 
-                transform: `translate(${currentSettings.x}px, ${currentSettings.y}px) scale(${currentSettings.scale})`,
-                transformOrigin: "center"
-              }}
-              className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
-                isHovered && !isAdjusting && !item.isLocked ? "scale-[1.03]" : ""
-              }`}
-            />
-          )}
+      {(() => {
+        const currentUrl =
+          (item.urls && item.urls.length > 0
+            ? item.urls[Math.min(item.currentUrlIndex || 0, item.urls.length - 1)]
+            : "") || item.coverUrl || "";
+        const displayCover =
+          item.coverUrl && (currentUrl.includes("video") || currentUrl.startsWith("data:video") || !item.urls?.length)
+            ? item.coverUrl
+            : currentUrl;
+        const hasDisplayMedia = Boolean(displayCover);
 
-          {isAdjusting && (
-            <div 
-              className="absolute bottom-2 left-1/2 -translate-x-1/2 w-11/12 bg-white/90 backdrop-blur-md rounded-xl p-2 shadow-lg flex items-center gap-2 z-50"
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <span className="text-[10px] font-bold text-foreground opacity-60">ZOOM</span>
-              <input 
-                type="range" 
-                min="0.5" 
-                max="3" 
-                step="0.05" 
-                value={tempSettings.scale}
-                onChange={(e) => setTempSettings(s => ({ ...s, scale: parseFloat(e.target.value) }))}
-                className="flex-1 accent-slate-800"
+        return hasDisplayMedia ? (
+          <div 
+            className="w-full h-full relative"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onContextMenu={(e) => e.preventDefault()}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
+            {(currentUrl.startsWith("data:video") || currentUrl.includes("video")) && !item.coverUrl ? (
+              <LocalMediaVideo
+                fallback={placeholder}
+                src={currentUrl}
+                className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
+                  isHovered && !isAdjusting && !item.isLocked ? "scale-[1.03]" : ""
+                }`}
+                autoPlay
+                muted
+                loop
+                playsInline
               />
-            </div>
-          )}
-        </div>
-      ) : (
-        placeholder
-      )}
+            ) : (
+              <LocalMediaImage
+                fallback={placeholder}
+                src={displayCover}
+                alt={`Grid image ${item.id}`}
+                style={{ 
+                  transform: `translate(${currentSettings.x}px, ${currentSettings.y}px) scale(${currentSettings.scale})`,
+                  transformOrigin: "center"
+                }}
+                className={`w-full h-full object-cover transition-all duration-200 pointer-events-none ${
+                  isHovered && !isAdjusting && !item.isLocked ? "scale-[1.03]" : ""
+                }`}
+              />
+            )}
+
+            {isAdjusting && (
+              <div 
+                className="absolute bottom-2 left-1/2 -translate-x-1/2 w-11/12 bg-white/90 backdrop-blur-md rounded-xl p-2 shadow-lg flex items-center gap-2 z-50"
+                onPointerDown={(e) => e.stopPropagation()}
+              >
+                <span className="text-[10px] font-bold text-foreground opacity-60">ZOOM</span>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="3" 
+                  step="0.05" 
+                  value={tempSettings.scale}
+                  onChange={(e) => setTempSettings(s => ({ ...s, scale: parseFloat(e.target.value) }))}
+                  className="flex-1 accent-slate-800"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          placeholder
+        );
+      })()}
 
       {/* Visual Badges */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">

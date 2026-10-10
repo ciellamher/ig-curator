@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { LocalMediaImage, LocalMediaVideo } from "@/components/grid/LocalMedia";
 import { CoverPicker } from "./CoverPicker";
-import { droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE, withoutMoved } from "@/lib/photoDrag";
 import { FEED_REORDER_STORIES_EVENT } from "@/lib/planner/types";
 
 /** Data type for moving a photo within a box */
@@ -59,7 +59,7 @@ interface EditorPanelProps {
   /** All items across the board, so folder stories or connected items can be resolved */
   allItems?: SlotItem[];
   /** Handler to drop/add photos into folder if activeSlot is a folder */
-  onDropPhotos?: (folderId: string, urls: string[]) => void;
+  onDropPhotos?: (folderId: string, urls: string[], sourceIds?: string[]) => void;
   /** Handler when stories in a folder are reordered or removed */
   updateItems?: React.Dispatch<React.SetStateAction<SlotItem[]>>;
 }
@@ -132,11 +132,12 @@ export function EditorPanel({
     }
   };
 
-  const appendUrls = (newBase64Strings: string[]) => {
+  /** `sourceIds`: the inspo photos or stories they were dragged from, which they move out of */
+  const appendUrls = (newBase64Strings: string[], sourceIds: string[] = []) => {
     if (newBase64Strings.length === 0) return;
     if (isFolder) {
       if (onDropPhotos) {
-        onDropPhotos(activeSlot.id, newBase64Strings);
+        onDropPhotos(activeSlot.id, newBase64Strings, sourceIds);
       } else if (updateItems) {
         const newStories: SlotItem[] = newBase64Strings.map((u, n) => ({
           id: `story-${Date.now()}-${n}-${Math.floor(Math.random() * 1000)}`,
@@ -164,6 +165,8 @@ export function EditorPanel({
             : activeSlot.contentType,
         currentUrlIndex: effectiveUrls.length,
       });
+      const moved = sourceIds.filter((id) => id !== activeSlot.id);
+      if (moved.length && updateItems) updateItems((curr) => withoutMoved(curr, moved));
       const video = newBase64Strings.find(isVideoUrl);
       if (video && activeSlot.contentType === "Reel") setCoverFor(video);
     }
@@ -226,7 +229,7 @@ export function EditorPanel({
 
     const uriPhotos = droppedPhotos(e);
     if (uriPhotos.length > 0) {
-      appendUrls(uriPhotos);
+      appendUrls(uriPhotos, draggedItemIds(e));
       return;
     }
 

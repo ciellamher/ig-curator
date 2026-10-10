@@ -7,7 +7,7 @@ import { Grid } from "@/components/grid/Grid";
 import { EditorPanel } from "@/components/editor/EditorPanel";
 import { SlotItem } from "@/types";
 import { removeRepeatedPhotos } from "@/lib/feedRepair";
-import { type PhotoDropMode } from "@/lib/photoDrag";
+import { alreadyIn, type PhotoDropMode, withoutMoved } from "@/lib/photoDrag";
 import { FacebookFeedView } from "@/components/grid/FacebookFeedView";
 import { getLiveGrid } from "@/app/actions/instagram";
 import { CalendarView } from "@/components/calendar/CalendarView";
@@ -1148,16 +1148,22 @@ export function DashboardClient() {
     text: "",
     contentType,
   });
-  /** Onto a post or reel: added to its photos. Beside one: a new post (or reel) per photo, right there. */
-  const dropPhotosOnGrid = (targetId: string | null, mode: PhotoDropMode, urls: string[]) => {
+  /**
+   * Onto a post or reel: added to its photos. Beside one: a new post (or reel) per photo, right there.
+   * The photos move: the inspo photos, stories or drafts they were dragged from are removed.
+   */
+  const dropPhotosOnGrid = (targetId: string | null, mode: PhotoDropMode, urls: string[], sourceIds: string[] = []) => {
     const kind = gridFilter === "Reel" ? "Reel" : "Post";
-    updateItems((curr) => {
+    updateItems((all) => {
+      const curr = withoutMoved(all, sourceIds.filter((id) => id !== targetId));
       if (targetId && mode === "into") {
         return curr.map((i) => {
           if (i.id !== targetId) return i;
           const have = i.urls ?? [];
           const fresh = urls.filter((u) => !have.includes(u));
-          return fresh.length ? { ...i, type: "image", urls: [...have, ...fresh], currentUrlIndex: have.length } : i;
+          return fresh.length
+            ? { ...i, type: i.type === "placeholder" ? photoBox(fresh[0], kind).type : i.type, urls: [...have, ...fresh], currentUrlIndex: have.length }
+            : i;
         });
       }
       const boxes = urls.map((u) => photoBox(u, kind));
@@ -1167,8 +1173,9 @@ export function DashboardClient() {
       return [...curr.slice(0, index), ...boxes, ...curr.slice(index)];
     });
   };
-  /** Into a story folder: each photo becomes a story at the end. */
-  const dropPhotosInFolder = (folderId: string, urls: string[]) => {
+  /** Into a story folder: each photo becomes a story at the top, and leaves the place it was dragged from. */
+  const dropPhotosInFolder = (folderId: string, urls: string[], sourceIds: string[] = []) => {
+    if (alreadyIn(items, sourceIds, folderId)) return;
     const newStories: SlotItem[] = urls.map((u, n) => ({
       id: `story-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
       type: (u.includes("-video-") ? "video" : "image") as SlotItem["type"],
@@ -1179,21 +1186,17 @@ export function DashboardClient() {
       contentType: "Story" as const,
       folderId,
     }));
-    updateItems((curr) => {
+    updateItems((all) => {
+      const curr = withoutMoved(all, sourceIds, folderId);
       const firstIndex = curr.findIndex((i) => i.folderId === folderId);
-      if (firstIndex !== -1) {
-        return [
-          ...curr.slice(0, firstIndex),
-          ...newStories,
-          ...curr.slice(firstIndex),
-        ];
-      }
-      return [...newStories, ...curr];
+      if (firstIndex === -1) return [...newStories, ...curr];
+      return [...curr.slice(0, firstIndex), ...newStories, ...curr.slice(firstIndex)];
     });
   };
 
-  const handleTransferPhotosToBoard = (urls: string[], targetFolderId?: string) => {
-    const destId = targetFolderId || activeInspoFolderId || boardsIn(libraryTab)[0]?.id;
+  /** Stories moved from a story folder to the open board (or the library's first board); they leave the folder. */
+  const handleTransferPhotosToBoard = (urls: string[], sourceIds: string[] = []) => {
+    const destId = activeInspoFolderId || boardsIn(libraryTab)[0]?.id;
     if (!destId || !urls.length) return;
     const newItems: SlotItem[] = urls.map((u, n) => ({
       id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
@@ -1205,36 +1208,26 @@ export function DashboardClient() {
       folderId: destId,
       contentType: "InspoPost",
     }));
-    updateItems((curr) => {
+    updateItems((all) => {
+      const curr = withoutMoved(all, sourceIds, destId);
       const firstIndex = curr.findIndex((i) => i.folderId === destId);
-      if (firstIndex !== -1) {
-        return [
-          ...curr.slice(0, firstIndex),
-          ...newItems,
-          ...curr.slice(firstIndex),
-        ];
-      }
-      return [...newItems, ...curr];
+      if (firstIndex === -1) return [...newItems, ...curr];
+      return [...curr.slice(0, firstIndex), ...newItems, ...curr.slice(firstIndex)];
     });
   };
 
-  const handleCopyInspoToGrid = (
-    inspoItem: SlotItem,
-    targetType: "Post" | "Story",
-  ) => {
-    const copiedSlot: SlotItem = {
+  /** An inspo photo moved to the phone: a new post or story, and it leaves the board. */
+  const handleCopyInspoToGrid = (inspoItem: SlotItem, targetType: "Post" | "Story") => {
+    const movedSlot: SlotItem = {
       id: `slot-${Math.floor(Math.random() * 1000000000)}`,
-      type: "image",
+      type: inspoItem.type === "video" ? "video" : "image",
       urls: [...(inspoItem.urls || [])],
       currentUrlIndex: 0,
       hexColor: inspoItem.hexColor || "#E4E4E7",
       text: inspoItem.text || "",
       contentType: targetType,
     };
-    updateItems((curr) => [copiedSlot, ...curr]);
-    alert(
-      `Copied photo to your ${targetType === "Post" ? "Main Grid" : "Stories"}!`,
-    );
+    updateItems((curr) => [movedSlot, ...withoutMoved(curr, [inspoItem.id])]);
   };
 
   if (!isLoaded) return null;
@@ -1513,7 +1506,7 @@ export function DashboardClient() {
                     ) : (
                       <Grid
                         items={
-                          gridFilter === "All"
+                          (gridFilter === "All"
                             ? items.filter(
                                 (i) =>
                                   i.contentType !== "StoryFolder" &&
@@ -1528,6 +1521,22 @@ export function DashboardClient() {
                                 (i) =>
                                   i.contentType === gridFilter && !i.folderId && !i.isHiddenFromPhone,
                               )
+                          ).map((item) => {
+                            // If slot has no urls or cover, check if it has child stories/media
+                            if ((!item.urls || item.urls.length === 0) && !item.coverUrl) {
+                              const childStories = items.filter((s) => s.folderId === item.id);
+                              const childUrls = childStories.flatMap((s) => s.urls || []).filter(Boolean);
+                              if (childUrls.length > 0) {
+                                return {
+                                  ...item,
+                                  type: "image" as const,
+                                  urls: childUrls,
+                                  coverUrl: childUrls[0],
+                                };
+                              }
+                            }
+                            return item;
+                          })
                         }
                         setItems={updateItems}
                         updateItem={updateItem}

@@ -5,7 +5,7 @@ import { SlotItem } from "@/types";
 import { Plus, Trash2, X, Edit2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
-import { droppedPhotos } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, withoutMoved } from "@/lib/photoDrag";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -305,7 +305,18 @@ export function InspoFolderListView({
                     e.preventDefault();
                     setDragTargetId(null);
 
-                    // Dropped photos or stories from phone
+                    // Inspo photos from another board just move to this one
+                    const sourceIds = draggedItemIds(e);
+                    const boardPhotos = sourceIds.filter((id) => {
+                      const type = allItems.find((i) => i.id === id)?.contentType;
+                      return type?.startsWith("Inspo") && type !== "InspoFolder";
+                    });
+                    if (boardPhotos.length && updateItems) {
+                      updateItems((curr) => curr.map((i) => (boardPhotos.includes(i.id) ? { ...i, folderId: folder.id } : i)));
+                      return;
+                    }
+
+                    // Dropped photos or stories from phone: moved here, so they leave the phone
                     let urls: string[] = droppedPhotos(e);
                     if (!urls.length) {
                       const storyId =
@@ -327,7 +338,7 @@ export function InspoFolderListView({
                         folderId: folder.id,
                         contentType: "InspoPost",
                       }));
-                      updateItems((curr) => [...newItems, ...curr]);
+                      updateItems((curr) => [...newItems, ...withoutMoved(curr, sourceIds)]);
                       return;
                     }
 

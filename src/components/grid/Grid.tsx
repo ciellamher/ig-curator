@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { dropModeAt, droppedPhotos, isPhotoDrag, type PhotoDropMode } from "@/lib/photoDrag"
+import { draggedItemIds, dropModeAt, droppedPhotos, isPhotoDrag, type PhotoDropMode } from "@/lib/photoDrag"
 import {
   DndContext,
   closestCenter,
@@ -33,11 +33,12 @@ interface GridProps {
   searchResults?: string[];
   focusedMatchId?: string | null;
   /** Inspo photos dropped on a box (into it) or beside it (new boxes there); targetId null = the end */
-  onDropPhotos?: (targetId: string | null, mode: PhotoDropMode, urls: string[]) => void;
+  onDropPhotos?: (targetId: string | null, mode: PhotoDropMode, urls: string[], sourceIds?: string[]) => void;
 }
 
 export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotId, gridFilter = "All", onDoubleClickItem, onDeleteItem, isSearchActive, searchResults = [], focusedMatchId, onDropPhotos }: GridProps) {
   const [dropAt, setDropAt] = useState<{ id: string; mode: PhotoDropMode } | null>(null)
+
   const dropProps = (id: string) =>
     onDropPhotos
       ? {
@@ -57,8 +58,9 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
             e.preventDefault()
             e.stopPropagation()
             const urls = droppedPhotos(e)
+            const sourceIds = draggedItemIds(e)
             setDropAt(null)
-            if (urls.length) onDropPhotos(id, dropModeAt(e, e.currentTarget), urls)
+            if (urls.length) onDropPhotos(id, dropModeAt(e, e.currentTarget), urls, sourceIds)
           },
         }
       : {}
@@ -100,7 +102,8 @@ export function Grid({ items, setItems, updateItem, activeSlotId, setActiveSlotI
         e.preventDefault()
         setDropAt(null)
         const urls = droppedPhotos(e)
-        if (urls.length) onDropPhotos(null, "after", urls)
+        const sourceIds = draggedItemIds(e)
+        if (urls.length) onDropPhotos(null, "after", urls, sourceIds)
       }}
     >
       <DndContext

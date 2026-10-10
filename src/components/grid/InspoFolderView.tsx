@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { SlotItem } from "@/types";
-import { droppedPhotos, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, PHOTO_DRAG_TYPE, withoutMoved } from "@/lib/photoDrag";
 import {
   ChevronLeft,
   Plus,
@@ -21,10 +21,12 @@ import {
   Bookmark,
   FolderPlus,
   Edit2,
+  ArrowUpRight,
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
+import { downloadVisionBoardCollage, isVideoUrl as isBoardVideo } from "@/lib/visionBoardCollage";
 
 interface InspoFolderViewProps {
   folder: SlotItem;
@@ -70,6 +72,7 @@ export function InspoFolderView({
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ ids: string[]; message: string } | null>(null);
+  const [isGeneratingCollage, setIsGeneratingCollage] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("ig-curator-profile");
@@ -252,9 +255,11 @@ export function InspoFolderView({
       return;
     }
 
-    // 2. Photos or stories dragged from phone or other boards
-    let urls: string[] = droppedPhotos(e);
-    if (!urls.length) {
+    // 2. Photos or stories dragged from the phone (inspo photos from a board are moved by step 3 instead)
+    const sourceIds = draggedItemIds(e);
+    const fromBoards = sourceIds.some((id) => allItems?.find((i) => i.id === id)?.contentType?.startsWith("Inspo"));
+    let urls: string[] = fromBoards ? [] : droppedPhotos(e);
+    if (!urls.length && !fromBoards) {
       const storyId =
         e.dataTransfer.getData("application/x-ig-curator-story-id") ||
         e.dataTransfer.getData("application/x-ig-curator-story");
@@ -263,7 +268,7 @@ export function InspoFolderView({
         if (sourceItem?.urls?.length) urls = sourceItem.urls;
       }
     }
-    if (!urls.length) {
+    if (!urls.length && !fromBoards) {
       const uri = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
       if (uri && (uri.startsWith("http") || uri.startsWith("data:") || uri.startsWith("local-media:"))) {
         urls = [uri];
@@ -281,7 +286,8 @@ export function InspoFolderView({
         folderId: folder.id,
         contentType: "InspoPost",
       }));
-      updateItems((curr) => [...newItems, ...curr]);
+      // Moved, not copied: the stories or posts they came from are removed
+      updateItems((curr) => [...newItems, ...withoutMoved(curr, sourceIds)]);
       return;
     }
 
@@ -391,7 +397,7 @@ export function InspoFolderView({
             {subFolders.length ? ` · ${subFolders.length} sub-board${subFolders.length === 1 ? "" : "s"}` : ""}
           </p>
         </div>
-        <div className="flex gap-2 px-1">
+        <div className="flex flex-wrap gap-2 px-1">
           <button
             onClick={handleUploadClick}
             disabled={isUploading}
@@ -407,6 +413,31 @@ export function InspoFolderView({
           >
             <FolderPlus size={14} /> New sub-board
           </button>
+          {postItems.length > 0 && (
+            <button
+              onClick={async () => {
+                const urls = postItems.flatMap((p) => p.urls || []).filter(Boolean);
+                if (!urls.length) return;
+                setIsGeneratingCollage(true);
+                try {
+                  await downloadVisionBoardCollage(urls, {
+                    title: folder.text || "Vision Board",
+                    subtitle: `${folder.text || "Vision Board"} · ${postItems.length} Pins`,
+                  });
+                } catch (err) {
+                  console.error("Collage export failed", err);
+                } finally {
+                  setIsGeneratingCollage(false);
+                }
+              }}
+              disabled={isGeneratingCollage}
+              className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 transition-colors shadow-xs disabled:opacity-50"
+              title={postItems.flatMap((p) => p.urls || []).some(isBoardVideo) ? "Download everything as one vision board video (MP4)" : "Download everything as one vision board picture (PNG)"}
+            >
+              <Download size={13} strokeWidth={2.4} />
+              <span>{isGeneratingCollage ? "Making…" : postItems.flatMap((p) => p.urls || []).some(isBoardVideo) ? "Vision board MP4" : "Vision board PNG"}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -450,8 +481,10 @@ export function InspoFolderView({
                     return;
                   }
 
-                  let urls: string[] = droppedPhotos(e);
-                  if (!urls.length) {
+                  const sourceIds = draggedItemIds(e);
+                  const fromBoards = sourceIds.some((id) => allItems?.find((i) => i.id === id)?.contentType?.startsWith("Inspo"));
+                  let urls: string[] = fromBoards ? [] : droppedPhotos(e);
+                  if (!urls.length && !fromBoards) {
                     const storyId =
                       e.dataTransfer.getData("application/x-ig-curator-story-id") ||
                       e.dataTransfer.getData("application/x-ig-curator-story");
@@ -471,7 +504,7 @@ export function InspoFolderView({
                       folderId: item.id,
                       contentType: "InspoPost",
                     }));
-                    updateItems((curr) => [...newItems, ...curr]);
+                    updateItems((curr) => [...newItems, ...withoutMoved(curr, sourceIds)]);
                     return;
                   }
 
@@ -669,6 +702,16 @@ export function InspoFolderView({
                     <Download size={13} />
                   </button>
                 )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCopyToMainGrid(item, "Post");
+                  }}
+                  className="p-1.5 bg-white/80 hover:bg-white text-slate-700 hover:text-slate-900 rounded-lg shadow-sm backdrop-blur-sm transition-all cursor-pointer"
+                  title="Transfer to Phone (Moves photo to main grid)"
+                >
+                  <ArrowUpRight size={13} />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

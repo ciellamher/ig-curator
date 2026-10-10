@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { SlotItem } from "@/types";
-import { ArrowUpRight, ChevronLeft, Eye, ImagePlus, Plus, X } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, Download, Eye, ImagePlus, Plus, X } from "lucide-react";
 import { StoryPreviewModal } from "./StoryPreviewModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { Masonry } from "./Masonry";
-import { droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
+import { downloadVisionBoardCollage, isVideoUrl as isBoardVideo } from "@/lib/visionBoardCollage";
 
 interface StoryFolderViewProps {
   folder: SlotItem;
@@ -17,9 +18,9 @@ interface StoryFolderViewProps {
   activeSlotId: string | null;
   setActiveSlotId: (id: string | null) => void;
   /** Inspo photos dropped in the folder become stories */
-  onDropPhotos?: (folderId: string, urls: string[]) => void;
-  /** Transfer stories/photos from this folder to the active board */
-  onTransferToBoard?: (urls: string[]) => void;
+  onDropPhotos?: (folderId: string, urls: string[], sourceIds?: string[]) => void;
+  /** Transfer stories/photos from this folder to the active board (passes urls and ids to delete source) */
+  onTransferToBoard?: (urls: string[], storyIds?: string[]) => void;
   activeBoardName?: string;
 }
 
@@ -47,6 +48,7 @@ export function StoryFolderView({
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewStartIndex, setPreviewStartIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [isGeneratingCollage, setIsGeneratingCollage] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const storyFor = (url: string, n: number): SlotItem => ({
@@ -144,7 +146,7 @@ export function StoryFolderView({
     const photoUrls = droppedPhotos(e);
     if (photoUrls.length > 0) {
       if (onDropPhotos) {
-        onDropPhotos(folder.id, photoUrls);
+        onDropPhotos(folder.id, photoUrls, draggedItemIds(e));
       } else {
         insertStoriesAtTop(photoUrls.map(storyFor));
       }
@@ -177,7 +179,7 @@ export function StoryFolderView({
       }
       if (extractedUrls.length > 0) {
         if (onDropPhotos) {
-          onDropPhotos(folder.id, extractedUrls);
+          onDropPhotos(folder.id, extractedUrls, ids);
         } else {
           insertStoriesAtTop(extractedUrls.map(storyFor));
         }
@@ -279,13 +281,39 @@ export function StoryFolderView({
           <button
             onClick={() => {
               const allUrls = playable.flatMap((s) => s.urls).filter(Boolean);
-              if (allUrls.length) onTransferToBoard(allUrls);
+              const allIds = playable.map((s) => s.id);
+              if (allUrls.length) onTransferToBoard(allUrls, allIds);
             }}
             className="inline-flex items-center gap-1 px-3 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 transition-colors"
             title={`Transfer stories to ${activeBoardName}`}
           >
             <ArrowUpRight size={13} />
             <span className="truncate max-w-[110px]">To {activeBoardName}</span>
+          </button>
+        )}
+        {playable.length > 0 && (
+          <button
+            onClick={async () => {
+              const allUrls = playable.flatMap((s) => s.urls).filter(Boolean);
+              if (!allUrls.length) return;
+              setIsGeneratingCollage(true);
+              try {
+                await downloadVisionBoardCollage(allUrls, {
+                  title: folder.text || "Vision Board",
+                  subtitle: `${folder.text || "Vision Board"} · ${playable.length} Stories`,
+                });
+              } catch (err) {
+                console.error("Collage export failed", err);
+              } finally {
+                setIsGeneratingCollage(false);
+              }
+            }}
+            disabled={isGeneratingCollage}
+            className="inline-flex items-center gap-1.5 px-3 h-8 rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0 transition-colors shadow-xs disabled:opacity-50"
+            title={playable.flatMap((s) => s.urls).some(isBoardVideo) ? "Download everything as one vision board video (MP4)" : "Download everything as one vision board picture (PNG)"}
+          >
+            <Download size={13} strokeWidth={2.4} />
+            <span>{isGeneratingCollage ? "Making…" : playable.flatMap((s) => s.urls).some(isBoardVideo) ? "Vision board MP4" : "Vision board PNG"}</span>
           </button>
         )}
         <input
@@ -403,7 +431,7 @@ export function StoryFolderView({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onTransferToBoard(story.urls);
+                          onTransferToBoard(story.urls, [story.id]);
                         }}
                         aria-label={`Transfer to ${activeBoardName || "board"}`}
                         title={`Transfer to ${activeBoardName || "board"}`}
