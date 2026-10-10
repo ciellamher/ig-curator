@@ -12,9 +12,7 @@ import {
   Video,
   GalleryHorizontal,
   Trash2,
-  Sparkles,
 } from "lucide-react";
-import { createFeedDrafts } from "@/lib/feedDraftsData";
 
 interface PlaceholderPoolViewProps {
   placeholders: SlotItem[];
@@ -83,13 +81,6 @@ export function PlaceholderPoolView({
       folderId: "draft-pool",
     };
     updateItems((prev) => [newPlaceholder, ...prev]);
-  };
-
-  const handlePopulateAnalyzedDrafts = () => {
-    const drafts = createFeedDrafts();
-    updateItems((prev) => [...drafts, ...prev]);
-    setToastMessage(`Added ${drafts.length} analyzed feed draft boxes!`);
-    setTimeout(() => setToastMessage(null), 3000);
   };
 
   const handleDeleteDraft = (id: string) => {
@@ -182,15 +173,6 @@ export function PlaceholderPoolView({
           )}
 
           <button
-            onClick={handlePopulateAnalyzedDrafts}
-            className="flex items-center justify-center h-8 px-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-full text-xs font-semibold transition-all cursor-pointer active:scale-95 shrink-0 gap-1 border border-zinc-200"
-            title="Add Analyzed Feed Draft Boxes"
-          >
-            <Sparkles size={14} className="text-zinc-600" />
-            <span className="hidden sm:inline">Add All Feed Drafts</span>
-          </button>
-
-          <button
             onClick={handleAddPlaceholder}
             className="flex items-center justify-center w-8 h-8 bg-slate-900 text-white hover:bg-black rounded-full transition-all cursor-pointer active:scale-95 shrink-0"
             title="Add Draft Box"
@@ -220,22 +202,13 @@ export function PlaceholderPoolView({
             <p className="text-[11px] text-foreground/40 mt-0.5 mb-4 max-w-[200px]">
               Add draft placeholders to plan off the main grid.
             </p>
-            <div className="flex flex-col sm:flex-row items-center gap-2">
-              <button
-                onClick={handleAddPlaceholder}
-                className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={2.5} />
-                <span>Add First Draft Box</span>
-              </button>
-              <button
-                onClick={handlePopulateAnalyzedDrafts}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 rounded-full text-xs font-semibold transition-all cursor-pointer"
-              >
-                <Sparkles size={13} className="text-zinc-600" />
-                <span>Add All Feed Drafts</span>
-              </button>
-            </div>
+            <button
+              onClick={handleAddPlaceholder}
+              className="flex items-center gap-1 px-3.5 py-1.5 bg-slate-900 text-white rounded-full text-xs font-semibold hover:bg-black transition-all cursor-pointer"
+            >
+              <Plus size={13} strokeWidth={2.5} />
+              <span>Add First Draft Box</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-3 @xl:grid-cols-5 @4xl:grid-cols-6 gap-[1px] bg-white w-full">
