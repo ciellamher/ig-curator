@@ -452,7 +452,10 @@ export async function syncFeedToContent(request: FeedSyncRequest): Promise<Resul
 
     // Only Posts-tab boxes belong in the planner: drop rows for drafts/stories that are in the feed
     const excluded = ids(request?.excludedSlotIds)
-    if (excluded.length) await prisma.content.deleteMany({ where: { userId, slotId: { in: excluded } } })
+    // (A page ticked Post, Reels or Story is kept: its box goes back to the grid.)
+    if (excluded.length) {
+      await prisma.content.deleteMany({ where: { userId, slotId: { in: excluded }, NOT: { categories: { hasSome: ["Post", "Reels", "Story"] } } } })
+    }
     // Planner pages without a box in the feed are fine (e.g. planned but no photo yet): they're left alone.
 
     const LOCATIONS = ["grid", "drafts", "story"] as const

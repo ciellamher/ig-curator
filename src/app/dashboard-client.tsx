@@ -831,8 +831,14 @@ export function DashboardClient() {
       if (ensure && pendingDeletesRef.current.has(slotId)) return;
       setItems((curr) => {
         const box = curr.find((i) => i.id === slotId);
-        // Making sure a page has its box: never add its photos again to a box that's already there
-        if (ensure && box) return curr;
+        // Making sure a page has its box: never add its photos again to a box that's already there, but a post or
+        // reel box belongs in the grid (not Drafts) and follows the page's "Hide from feed"
+        if (ensure && box) {
+          if (contentType === "StoryFolder") return curr;
+          const inDrafts = box.folderId === "draft-pool";
+          if (!inDrafts && Boolean(box.isHiddenFromGrid) === Boolean(hidden)) return curr;
+          return curr.map((i) => (i.id === slotId ? { ...i, folderId: inDrafts ? undefined : i.folderId, isHiddenFromGrid: Boolean(hidden) } : i));
+        }
         const text = /^Untitled/.test(title) ? "" : title;
         if (contentType === "StoryFolder") {
           const folder: SlotItem[] = box ? [] : [{ id: slotId, type: "placeholder", urls: [], currentUrlIndex: 0, hexColor: "#E4E4E7", text: title, contentType: "StoryFolder" }];
@@ -1527,6 +1533,7 @@ export function DashboardClient() {
                 return slot
                   ? createPortal(
                       <EditorPanel
+                        pageOnly
                         activeSlot={slot}
                         updateSlot={updateItem}
                         onClose={() => {}}

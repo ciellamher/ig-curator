@@ -84,6 +84,19 @@ export function usePlanner(enabled: boolean) {
     }
   }, [])
 
+  /** A page's post/reel boxes: in the grid (out of Drafts), shown or hidden like the page. */
+  const ensureGridBoxes = useCallback((page: ContentDTO) => {
+    const wanted = feedKindsFor(page.categories)
+    const boxes = [
+      ...(page.slotId && page.contentType && page.contentType !== "StoryFolder" ? [{ slotId: page.slotId, contentType: page.contentType }] : []),
+      ...Object.entries(page.extraSlots ?? {}).filter(([type]) => type !== "StoryFolder").map(([contentType, slotId]) => ({ slotId, contentType })),
+    ].filter((box) => wanted.includes(box.contentType === "Carousel" ? "Post" : box.contentType))
+    for (const box of boxes) {
+      const detail: FeedAttach = { ...box, urls: page.media.map((m) => m.url), title: page.title, ensure: true, hidden: page.hiddenFromFeed }
+      window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
+    }
+  }, [])
+
   const reload = useCallback(async () => {
     const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
     if (content.success) {
@@ -98,12 +111,11 @@ export function usePlanner(enabled: boolean) {
             reconcileFeed(item, true)
             continue
           }
-          const boxes = [
-            ...(item.slotId && item.contentType ? [{ slotId: item.slotId, contentType: item.contentType }] : []),
-            ...Object.entries(item.extraSlots ?? {}).map(([contentType, slotId]) => ({ slotId, contentType })),
-          ]
-          for (const box of boxes) {
-            const detail: FeedAttach = { ...box, urls: item.media.map((m) => m.url), title: item.title, ensure: true, hidden: item.hiddenFromFeed && box.contentType !== "StoryFolder" }
+          ensureGridBoxes(item)
+          // Its story folder, if this browser's feed doesn't have it yet
+          const folder = item.contentType === "StoryFolder" ? item.slotId : item.extraSlots?.StoryFolder
+          if (folder) {
+            const detail: FeedAttach = { slotId: folder, contentType: "StoryFolder", urls: item.media.map((m) => m.url), title: item.title, ensure: true }
             window.dispatchEvent(new CustomEvent(FEED_ATTACH_EVENT, { detail }))
           }
         }
@@ -114,7 +126,7 @@ export function usePlanner(enabled: boolean) {
     const failed = [content, quick, orderList].find((r) => !r.success)
     setError(failed && !failed.success ? failed.error : null)
     setLoading(false)
-  }, [reconcileFeed])
+  }, [reconcileFeed, ensureGridBoxes])
 
   useEffect(() => {
     if (!enabled) return
@@ -132,13 +144,18 @@ export function usePlanner(enabled: boolean) {
   /** Optimistic update: every view re-renders from the same list immediately, then reconciles with the server. */
   const update = useCallback(async (id: string, patch: ContentPatch) => {
     const previous = itemsRef.current.find((i) => i.id === id)
+    // Ticking Post or Reels means "show it": it comes off Hide from feed
+    const addsGrid = (patch.categories ?? []).some((c) => (c === "Post" || c === "Reels") && !previous?.categories.includes(c))
+    if (addsGrid && previous?.hiddenFromFeed && !("hiddenFromFeed" in patch)) patch = { ...patch, hiddenFromFeed: false }
     // Show the automatic edit-date / status changes immediately; the server applies the same rules.
     const optimistic = previous ? withScheduleRules(previous, patch) : patch
     setItems((curr) => curr.map((i) => (i.id === id ? { ...i, ...optimistic } : i)))
     const res = await updateContent(id, patch)
     if (res.success) {
       setItems((curr) => curr.map((i) => (i.id === id ? res.data : i)))
-      if ("categories" in patch) reconcileFeed(res.data)
+      if ("categories" in patch) {
+        reconcileFeed(res.data).then(() => ensureGridBoxes(itemsRef.current.find((i) => i.id === id) ?? res.data))
+      } else if ("hiddenFromFeed" in patch) ensureGridBoxes(res.data)
       // Renaming a feed-linked record renames its box in the feed.
       if ("title" in patch && previous?.title !== res.data.title) {
         for (const slotId of [res.data.slotId, ...Object.values(res.data.extraSlots ?? {})]) {
