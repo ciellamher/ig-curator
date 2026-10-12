@@ -468,6 +468,8 @@ export function InspoFolderView({
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
+                  e.stopPropagation(); // the sub-board lights up, not the board around it
+                  setIsDragging(false);
                   setDragTargetId(item.id);
                 }}
                 onDragLeave={() => {
@@ -475,9 +477,14 @@ export function InspoFolderView({
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
+                  // Only this sub-board gets it (the open board around it would add the same photos again)
+                  e.stopPropagation();
                   setDragTargetId(null);
-                  
-                  const files = Array.from(e.dataTransfer.files || []);
+
+                  // Photos or videos from the computer go straight into this sub-board
+                  const files = Array.from(e.dataTransfer.files || []).filter(
+                    (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+                  );
                   if (files.length > 0) {
                     processFiles(files, item.id);
                     return;
