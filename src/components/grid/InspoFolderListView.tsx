@@ -6,6 +6,7 @@ import { Plus, Trash2, X, Edit2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { draggedItemIds, droppedPhotos, withoutMoved } from "@/lib/photoDrag";
+import { saveFilesLocally } from "@/lib/localUpload";
 
 interface InspoFolderListViewProps {
   folders: SlotItem[];
@@ -32,6 +33,7 @@ export function InspoFolderListView({
   const [isCreating, setIsCreating] = useState(false);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [dragTargetId, setDragTargetId] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newCoverUrl, setNewCoverUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -122,7 +124,16 @@ export function InspoFolderListView({
   };
 
   return (
-    <div className="w-full flex flex-col pb-6">
+    <div
+      className="w-full flex flex-col pb-6"
+      // A file let go between boards does nothing (instead of the browser opening it)
+      onDragOver={(e) => {
+        if (Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault();
+      }}
+      onDrop={(e) => {
+        if (Array.from(e.dataTransfer.types).includes("Files")) e.preventDefault();
+      }}
+    >
       <ConfirmModal
         isOpen={!!deleteFolderId}
         title="Delete folder"
@@ -301,9 +312,35 @@ export function InspoFolderListView({
                   onDragLeave={() => {
                     setDragTargetId(null);
                   }}
-                  onDrop={(e) => {
+                  onDrop={async (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setDragTargetId(null);
+
+                    // Photos or videos dragged in from the computer: saved straight into this board, at the top
+                    const files = Array.from(e.dataTransfer.files || []).filter(
+                      (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+                    );
+                    if (files.length && updateItems) {
+                      setUploadingId(folder.id);
+                      try {
+                        const saved = await saveFilesLocally(files);
+                        const pins: SlotItem[] = saved.map((u, n) => ({
+                          id: `inspo-${Date.now().toString(36)}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+                          type: u.includes("-video-") ? "video" : "image",
+                          urls: [u],
+                          currentUrlIndex: 0,
+                          hexColor: "#E4E4E7",
+                          text: "",
+                          folderId: folder.id,
+                          contentType: "InspoPost",
+                        }));
+                        if (pins.length) updateItems((curr) => [...pins, ...curr]);
+                      } finally {
+                        setUploadingId(null);
+                      }
+                      return;
+                    }
 
                     // Inspo photos from another board just move to this one
                     const sourceIds = draggedItemIds(e);
@@ -403,7 +440,7 @@ export function InspoFolderListView({
                   <div className="px-1 -mt-0.5">
                     <h3 className="font-bold text-zinc-950 text-sm tracking-tight truncate">{folder.text || "Untitled board"}</h3>
                     <p className="text-[11px] font-medium text-zinc-500">
-                      {countPhotos(folder.id)} {countPhotos(folder.id) === 1 ? "Pin" : "Pins"}
+                      {uploadingId === folder.id ? "Adding photos…" : `${countPhotos(folder.id)} ${countPhotos(folder.id) === 1 ? "Pin" : "Pins"}`}
                     </p>
                   </div>
                 </div>
