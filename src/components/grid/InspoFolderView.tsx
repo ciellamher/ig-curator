@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { StoryFolderView } from "./StoryFolderView";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useNamePrompt } from "@/components/ui/NamePrompt";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { downloadVisionBoardCollage, isVideoUrl as isBoardVideo } from "@/lib/visionBoardCollage";
 
@@ -59,6 +60,7 @@ export function InspoFolderView({
     null,
   );
   const [isUploading, setIsUploading] = useState(false);
+  const { askName, namePrompt } = useNamePrompt();
   const [previewItem, setPreviewItem] = useState<SlotItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -313,14 +315,17 @@ export function InspoFolderView({
     }
   };
 
-  const handleAddSubFolder = () => {
+  /** A new sub-board, named first (Cancel makes nothing) */
+  const handleAddSubFolder = async () => {
+    const name = await askName({ title: "New sub-board", placeholder: "e.g. Summer looks", confirmLabel: "Create sub-board" });
+    if (!name) return;
     const newFolder: SlotItem = {
       id: `inspo-folder-${Math.floor(Math.random() * 1000000000)}`,
       type: "placeholder",
       urls: [],
       currentUrlIndex: 0,
       hexColor: "#E4E4E7",
-      text: "New Sub-Folder",
+      text: name,
       folderId: folder.id,
       contentType: "InspoFolder",
     };
@@ -953,6 +958,7 @@ export function InspoFolderView({
       )}
 
       {/* Delete Confirmation Modal */}
+      {namePrompt}
       <ConfirmModal
         isOpen={!!deleteConfirm}
         title="Confirm delete"

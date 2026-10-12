@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import { setItem, getItem, removeItem, saveFeedBackup, deleteMediaBlob } from "@/lib/idb";
 import { useConfirmModal, ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useNamePrompt } from "@/components/ui/NamePrompt";
 import { listDeletedFeedSlots, syncFeedToContent } from "@/app/actions/content";
 import { fetchGridFromCloud, syncGridToCloud } from "@/app/actions/grid";
 import {
@@ -222,6 +223,23 @@ export function DashboardClient() {
   >("All");
   const deviceView = "phone" as const;
   const { confirm, modalProps } = useConfirmModal();
+  const { askName, namePrompt } = useNamePrompt();
+  /** A new story folder, named first (Cancel makes nothing); it opens straight away. */
+  const addStoryFolder = async () => {
+    const name = await askName({ title: "New story folder", placeholder: "e.g. Beach Day", confirmLabel: "Create folder" });
+    if (!name) return;
+    const folder: SlotItem = {
+      id: `folder-${Math.floor(Math.random() * 1000000000)}`,
+      type: "placeholder",
+      urls: [],
+      currentUrlIndex: 0,
+      hexColor: "#E4E4E7",
+      text: name,
+      contentType: "StoryFolder",
+    };
+    updateItems((curr) => [folder, ...curr]);
+    setActiveStoryFolderId(folder.id);
+  };
   const [activeStoryFolderId, setActiveStoryFolderId] = useState<string | null>(
     null,
   );
@@ -1396,16 +1414,7 @@ export function DashboardClient() {
                         gridFilter === "Story" &&
                         !activeStoryFolderId
                       ) {
-                        const newFolder: SlotItem = {
-                          id: `folder-${Math.floor(Math.random() * 1000000000)}`,
-                          type: "placeholder",
-                          urls: [],
-                          currentUrlIndex: 0,
-                          hexColor: "#E4E4E7",
-                          text: "New Folder",
-                          contentType: "StoryFolder",
-                        };
-                        updateItems([newFolder, ...items]);
+                        addStoryFolder();
                       } else {
                         const numItemsToAdd = 1;
                         const newRows = Array.from({
@@ -1524,19 +1533,7 @@ export function DashboardClient() {
                           onPostClick={(id) => setActiveSlotId(id)}
                           onFolderClick={(id) => setActiveStoryFolderId(id)}
                           onDropPhotos={dropPhotosInFolder}
-                          onAddFolder={() => {
-                            const folder: SlotItem = {
-                              id: `folder-${Math.floor(Math.random() * 1000000000)}`,
-                              type: "placeholder",
-                              urls: [],
-                              currentUrlIndex: 0,
-                              hexColor: "#E4E4E7",
-                              text: "New Folder",
-                              contentType: "StoryFolder",
-                            };
-                            updateItems((curr) => [folder, ...curr]);
-                            setActiveStoryFolderId(folder.id);
-                          }}
+                          onAddFolder={addStoryFolder}
                           updateItem={updateItem}
                           onDeleteFolder={async (id) => {
                             const ok = await confirm({
@@ -1838,6 +1835,7 @@ export function DashboardClient() {
           libraryEl,
         )}
       <ConfirmModal {...modalProps} />
+      {namePrompt}
     </div>
   );
 }
