@@ -375,6 +375,9 @@ describe("feed placement", () => {
     expect(toggleCategory(["Story", "Locket"], "Story")).toEqual(["Locket"])
     expect(feedKindsFor(["Post", "Story"])).toEqual(["StoryFolder", "Post"])
     expect(feedKindsFor(["Facebook"])).toEqual([])
+    // A reel shows in the Posts grid too: one box, not a post and a reel
+    expect(feedKindsFor(["Post", "Reels"])).toEqual(["Reel"])
+    expect(feedKindsFor(["Post", "Reels", "Story"])).toEqual(["StoryFolder", "Reel"])
   })
 })
 

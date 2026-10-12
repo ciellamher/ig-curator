@@ -72,8 +72,10 @@ export function usePlanner(enabled: boolean) {
 
     const wanted = feedKindsFor(page.categories)
     // A story folder stays even when the page's categories change (it leaves the Stories tab once Posted)
+    // A reel is its own grid box: a post box next to it (from before) was the same page shown twice. They hold the
+    // same photos (linked boxes are kept in step), so it can go.
     const keep = addOnly
-      ? [...new Set([...current.keys(), ...wanted])]
+      ? [...new Set([...current.keys(), ...wanted])].filter((k) => !(k === "Post" && wanted.includes("Reel")))
       : [...new Set([...wanted, ...(current.has("StoryFolder") ? ["StoryFolder"] : [])])]
     const removed = [...current].filter(([k]) => !keep.includes(k)).map(([, box]) => box.slotId)
     const slots = new Map<string, { slotId: string; type: string }>()
@@ -132,7 +134,9 @@ export function usePlanner(enabled: boolean) {
       setTimeout(() => {
         for (const item of content.data) {
           const has = [...(item.slotId && item.contentType ? [item.contentType] : []), ...Object.keys(item.extraSlots ?? {})].map((t) => (t === "Carousel" ? "Post" : t))
-          if (feedKindsFor(item.categories).some((k) => !has.includes(k))) {
+          const wanted = feedKindsFor(item.categories)
+          // A box missing, or a post box doubling the page's reel
+          if (wanted.some((k) => !has.includes(k)) || (wanted.includes("Reel") && has.includes("Post"))) {
             reconcileFeed(item, true)
             continue
           }

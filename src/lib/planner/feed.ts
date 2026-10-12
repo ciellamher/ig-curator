@@ -25,12 +25,15 @@ export function defaultFeedTitle(slot: Pick<FeedSlotSync, "location" | "contentT
   return `Untitled ${slot.contentType}`
 }
 
-/** Where a planner page shows in the feed, from its categories. */
+/**
+ * Where a planner page shows in the feed, from its categories. A reel is one box: like on Instagram it shows in the
+ * Posts grid and the Reels tab, so Post + Reels doesn't add a second (post) box.
+ */
 export function feedKindsFor(categories: string[]): string[] {
   const kinds = []
   if (categories.includes("Story")) kinds.push("StoryFolder")
   if (categories.includes("Reels")) kinds.push("Reel")
-  if (categories.includes("Post")) kinds.push("Post")
+  else if (categories.includes("Post")) kinds.push("Post")
   return kinds
 }
 
