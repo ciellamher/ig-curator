@@ -51,26 +51,8 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
 
     setIsUploading(true);
     try {
-      const newBase64Strings: string[] = [];
-      const { saveMediaBlob } = await import('@/lib/idb');
-      
-      for (const file of files) {
-        try {
-          const isVideo = file.type.startsWith("video/");
-          const prefix = isVideo ? "video" : "image";
-          const uniqueId = `media-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          
-          // Convert File to pure Blob to prevent fragile OS file reference loss on refresh
-          const arrayBuffer = await file.arrayBuffer();
-          const pureBlob = new Blob([arrayBuffer], { type: file.type });
-          
-          await saveMediaBlob(uniqueId, pureBlob);
-          newBase64Strings.push(`local-media://${uniqueId}`);
-        } catch (e) {
-          console.error("Failed to save media to IDB:", e);
-          continue;
-        }
-      }
+      const { saveFilesLocally } = await import("@/lib/localUpload");
+      const newBase64Strings = await saveFilesLocally(files);
 
       const newUrls = [...item.urls, ...newBase64Strings];
       updateItem(item.id, {
@@ -212,7 +194,7 @@ export function GridItem({ item, updateItem, gridFilter, isActive, isSearchActiv
         ref={fileInputRef}
         onChange={handleUpload}
         className="hidden"
-        accept="image/*,video/*"
+        accept="image/*,.heic,.heif,video/*"
         multiple
       />
 

@@ -97,7 +97,7 @@ export function CoverPicker({ videoUrl, onPick, onClose }: { videoUrl: string; o
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           className="hidden"
           onChange={async (e) => {
             const file = e.target.files?.[0];

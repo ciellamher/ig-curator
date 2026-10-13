@@ -1,7 +1,28 @@
 import { useState, useEffect } from "react";
-import { getMediaBlob } from "@/lib/idb";
+import { getMediaBlob, saveMediaBlob } from "@/lib/idb";
+import { heicToJpeg, isHeicBlob } from "@/lib/heic";
 
 const objectUrlCache = new Map<string, string>();
+const reading = new Map<string, Promise<Blob | null>>();
+
+/**
+ * A saved photo, ready to show. One added as HEIC before they were converted on upload is turned into a JPEG now,
+ * once, and saved over the original (several boxes showing the same photo share the one conversion).
+ */
+function readShowable(id: string): Promise<Blob | null> {
+  let pending = reading.get(id);
+  if (!pending) {
+    pending = getMediaBlob(id).then(async (blob) => {
+      if (!blob || id.includes("-video-") || !(await isHeicBlob(blob))) return blob;
+      const jpeg = await heicToJpeg(blob);
+      if (jpeg !== blob) await saveMediaBlob(id, jpeg).catch(() => {});
+      return jpeg;
+    });
+    reading.set(id, pending);
+    pending.finally(() => reading.delete(id));
+  }
+  return pending;
+}
 
 /**
  * Resolves a photo/video address to something the browser can show. Photos are kept in this browser
@@ -29,7 +50,7 @@ export function useLocalMediaStatus(url: string | null | undefined): { src: stri
 
     let isMounted = true;
     setState({ url, src: null, missing: false }); // loading — never show the previous photo meanwhile
-    getMediaBlob(url.replace("local-media://", ""))
+    readShowable(url.replace("local-media://", ""))
       .then((blob) => {
         if (!isMounted) return;
         if (!blob) return setState({ url, src: null, missing: true });

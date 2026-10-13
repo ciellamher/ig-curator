@@ -134,10 +134,13 @@ export function ProfileHeader({ session, status, liveMediaCount = 0, onAddRow, o
               type="file" 
               id="profile-upload" 
               className="hidden" 
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
+              accept="image/*,.heic,.heif"
+              onChange={async (e) => {
+                const picked = e.target.files?.[0];
+                if (!picked) return;
+                // An iPhone (HEIC) photo becomes a JPEG first, so it can be drawn and shown
+                const { normalizeImageFile } = await import("@/lib/heic");
+                const file = await normalizeImageFile(picked);
                 const reader = new FileReader();
                 reader.onload = (e) => {
                   const img = new Image();

@@ -338,7 +338,7 @@ export function EditorPanel({
         ref={fileInputRef}
         onChange={handleUpload}
         className="hidden"
-        accept="image/*,video/*"
+        accept="image/*,.heic,.heif,video/*"
         multiple
       />
 

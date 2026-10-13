@@ -1,4 +1,5 @@
 import { getMediaBlob } from "./idb";
+import { heicToJpeg, isHeicBlob } from "./heic";
 
 // One-page vision board of a board's or story folder's photos: a PNG, or an MP4 with the videos playing when there are any.
 
@@ -9,8 +10,10 @@ type Tile = { el: HTMLImageElement | HTMLVideoElement; w: number; h: number; x: 
 /** A loadable address for the photo or video (local-media:// lives in this browser's storage). */
 async function sourceFor(url: string): Promise<{ src: string; revoke?: string } | null> {
   if (!url.startsWith("local-media://")) return { src: url };
-  const blob = await getMediaBlob(url.replace("local-media://", ""));
+  let blob = await getMediaBlob(url.replace("local-media://", ""));
   if (!blob) return null;
+  // An iPhone (HEIC) photo can't be drawn outside Safari: as a JPEG
+  if (!isVideoUrl(url) && (await isHeicBlob(blob))) blob = await heicToJpeg(blob);
   const src = URL.createObjectURL(blob);
   return { src, revoke: src };
 }

@@ -182,31 +182,9 @@ export function InspoFolderView({
 
     setIsUploading(true);
     try {
-      const processedFiles: { url: string; isVideo: boolean }[] = [];
-      const { saveMediaBlob } = await import('@/lib/idb');
-      
-      for (const file of files) {
-        const isVideo = file.type.startsWith("video/");
-        
-        try {
-          const prefix = isVideo ? "video" : "image";
-          const uniqueId = `media-${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          
-          // Convert File to pure Blob to prevent fragile OS file reference loss on refresh
-          const arrayBuffer = await file.arrayBuffer();
-          const pureBlob = new Blob([arrayBuffer], { type: file.type });
-          
-          await saveMediaBlob(uniqueId, pureBlob);
-          
-          processedFiles.push({
-            url: `local-media://${uniqueId}`,
-            isVideo
-          });
-        } catch (e) {
-          console.error("Failed to save media to IDB:", e);
-          continue;
-        }
-      }
+      // Saved like every other upload (HEIC photos become JPEGs)
+      const { saveFilesLocally } = await import("@/lib/localUpload");
+      const processedFiles = (await saveFilesLocally(files)).map((url) => ({ url, isVideo: url.includes("-video-") }));
 
       // Create new InspoPost items
       const newItems: SlotItem[] = processedFiles.map((pf, index) => ({
@@ -368,7 +346,7 @@ export function InspoFolderView({
         ref={fileInputRef}
         onChange={handleUploadPosts}
         className="hidden"
-        accept="image/*,video/*"
+        accept="image/*,.heic,.heif,video/*"
         multiple
       />
 
@@ -488,7 +466,7 @@ export function InspoFolderView({
 
                   // Photos or videos from the computer go straight into this sub-board
                   const files = Array.from(e.dataTransfer.files || []).filter(
-                    (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+                    (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || /\.(heic|heif)$/i.test(f.name),
                   );
                   if (files.length > 0) {
                     processFiles(files, item.id);

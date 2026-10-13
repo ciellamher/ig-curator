@@ -1,9 +1,12 @@
 /** Saves picked photos/videos in this browser (IndexedDB) and returns their local-media:// addresses. */
 export async function saveFilesLocally(files: File[]): Promise<string[]> {
   const { saveMediaBlob } = await import("@/lib/idb");
+  const { normalizeImageFile } = await import("@/lib/heic");
   const urls: string[] = [];
-  for (const file of files) {
+  for (const picked of files) {
     try {
+      // iPhone (HEIC) photos are kept as JPEGs, which every browser can show
+      const file = await normalizeImageFile(picked);
       const prefix = file.type.startsWith("video/") ? "video" : "image";
       const id = `media-${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
       // A plain Blob copy, so the photo doesn't depend on the original file still being there after a refresh

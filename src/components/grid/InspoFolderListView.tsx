@@ -71,11 +71,13 @@ export function InspoFolderListView({
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const picked = e.target.files?.[0];
+    if (!picked) return;
 
     setIsUploading(true);
     try {
+      const { normalizeImageFile } = await import("@/lib/heic");
+      const file = await normalizeImageFile(picked); // HEIC → JPEG
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -210,7 +212,7 @@ export function InspoFolderListView({
                 ref={fileInputRef}
                 onChange={handleUpload}
                 className="hidden"
-                accept="image/*"
+                accept="image/*,.heic,.heif"
               />
 
               {newCoverUrl ? (
@@ -319,7 +321,7 @@ export function InspoFolderListView({
 
                     // Photos or videos dragged in from the computer: saved straight into this board, at the top
                     const files = Array.from(e.dataTransfer.files || []).filter(
-                      (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+                      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || /\.(heic|heif)$/i.test(f.name),
                     );
                     if (files.length && updateItems) {
                       setUploadingId(folder.id);

@@ -315,7 +315,7 @@ export function StoryFolderView({
         <input
           ref={fileRef}
           type="file"
-          accept="image/*,video/*"
+          accept="image/*,.heic,.heif,video/*"
           multiple
           className="hidden"
           onChange={(e) => {
