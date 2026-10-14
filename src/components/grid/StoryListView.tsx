@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
-import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE, droppedFiles } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 
 interface StoryListViewProps {
@@ -129,9 +129,7 @@ export function StoryListView({ folders, allItems, onFolderClick, updateItem, on
                 if (!onDropPhotos) return;
                 e.preventDefault();
                 setDropFolder(null);
-                const files = Array.from(e.dataTransfer.files || []).filter(
-                  (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type
-                );
+                const files = droppedFiles(e);
                 if (files.length > 0) {
                   const urls = await saveFilesLocally(files);
                   if (urls.length) onDropPhotos(folder.id, urls);

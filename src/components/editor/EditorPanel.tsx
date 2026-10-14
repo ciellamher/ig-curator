@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { LocalMediaImage, LocalMediaVideo } from "@/components/grid/LocalMedia";
 import { CoverPicker } from "./CoverPicker";
-import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE, withoutMoved } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE, withoutMoved, droppedFiles } from "@/lib/photoDrag";
 import { FEED_REORDER_STORIES_EVENT } from "@/lib/planner/types";
 
 /** Data type for moving a photo within a box */
@@ -213,9 +213,7 @@ export function EditorPanel({
     // A thumbnail being rearranged in this box isn't a new photo (adding it again then deleted every copy)
     if (Array.from(e.dataTransfer.types).includes(PHOTO_ORDER_TYPE)) return;
 
-    const files = Array.from(e.dataTransfer.files || []).filter(
-      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type,
-    );
+    const files = droppedFiles(e);
     if (files.length > 0) {
       setIsUploading(true);
       try {

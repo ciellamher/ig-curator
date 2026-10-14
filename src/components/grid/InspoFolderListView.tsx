@@ -5,7 +5,7 @@ import { SlotItem } from "@/types";
 import { Plus, Trash2, X, Edit2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
-import { draggedItemIds, droppedPhotos, withoutMoved } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, withoutMoved, droppedFiles } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 
 interface InspoFolderListViewProps {
@@ -320,9 +320,7 @@ export function InspoFolderListView({
                     setDragTargetId(null);
 
                     // Photos or videos dragged in from the computer: saved straight into this board, at the top
-                    const files = Array.from(e.dataTransfer.files || []).filter(
-                      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || /\.(heic|heif)$/i.test(f.name),
-                    );
+                    const files = droppedFiles(e);
                     if (files.length && updateItems) {
                       setUploadingId(folder.id);
                       try {

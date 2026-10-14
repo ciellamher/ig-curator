@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { SlotItem } from "@/types";
-import { draggedItemIds, droppedPhotos, PHOTO_DRAG_TYPE, withoutMoved } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, PHOTO_DRAG_TYPE, withoutMoved, droppedFiles } from "@/lib/photoDrag";
 import {
   ChevronLeft,
   Plus,
@@ -229,7 +229,7 @@ export function InspoFolderView({
     setIsDragging(false);
 
     // 1. Files from computer
-    const files = Array.from(e.dataTransfer.files || []);
+    const files = droppedFiles(e);
     if (files.length > 0) {
       await processFiles(files);
       return;
@@ -465,9 +465,7 @@ export function InspoFolderView({
                   setDragTargetId(null);
 
                   // Photos or videos from the computer go straight into this sub-board
-                  const files = Array.from(e.dataTransfer.files || []).filter(
-                    (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || /\.(heic|heif)$/i.test(f.name),
-                  );
+                  const files = droppedFiles(e);
                   if (files.length > 0) {
                     processFiles(files, item.id);
                     return;

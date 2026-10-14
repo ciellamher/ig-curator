@@ -4,7 +4,7 @@ import { ArrowUpRight, ChevronLeft, Download, Eye, ImagePlus, Plus, X } from "lu
 import { StoryPreviewModal } from "./StoryPreviewModal";
 import { LocalMediaImage, LocalMediaVideo } from "./LocalMedia";
 import { Masonry } from "./Masonry";
-import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE } from "@/lib/photoDrag";
+import { draggedItemIds, droppedPhotos, isPhotoDrag, PHOTO_DRAG_TYPE, droppedFiles } from "@/lib/photoDrag";
 import { saveFilesLocally } from "@/lib/localUpload";
 import { downloadVisionBoardCollage, isVideoUrl as isBoardVideo } from "@/lib/visionBoardCollage";
 
@@ -134,9 +134,7 @@ export function StoryFolderView({
     setDropping(false);
 
     // 1. Files dragged from computer (Finder / desktop)
-    const files = Array.from(e.dataTransfer.files || []).filter(
-      (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type
-    );
+    const files = droppedFiles(e);
     if (files.length > 0) {
       await addPhotos(files);
       return;

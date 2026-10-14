@@ -69,3 +69,18 @@ export function withoutMoved<T extends { id: string; contentType?: string; folde
 export function alreadyIn<T extends { id: string; folderId?: string }>(items: T[], ids: string[], folderId: string): boolean {
   return ids.length > 0 && ids.every((id) => items.find((i) => i.id === id)?.folderId === folderId);
 }
+
+/** Drags that started inside the app (photos, pins, stories, boards) — never treated as files from the computer. */
+const APP_DRAG_TYPES = [PHOTO_DRAG_TYPE, "application/folder-id", "application/folder-ids", "application/x-ig-curator-story-id", "application/x-ig-curator-story"];
+
+/**
+ * Photos and videos dropped from the computer. Empty for a drag that started in the app: Chrome also attaches a
+ * dragged picture as a file, and taking that file made a new copy (slowly) instead of moving the photo.
+ */
+export function droppedFiles(e: React.DragEvent): File[] {
+  const types = Array.from(e.dataTransfer.types || []);
+  if (types.some((t) => APP_DRAG_TYPES.includes(t))) return [];
+  return Array.from(e.dataTransfer.files || []).filter(
+    (f) => f.type.startsWith("image/") || f.type.startsWith("video/") || !f.type || /\.(heic|heif)$/i.test(f.name),
+  );
+}
