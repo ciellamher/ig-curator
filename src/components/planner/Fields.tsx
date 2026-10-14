@@ -26,11 +26,16 @@ const COMPLETE_DATE = /^(\d{4})-\d{2}-\d{2}$/
  * A date box that saves only a complete, real date (or clearing it). While a year is being typed the browser reports
  * in-between values like year 0002 or 20261; saving those moved the item and was rejected as an invalid date.
  */
-export function DateInput({ value, onChange, ...rest }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & { value: string; onChange: (value: string) => void }) {
+export function DateInput({ value: saved, onChange, ...rest }: Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & { value: string; onChange: (value: string) => void }) {
+  // An impossible saved year shows as empty, so the picker opens on this year instead of year 0202
+  const savedYear = Number(COMPLETE_DATE.exec(saved)?.[1])
+  const value = saved && (savedYear < 1900 || savedYear > 2200) ? "" : saved
   const [draft, setDraft] = useState(value)
   useEffect(() => setDraft(value), [value])
   return (
     <input
+      min="1900-01-01"
+      max="2200-12-31"
       {...rest}
       type="date"
       value={draft}

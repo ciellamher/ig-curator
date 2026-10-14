@@ -203,6 +203,12 @@ export async function listContent(): Promise<Result<ContentDTO[]>> {
     const userId = await requireUserId()
     // Nothing to edit toward yet: To Edit without an edit date or a post date is To Schedule
     await prisma.content.updateMany({ where: { userId, status: "To Edit", editStart: null, postStart: null }, data: { status: "To Schedule" } })
+    // Impossible dates saved by a half-typed year (e.g. 0202-10-23) are cleared, so they can be picked again
+    const badYear = (field: string) => ({ OR: [{ [field]: { lt: "1900" } }, { [field]: { gte: "2201" } }] })
+    for (const [start, end] of [["shootStart", "shootEnd"], ["editStart", "editEnd"], ["postStart", "postEnd"]] as const) {
+      await prisma.content.updateMany({ where: { userId, ...badYear(start) }, data: { [start]: null, [end]: null } })
+      await prisma.content.updateMany({ where: { userId, ...badYear(end) }, data: { [end]: null } })
+    }
     const rows = await prisma.content.findMany({ where: { userId }, include: { media: true }, orderBy: { createdAt: "desc" } })
     // Move extra feed boxes kept in the old JSON form into their own column
     for (const r of rows.filter((r) => r.contentType?.startsWith('{"primary"') || legacyHidden(r.extraSlots))) {

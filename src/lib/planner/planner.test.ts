@@ -1,3 +1,4 @@
+import { isValidScheduleValue } from "./dates"
 import { describe, expect, it } from "vitest"
 import { batchShootDate, clothingAlert, clothingAlerts, itemTimeline, orderAlert, orderStage, orderTimeline } from "./clothing"
 import { addDaysISO, formatDate, moveSchedule, scheduleCovers, todayISO } from "./dates"
@@ -378,6 +379,14 @@ describe("feed placement", () => {
     // A reel shows in the Posts grid too: one box, not a post and a reel
     expect(feedKindsFor(["Post", "Reels"])).toEqual(["Reel"])
     expect(feedKindsFor(["Post", "Reels", "Story"])).toEqual(["StoryFolder", "Reel"])
+  })
+})
+
+describe("impossible years", () => {
+  it("are not dates (a half-typed year like 0202)", () => {
+    expect(isValidScheduleValue("0202-10-23")).toBe(false)
+    expect(isValidScheduleValue("0202-10-23T07:00")).toBe(false)
+    expect(isValidScheduleValue("2026-10-23T07:00")).toBe(true)
   })
 })
 

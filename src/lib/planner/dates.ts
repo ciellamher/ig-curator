@@ -9,9 +9,14 @@ export type Schedule = { start: string | null; end: string | null }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/
 
+/** Years a date can have; anything else is a half-typed year (0202) or a slip of the keyboard */
+export const MIN_YEAR = 1900
+export const MAX_YEAR = 2200
+
 export function isValidScheduleValue(value: string): boolean {
   if (!DATE_RE.test(value) && !DATETIME_RE.test(value)) return false
   const [y, m, d] = datePart(value).split("-").map(Number)
+  if (y < MIN_YEAR || y > MAX_YEAR) return false
   const probe = new Date(Date.UTC(y, m - 1, d))
   return probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d
 }
