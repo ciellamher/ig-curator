@@ -294,7 +294,7 @@ export function StoryFolderView({
               try {
                 await downloadVisionBoardCollage(allUrls, {
                   title: folder.text || "Vision Board",
-                  subtitle: `${folder.text || "Vision Board"} · ${playable.length} Stories`,
+                  countLabel: "Stories",
                 });
               } catch (err) {
                 console.error("Collage export failed", err);

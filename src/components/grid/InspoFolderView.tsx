@@ -419,7 +419,7 @@ export function InspoFolderView({
                 try {
                   await downloadVisionBoardCollage(urls, {
                     title: folder.text || "Vision Board",
-                    subtitle: `${folder.text || "Vision Board"} · ${urls.length} Pins`,
+                    countLabel: "Pins",
                   });
                 } catch (err) {
                   console.error("Collage export failed", err);

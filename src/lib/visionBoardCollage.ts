@@ -5,60 +5,112 @@ import { heicToJpeg, isHeicBlob } from "./heic";
 
 export const isVideoUrl = (url: string) => url.includes("-video-") || url.startsWith("data:video");
 
-type Tile = { el: HTMLImageElement | HTMLVideoElement; w: number; h: number; x: number; y: number; dw: number; dh: number };
+type Tile = { el: CanvasImageSource; w: number; h: number; x: number; y: number; dw: number; dh: number };
+type Loaded = Pick<Tile, "el" | "w" | "h">;
+/** A photo that isn't saved in this browser (added on another device) vs one that's here but wouldn't open */
+type LoadResult = Loaded | "missing" | "failed";
 
-/** A loadable address for the photo or video (local-media:// lives in this browser's storage). */
-async function sourceFor(url: string): Promise<{ src: string; revoke?: string } | null> {
-  if (!url.startsWith("local-media://")) return { src: url };
-  let blob = await getMediaBlob(url.replace("local-media://", ""));
-  if (!blob) return null;
-  // An iPhone (HEIC) photo can't be drawn outside Safari: as a JPEG
-  if (!isVideoUrl(url) && (await isHeicBlob(blob))) blob = await heicToJpeg(blob);
-  const src = URL.createObjectURL(blob);
-  return { src, revoke: src };
-}
-
-const LOAD_TIMEOUT = 20_000;
+const LOAD_TIMEOUT = 60_000;
+/** Photos are kept at the size the board needs (a tile is at most ~1000px wide), so big boards don't run out of memory */
+const MAX_SIDE = 1400;
+/** How many photos are opened at once */
+const AT_ONCE = 4;
 
 /** One photo that never loads mustn't hold up the whole board */
 function within<T>(ms: number, work: Promise<T>): Promise<T> {
   return Promise.race([work, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("took too long to load")), ms))]);
 }
 
-async function load(url: string, revokeLater: string[]): Promise<Pick<Tile, "el" | "w" | "h"> | null> {
-  const source = await sourceFor(url);
-  if (!source) return null;
-  if (source.revoke) revokeLater.push(source.revoke);
-  try {
-    if (isVideoUrl(url)) {
-      const video = document.createElement("video");
-      video.muted = true;
-      video.loop = true;
-      video.playsInline = true;
-      video.preload = "auto";
-      // Some browsers never report the first frame of a video that isn't on screen: after a while, its size is enough
-      await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
-        video.onloadeddata = () => resolve();
-        video.onerror = () => reject(new Error("video failed to load"));
-        video.src = source.src;
-        video.load();
-      })).catch((err) => {
-        if (!video.videoWidth) throw err;
-      });
-      return video.videoWidth ? { el: video, w: video.videoWidth, h: video.videoHeight } : null;
-    }
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("photo failed to load"));
-      img.src = source.src;
-    }));
-    return img.naturalWidth ? { el: img, w: img.naturalWidth, h: img.naturalHeight } : null;
-  } catch (err) {
-    console.warn("Left out of the vision board:", url, err);
-    return null;
+/** The saved photo or video (local-media:// lives in this browser's storage); null when it isn't here */
+async function blobFor(url: string): Promise<Blob | null> {
+  if (url.startsWith("local-media://")) return getMediaBlob(url.replace("local-media://", ""));
+  if (url.startsWith("data:") || url.startsWith("blob:")) return (await fetch(url)).blob();
+  return null; // a web address: loaded as an image instead
+}
+
+async function loadVideo(src: string): Promise<Loaded> {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  // Some browsers never report the first frame of a video that isn't on screen: after a while, its size is enough
+  await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
+    video.onloadeddata = () => resolve();
+    video.onerror = () => reject(new Error("video failed to load"));
+    video.src = src;
+    video.load();
+  })).catch((err) => {
+    if (!video.videoWidth) throw err;
+  });
+  if (!video.videoWidth) throw new Error("video has no picture");
+  return { el: video, w: video.videoWidth, h: video.videoHeight };
+}
+
+/** A photo, decoded straight at board size (full-size phone photos all at once used several GB and some failed) */
+async function loadPhoto(blob: Blob): Promise<Loaded> {
+  if (await isHeicBlob(blob)) blob = await heicToJpeg(blob); // iPhone photos can't be drawn outside Safari
+  const full = await within(LOAD_TIMEOUT, createImageBitmap(blob));
+  const scale = Math.min(1, MAX_SIDE / Math.max(full.width, full.height));
+  if (scale === 1) return { el: full, w: full.width, h: full.height };
+  const w = Math.max(1, Math.round(full.width * scale));
+  const h = Math.max(1, Math.round(full.height * scale));
+  full.close();
+  const small = await within(LOAD_TIMEOUT, createImageBitmap(blob, { resizeWidth: w, resizeHeight: h, resizeQuality: "high" }));
+  return { el: small, w, h };
+}
+
+async function loadWebImage(url: string): Promise<Loaded> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("photo failed to load"));
+    img.src = url;
+  }));
+  return { el: img, w: img.naturalWidth, h: img.naturalHeight };
+}
+
+async function loadOnce(url: string, revokeLater: string[]): Promise<LoadResult> {
+  const blob = await blobFor(url);
+  if (!blob) {
+    if (url.startsWith("local-media://")) return "missing";
+    return loadWebImage(url);
   }
+  if (isVideoUrl(url) || blob.type.startsWith("video/")) {
+    const src = URL.createObjectURL(blob);
+    revokeLater.push(src);
+    return loadVideo(src);
+  }
+  return loadPhoto(blob);
+}
+
+/** Tried twice before it's left out */
+async function load(url: string, revokeLater: string[]): Promise<LoadResult> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await loadOnce(url, revokeLater);
+    } catch (err) {
+      if (attempt >= 2) {
+        console.warn("Left out of the vision board:", url, err);
+        return "failed";
+      }
+    }
+  }
+}
+
+/** Loads every photo, a few at a time, keeping their order */
+async function loadAll(urls: string[], revokeLater: string[]): Promise<LoadResult[]> {
+  const results: LoadResult[] = new Array(urls.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < urls.length) {
+      const n = next++;
+      results[n] = await load(urls[n], revokeLater);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(AT_ONCE, urls.length) }, worker));
+  return results;
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -72,7 +124,7 @@ const GAP = 14;
 const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 /** Shortest-column layout at each item's own shape; more columns until it fits on one page (about 4:5 or taller up to 9:16). */
-function layout(items: Pick<Tile, "el" | "w" | "h">[], top: number) {
+function layout(items: Loaded[], top: number) {
   let best: { tiles: Tile[]; height: number } | null = null;
   const fewest = Math.min(2, items.length);
   for (let cols = fewest; cols <= Math.max(fewest, Math.min(6, items.length)); cols++) {
@@ -141,7 +193,8 @@ const MAX_SECONDS = 30;
 
 export interface CollageOptions {
   title?: string;
-  subtitle?: string;
+  /** What the photos are called under the title, e.g. "Stories" → "BEACH DAY · 30 STORIES" (counting the ones included) */
+  countLabel?: string;
 }
 
 /**
@@ -152,19 +205,24 @@ export async function downloadVisionBoardCollage(urls: string[], options: Collag
   if (!urls.length) return;
   const revoke: string[] = [];
   try {
-    const loaded = (await Promise.all(urls.map((u) => load(u, revoke)))).filter((x): x is NonNullable<typeof x> => x !== null);
+    const results = await loadAll(urls, revoke);
+    const loaded = results.filter((r): r is Loaded => typeof r === "object");
+    const missing = results.filter((r) => r === "missing").length;
+    const failed = results.filter((r) => r === "failed").length;
     if (!loaded.length) {
-      alert("None of these photos are saved in this browser, so the vision board couldn't be made.");
+      alert(missing ? "None of these photos are saved in this browser (they were added on another device), so the vision board couldn't be made here." : "None of these photos could be opened, so the vision board couldn't be made.");
       return;
     }
-    const left = urls.length - loaded.length;
-    if (left > 0) {
+    if (missing || failed) {
       // Say so, rather than quietly making a board that's missing photos
-      const go = confirm(
-        `${left} of ${urls.length} photos can't be included: they aren't saved in this browser (added on another device) or couldn't be opened. Download the vision board with the other ${loaded.length}?`,
-      );
+      const why = [
+        missing ? `${missing} ${missing === 1 ? "was" : "were"} added on another device and ${missing === 1 ? "isn't" : "aren't"} saved in this browser (download from that device to include ${missing === 1 ? "it" : "them"})` : "",
+        failed ? `${failed} couldn't be opened` : "",
+      ].filter(Boolean).join("; ");
+      const go = confirm(`${missing + failed} of ${urls.length} photos can't be included: ${why}. Download the vision board with the other ${loaded.length}?`);
       if (!go) return;
     }
+    const subtitle = options.countLabel ? `${options.title ?? "Vision board"} · ${loaded.length} ${options.countLabel}` : undefined;
     const { tiles, height: rawHeight } = layout(loaded, options.title ? 116 : PAD);
     const height = Math.ceil(rawHeight / 2) * 2; // video encoders need even sizes
     const canvas = document.createElement("canvas");
@@ -177,7 +235,7 @@ export async function downloadVisionBoardCollage(urls: string[], options: Collag
     const videos = tiles.map((t) => t.el).filter((el): el is HTMLVideoElement => el instanceof HTMLVideoElement);
     const format = videos.length ? recordingType() : null;
     if (!videos.length || !format) {
-      drawBoard(ctx, tiles, height, options.title, options.subtitle);
+      drawBoard(ctx, tiles, height, options.title, subtitle);
       const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
       if (png) save(png, `${name}.png`);
       return;
@@ -191,7 +249,7 @@ export async function downloadVisionBoardCollage(urls: string[], options: Collag
         return v.play().catch(() => {});
       }),
     );
-    drawBoard(ctx, tiles, height, options.title, options.subtitle);
+    drawBoard(ctx, tiles, height, options.title, subtitle);
     const stream = canvas.captureStream(30);
     const recorder = new MediaRecorder(stream, { mimeType: format.mimeType, videoBitsPerSecond: 8_000_000 });
     const chunks: Blob[] = [];
@@ -201,7 +259,7 @@ export async function downloadVisionBoardCollage(urls: string[], options: Collag
     const started = performance.now();
     await new Promise<void>((resolve) => {
       const frame = () => {
-        drawBoard(ctx, tiles, height, options.title, options.subtitle);
+        drawBoard(ctx, tiles, height, options.title, subtitle);
         if (performance.now() - started >= seconds * 1000) return resolve();
         requestAnimationFrame(frame);
       };
