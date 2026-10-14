@@ -18,6 +18,13 @@ async function sourceFor(url: string): Promise<{ src: string; revoke?: string } 
   return { src, revoke: src };
 }
 
+const LOAD_TIMEOUT = 20_000;
+
+/** One photo that never loads mustn't hold up the whole board */
+function within<T>(ms: number, work: Promise<T>): Promise<T> {
+  return Promise.race([work, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("took too long to load")), ms))]);
+}
+
 async function load(url: string, revokeLater: string[]): Promise<Pick<Tile, "el" | "w" | "h"> | null> {
   const source = await sourceFor(url);
   if (!source) return null;
@@ -29,20 +36,24 @@ async function load(url: string, revokeLater: string[]): Promise<Pick<Tile, "el"
       video.loop = true;
       video.playsInline = true;
       video.preload = "auto";
-      await new Promise<void>((resolve, reject) => {
+      // Some browsers never report the first frame of a video that isn't on screen: after a while, its size is enough
+      await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
         video.onloadeddata = () => resolve();
         video.onerror = () => reject(new Error("video failed to load"));
         video.src = source.src;
+        video.load();
+      })).catch((err) => {
+        if (!video.videoWidth) throw err;
       });
       return video.videoWidth ? { el: video, w: video.videoWidth, h: video.videoHeight } : null;
     }
     const img = new Image();
     img.crossOrigin = "anonymous";
-    await new Promise<void>((resolve, reject) => {
+    await within(LOAD_TIMEOUT, new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = () => reject(new Error("photo failed to load"));
       img.src = source.src;
-    });
+    }));
     return img.naturalWidth ? { el: img, w: img.naturalWidth, h: img.naturalHeight } : null;
   } catch (err) {
     console.warn("Left out of the vision board:", url, err);
@@ -145,6 +156,14 @@ export async function downloadVisionBoardCollage(urls: string[], options: Collag
     if (!loaded.length) {
       alert("None of these photos are saved in this browser, so the vision board couldn't be made.");
       return;
+    }
+    const left = urls.length - loaded.length;
+    if (left > 0) {
+      // Say so, rather than quietly making a board that's missing photos
+      const go = confirm(
+        `${left} of ${urls.length} photos can't be included: they aren't saved in this browser (added on another device) or couldn't be opened. Download the vision board with the other ${loaded.length}?`,
+      );
+      if (!go) return;
     }
     const { tiles, height: rawHeight } = layout(loaded, options.title ? 116 : PAD);
     const height = Math.ceil(rawHeight / 2) * 2; // video encoders need even sizes

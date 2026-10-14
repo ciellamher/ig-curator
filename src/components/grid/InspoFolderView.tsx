@@ -398,16 +398,28 @@ export function InspoFolderView({
           >
             <FolderPlus size={14} /> New sub-board
           </button>
-          {postItems.length > 0 && (
+          {(postItems.length > 0 || subFolders.length > 0) && (
             <button
               onClick={async () => {
-                const urls = postItems.flatMap((p) => p.urls || []).filter(Boolean);
+                // Everything on the board, its sub-boards' pins included
+                const boardIds = new Set([folder.id]);
+                for (let grew = true; grew; ) {
+                  grew = false;
+                  for (const i of allItems ?? []) {
+                    if (i.contentType === "InspoFolder" && i.folderId && boardIds.has(i.folderId) && !boardIds.has(i.id)) {
+                      boardIds.add(i.id);
+                      grew = true;
+                    }
+                  }
+                }
+                const pins = (allItems ?? []).filter((i) => i.folderId && boardIds.has(i.folderId) && i.contentType !== "InspoFolder");
+                const urls = [...new Set(pins.flatMap((p) => p.urls || []).filter(Boolean))];
                 if (!urls.length) return;
                 setIsGeneratingCollage(true);
                 try {
                   await downloadVisionBoardCollage(urls, {
                     title: folder.text || "Vision Board",
-                    subtitle: `${folder.text || "Vision Board"} · ${postItems.length} Pins`,
+                    subtitle: `${folder.text || "Vision Board"} · ${urls.length} Pins`,
                   });
                 } catch (err) {
                   console.error("Collage export failed", err);
