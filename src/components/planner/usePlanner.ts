@@ -30,6 +30,22 @@ import {
 
 const byName = (a: QuickLinkDTO, b: QuickLinkDTO) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
 
+/** Seconds a delete can be undone */
+export const UNDO_SECONDS = 10
+
+/** The list with deleted pages put back where they were (and their sub-items back under them) */
+function restoreFrom(curr: ContentDTO[], snapshot: ContentDTO[], ids: Set<string>): ContentDTO[] {
+  const now = new Map(curr.map((i) => [i.id, i]))
+  const before = new Set(snapshot.map((i) => i.id))
+  const restored = snapshot.flatMap((old) => {
+    if (ids.has(old.id)) return now.has(old.id) ? [now.get(old.id)!] : [old]
+    const item = now.get(old.id)
+    if (!item) return []
+    return [old.parentId && ids.has(old.parentId) && !item.parentId ? { ...item, parentId: old.parentId } : item]
+  })
+  return [...curr.filter((i) => !before.has(i.id)), ...restored]
+}
+
 export function usePlanner(enabled: boolean) {
   const [items, setItems] = useState<ContentDTO[]>([])
   const [links, setLinks] = useState<QuickLinkDTO[]>([])
@@ -127,7 +143,8 @@ export function usePlanner(enabled: boolean) {
   const reload = useCallback(async () => {
     const [content, quick, orderList] = await Promise.all([listContent(), listQuickLinks(), listOrders()])
     if (content.success) {
-      setItems(content.data)
+      // Pages waiting to be deleted (they can still be undone) stay out of view
+      setItems(content.data.filter((i) => !pendingIdsRef.current.has(i.id)))
       
       // Pages ticked Post / Reels / Story get their feed boxes, also in a browser whose feed doesn't have them yet.
       // Only missing boxes are created: photos are never sent again to a box that's there (that looped before).
@@ -231,14 +248,25 @@ export function usePlanner(enabled: boolean) {
   }, [])
 
   /** Deletes one or many records; deleted feed boxes leave the feed too. */
-  const removeMany = useCallback(async (ids: string[]) => {
-    if (!ids.length) return
-    const snapshot = itemsRef.current
-    const doomed = new Set(ids)
-    setItems((curr) => curr.filter((i) => !doomed.has(i.id)).map((i) => (i.parentId && doomed.has(i.parentId) ? { ...i, parentId: null } : i)))
-    const res = await deleteContents(ids)
+  /**
+   * Deleting waits a few seconds before it's real, so it can be undone: the pages leave every view straight away,
+   * their feed boxes stay until then, and Undo puts everything back as it was.
+   */
+  const pendingDeletesRef = useRef(new Map<string, { ids: string[]; snapshot: ContentDTO[]; timer: ReturnType<typeof setTimeout> }>())
+  const pendingIdsRef = useRef(new Set<string>())
+  const [undoable, setUndoable] = useState<{ key: string; count: number; title: string } | null>(null)
+
+  const commitDelete = useCallback(async (key: string) => {
+    const pending = pendingDeletesRef.current.get(key)
+    if (!pending) return
+    pendingDeletesRef.current.delete(key)
+    clearTimeout(pending.timer)
+    setUndoable((u) => (u?.key === key ? null : u))
+    const res = await deleteContents(pending.ids)
+    pending.ids.forEach((id) => pendingIdsRef.current.delete(id))
     if (!res.success) {
-      setItems(snapshot)
+      // Not deleted after all: back into view
+      setItems((curr) => restoreFrom(curr, pending.snapshot, new Set(pending.ids)))
       setError(res.error)
       return
     }
@@ -248,6 +276,42 @@ export function usePlanner(enabled: boolean) {
       window.dispatchEvent(new CustomEvent(PLANNER_DELETED_EVENT, { detail: res.data.deletedSlotIds }))
     }
   }, [])
+
+  const removeMany = useCallback(async (ids: string[]) => {
+    if (!ids.length) return
+    const snapshot = itemsRef.current
+    const doomed = new Set(ids)
+    setItems((curr) => curr.filter((i) => !doomed.has(i.id)).map((i) => (i.parentId && doomed.has(i.parentId) ? { ...i, parentId: null } : i)))
+    // A delete still waiting is made real now, so only the latest one can be undone
+    for (const key of [...pendingDeletesRef.current.keys()]) commitDelete(key)
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+    ids.forEach((id) => pendingIdsRef.current.add(id))
+    const timer = setTimeout(() => commitDelete(key), UNDO_SECONDS * 1000)
+    pendingDeletesRef.current.set(key, { ids, snapshot, timer })
+    const first = snapshot.find((i) => i.id === ids[0])
+    setUndoable({ key, count: ids.length, title: ids.length === 1 ? first?.title ?? "Page" : "" })
+  }, [commitDelete])
+
+  const undoDelete = useCallback(() => {
+    const key = [...pendingDeletesRef.current.keys()].pop()
+    const pending = key ? pendingDeletesRef.current.get(key) : undefined
+    if (!key || !pending) return
+    clearTimeout(pending.timer)
+    pendingDeletesRef.current.delete(key)
+    pending.ids.forEach((id) => pendingIdsRef.current.delete(id))
+    setItems((curr) => restoreFrom(curr, pending.snapshot, new Set(pending.ids)))
+    setUndoable(null)
+  }, [])
+
+  // Leaving the page while a delete is waiting: it goes through
+  useEffect(() => {
+    const flush = () => {
+      for (const key of [...pendingDeletesRef.current.keys()]) commitDelete(key)
+    }
+    window.addEventListener("pagehide", flush)
+    return () => window.removeEventListener("pagehide", flush)
+  }, [commitDelete])
+
   const remove = useCallback((id: string) => removeMany([id]), [removeMany])
 
   /** Runs an order change, then refreshes (order changes also update batches' Clothing status). */
@@ -338,7 +402,7 @@ export function usePlanner(enabled: boolean) {
   const ordersById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders])
   const alerts = useMemo(() => clothingAlerts(items, orders), [items, orders])
 
-  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, loadSamples, saveLink, removeLink, addPhotos, setPagePhotos }
+  return { items, byId, orders, ordersById, orderActions, links, alerts, loading, error, setError, update, create, remove, removeMany, undoable, undoDelete, loadSamples, saveLink, removeLink, addPhotos, setPagePhotos }
 }
 
 export type Planner = ReturnType<typeof usePlanner>

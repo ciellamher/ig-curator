@@ -7,13 +7,14 @@ import Link from "next/link"
 import { AlertTriangle, Plus, Search, Sparkles, X } from "lucide-react"
 import { ConfirmModal, useConfirmModal } from "@/components/ui/ConfirmModal"
 import { FEED_SELECT_EVENT, PLANNER_FOCUS_EVENT, PLANNER_OPEN_EVENT, PLANNER_SLOTS_EVENT, PLANNER_FACEBOOK_EVENT, PLANNER_POSTED_FOLDERS_EVENT, type FacebookPage, type ContentDTO, type QuickLinkDTO } from "@/lib/planner/types"
-import { usePlanner } from "./usePlanner"
+import { UNDO_SECONDS, usePlanner } from "./usePlanner"
 import { ContentCalendar } from "./ContentCalendar"
 import { ContentTable } from "./ContentTable"
 import { AvailablePosts } from "./AvailablePosts"
 import { OutfitsTable } from "./OutfitsTable"
 import { QuickLinks } from "./Sidebar"
 import { ItemDrawer } from "./ItemDrawer"
+import { UndoDeleteBar } from "./UndoDeleteBar"
 import { CalendarConnect } from "./CalendarConnect"
 import type { DateField } from "@/lib/planner/dates"
 
@@ -95,7 +96,7 @@ export function PlannerClient() {
   const deleteItem = async (item: ContentDTO) => {
     const ok = await confirm({
       title: "Delete item",
-      message: `Delete “${item.title}”? This can't be undone.${item.slotId ? " Its box in the feed is removed too." : ""}`,
+      message: `Delete “${item.title}”?${item.slotId ? " Its box in the feed is removed too." : ""} You can undo it for ${UNDO_SECONDS} seconds.`,
       confirmLabel: "Delete",
       variant: "danger",
     })
@@ -108,7 +109,7 @@ export function PlannerClient() {
     const inFeed = ids.filter((id) => planner.byId.get(id)?.slotId).length
     const ok = await confirm({
       title: `Delete ${ids.length} item${ids.length === 1 ? "" : "s"}`,
-      message: `This can't be undone.${inFeed ? ` ${inFeed} of them ${inFeed === 1 ? "is" : "are"} in your feed and will be removed there too.` : ""}`,
+      message: `You can undo it for ${UNDO_SECONDS} seconds.${inFeed ? ` ${inFeed} of them ${inFeed === 1 ? "is" : "are"} in your feed and will be removed there too.` : ""}`,
       confirmLabel: `Delete ${ids.length}`,
       variant: "danger",
     })
@@ -244,6 +245,7 @@ export function PlannerClient() {
         <ItemDrawer item={openItem} planner={planner} onClose={() => setOpenId(null)} onDelete={deleteItem} onOpen={open} overlay={!drawerFromFeed} />
       )}
       <ConfirmModal {...modalProps} />
+      <UndoDeleteBar undoable={allPlanner.undoable} onUndo={allPlanner.undoDelete} />
     </div>
   )
 }
